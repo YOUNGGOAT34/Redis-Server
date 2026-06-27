@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +12,17 @@ import (
 
 
 
+
+
+func buildResponse(body []byte) []byte{
+	  if bytes.EqualFold(body,[]byte("PONG")){
+		     return fmt.Appendf(nil, "+%s\r\n",body)
+	  }
+	  return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+}
+
+
+
 func handleClient(conn net.Conn){
 	     var request=make([]byte,1024)
 
@@ -18,7 +30,7 @@ func handleClient(conn net.Conn){
 
 		  for{
 
-			  _,err:= conn.Read(request)
+			  bytesRead,err:= conn.Read(request)
 				
 				  if err==io.EOF || (err!=nil && strings.Contains(err.Error(),"connection reset")){
 	 
@@ -30,10 +42,17 @@ func handleClient(conn net.Conn){
 					  fmt.Fprintf(os.Stderr,"Error reading client request: %s\n",err.Error())
 					  return
 				}
-	 
+
+				 
+	         response:=parseRequest(request[:bytesRead])
+
+		
+				if response==nil{
+					  return
+				}
 			 
 	 
-				_,err=conn.Write([]byte("+PONG\r\n"))
+				_,err=conn.Write(buildResponse(response))
 
 				if err!=nil{
 					  return
@@ -41,7 +60,6 @@ func handleClient(conn net.Conn){
 		  }
 	   
 }
-
 
 
 func accept(listener net.Listener) net.Conn{
@@ -57,6 +75,11 @@ func accept(listener net.Listener) net.Conn{
 }
 
 func StartServer(){
+
+
+	
+
+	
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {
