@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bytes"
+	
 	"fmt"
 	"net"
 	"os"
@@ -28,7 +28,7 @@ func main() {
  
 	connection.Read(request)
    
-	if bytes.Equal(request,[]byte("PING")){
-		  connection.Write([]byte("PONG"))
-	}
+	
+	connection.Write([]byte("+PONG\r\n"))
+	
 }
