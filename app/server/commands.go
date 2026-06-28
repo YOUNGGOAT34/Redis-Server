@@ -5,10 +5,14 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"sync"
 )
 
 
-var database =make(map[string]string)
+var (
+	database =make(map[string]string)
+	mu sync.RWMutex
+)
 
 /* 
   findCRLF returns the index of the first '\r' in the first CRLF sequence.
@@ -168,37 +172,73 @@ func parseRequest(request []byte) []byte{
 		  }
         
 
+ 
+		  
 
+		  return dispatchCommands(args)
+
+		 
+     
+}
+
+
+
+func compareBytes(a ,b []byte) bool{
+	   if bytes.EqualFold(a,b){
+			   return true
+		}
+
+		return false
+}
+
+
+func dispatchCommands(args [][]byte) []byte{
+	   
 		  if len(args)<1{
 			    return nil
 		  }
 
 
-
+        
 		  command:=args[0]
 
 
-		  if bytes.EqualFold(command,[]byte("ECHO")){
+		  if compareBytes(command,[]byte("ECHO")){
 			      if len(args)<2{
 						  return nil
 					}
 
 					return args[1]
-		  }else if bytes.EqualFold(command,[]byte("PING")){
+		  }else if compareBytes(command,[]byte("PING")){
 			       return  []byte("PONG")
-		  }else if bytes.EqualFold(command,[]byte("SET")){
+		  }else if compareBytes(command,[]byte("SET")){
 			          if len(args)<2{
 							   return nil
 						 }
 			          return setCommand(args[1:])
+		  }else if compareBytes(command,[]byte("GET")){
+			       return getCommand(args[1:])
 		  }
-			     
-		  
-
+   
 		  return nil
+			    
+}
 
-		 
-     
+func getCommand(arguments [][]byte) []byte {
+	   if len(arguments)<1{
+			  return []byte("Wrong number of arguments")
+		}
+
+		mu.RLock()
+      value,exists:=database[string(arguments[0])]
+		mu.RUnlock()
+
+		if exists{
+			     return []byte(value)
+		}
+
+
+		return []byte("")
 }
 
 func setCommand(arguments [][]byte) []byte {
@@ -214,7 +254,10 @@ func setCommand(arguments [][]byte) []byte {
 
 		*/
 
+		mu.Lock()
+
 		database[string(arguments[0])]=string(arguments[1])
+		mu.Unlock()
 
 		return []byte("OK")
 } 

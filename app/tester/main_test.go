@@ -57,6 +57,13 @@ func TestMain(t *testing.T) {
 	 Stage12_SetMultipleKeys(t)
 	 Stage13_SetLongValue(t)
 	 Stage14_SetConcurrentClients(t)
+	 stage15_GetBasic(t)
+	 stage16_GetMissingKey(t)
+	 stage17_GetOverwrite(t)
+	 stage18_GetMultipleKeys(t)
+	 stage19_GetLongValue(t)
+	 stage20_ConcurrentGets(t)
+	 
 	 
 	
 }

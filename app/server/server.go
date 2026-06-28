@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -11,9 +10,14 @@ import (
 
 
 func buildResponse(body []byte) []byte{
-	  if bytes.EqualFold(body,[]byte("PONG")) || bytes.EqualFold(body,[]byte("OK")){
+	  if compareBytes(body,[]byte("PONG")) || compareBytes(body,[]byte("OK")){
 		     return fmt.Appendf(nil, "+%s\r\n",body)
 	  }
+     
+	if compareBytes(body,[]byte("")){
+		     return fmt.Appendf(nil, "$-1\r\n")
+	}
+
 	  return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
 }
 
