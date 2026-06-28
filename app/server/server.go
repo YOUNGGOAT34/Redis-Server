@@ -10,12 +10,8 @@ import (
 )
 
 
-
-
-
-
 func buildResponse(body []byte) []byte{
-	  if bytes.EqualFold(body,[]byte("PONG")){
+	  if bytes.EqualFold(body,[]byte("PONG")) || bytes.EqualFold(body,[]byte("OK")){
 		     return fmt.Appendf(nil, "+%s\r\n",body)
 	  }
 	  return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
@@ -75,11 +71,6 @@ func accept(listener net.Listener) net.Conn{
 }
 
 func StartServer(){
-
-
-	
-
-	
 
 	l, err := net.Listen("tcp", "0.0.0.0:6379")
 	if err != nil {

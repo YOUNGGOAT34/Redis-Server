@@ -1,10 +1,9 @@
 package tester
 
 import (
-	"fmt"
+
 	"net"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -53,6 +52,12 @@ func TestMain(t *testing.T) {
     stage7_EchoMultipleRequestsSameConnection(t)
     stage8_PingThenEcho(t)
     stage9_ConcurrentEcho(t)
+	 Stage10_SetBasic(t)
+	 Stage11_SetOverwrite(t)
+	 Stage12_SetMultipleKeys(t)
+	 Stage13_SetLongValue(t)
+	 Stage14_SetConcurrentClients(t)
+	 
 	
 }
 
@@ -102,199 +107,4 @@ func send(conn net.Conn, req string) string {
 	return string(buf[:n])
 }
 
-// ---------------- TESTS ----------------
 
-func stage1_PingOnce(t *testing.T) {
-	stage("STAGE 1: PING ONCE")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	info("sending PING")
-
-	resp := send(conn, "*1\r\n$4\r\nPING\r\n")
-
-	if resp != "+PONG\r\n" {
-		fail("expected +PONG, got " + resp)
-		t.Fatalf("test failed")
-	}
-
-	pass("PING → PONG OK")
-}
-
-func stage2_MultiplePingSameConnection(t *testing.T) {
-	stage("STAGE 2: MULTIPLE PING (SAME CONNECTION)")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	for i := 0; i < 10; i++ {
-		resp := send(conn, "*1\r\n$4\r\nPING\r\n")
-
-		if resp != "+PONG\r\n" {
-			fail("iteration failed at index " + string(rune(i)))
-			t.Fatalf("failed")
-		}
-	}
-
-	pass("multiple PINGs on same connection OK")
-}
-
-func stage3_MultipleClients(t *testing.T) {
-	stage("STAGE 3: MULTIPLE CLIENTS")
-
-	client := func() {
-		conn := dial(t)
-		defer conn.Close()
-
-		for i := 0; i < 10; i++ {
-			resp := send(conn, "*1\r\n$4\r\nPING\r\n")
-
-			if resp != "+PONG\r\n" {
-				return
-			}
-		}
-	}
-
-	for i := 0; i < 5; i++ {
-		go client()
-	}
-
-	time.Sleep(1 * time.Second)
-
-	pass("concurrent clients OK")
-}
-
-func stage4_ClientDisconnect(t *testing.T) {
-	stage("STAGE 4: CLIENT DISCONNECT")
-
-	conn := dial(t)
-
-	_, _ = conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
-	conn.Close()
-
-	time.Sleep(100 * time.Millisecond)
-
-	pass("disconnect handled safely")
-}
-
-
-func stage5_EchoBasic(t *testing.T) {
-	stage("STAGE 5: ECHO BASIC")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	resp := send(conn, "*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n")
-
-	expected := "$3\r\nhey\r\n"
-
-	if resp != expected {
-		failf(t, "expected %q got %q", expected, resp)
-	}
-
-	pass("basic ECHO OK")
-}
-
-func stage6_EchoLongString(t *testing.T) {
-	stage("STAGE 6: LONG ECHO")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	msg := "abcdefghijklmnopqrstuvwxyz12345678"
-
-	req := fmt.Sprintf("*2\r\n$4\r\nECHO\r\n$%d\r\n%s\r\n", len(msg), msg)
-	expected := fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)
-
-	resp := send(conn, req)
-
-	if resp != expected {
-		failf(t, "expected %q got %q", expected, resp)
-	}
-
-	pass("multi-digit bulk string length OK")
-}
-
-func stage7_EchoMultipleRequestsSameConnection(t *testing.T) {
-	stage("STAGE 7: MULTIPLE ECHO (SAME CONNECTION)")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	tests := []string{
-		"hello",
-		"redis",
-		"codecrafters",
-		"golang",
-	}
-
-	for _, msg := range tests {
-		req := fmt.Sprintf("*2\r\n$4\r\nECHO\r\n$%d\r\n%s\r\n", len(msg), msg)
-		expected := fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)
-
-		resp := send(conn, req)
-
-		if resp != expected {
-			failf(t, "expected %q got %q", expected, resp)
-		}
-	}
-
-	pass("multiple ECHOs on same connection OK")
-}
-
-func stage8_PingThenEcho(t *testing.T) {
-	stage("STAGE 8: PING + ECHO")
-
-	conn := dial(t)
-	defer conn.Close()
-
-	resp := send(conn, "*1\r\n$4\r\nPING\r\n")
-	if resp != "+PONG\r\n" {
-		failf(t, "expected +PONG got %q", resp)
-	}
-
-	resp = send(conn, "*2\r\n$4\r\nECHO\r\n$5\r\nhello\r\n")
-	if resp != "$5\r\nhello\r\n" {
-		failf(t, "expected bulk string got %q", resp)
-	}
-
-	resp = send(conn, "*1\r\n$4\r\nPING\r\n")
-	if resp != "+PONG\r\n" {
-		failf(t, "expected +PONG got %q", resp)
-	}
-
-	pass("PING and ECHO coexist OK")
-}
-
-func stage9_ConcurrentEcho(t *testing.T) {
-	stage("STAGE 9: CONCURRENT ECHO")
-
-	var wg sync.WaitGroup
-
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
-
-		go func(id int) {
-			defer wg.Done()
-
-			conn := dial(t)
-			defer conn.Close()
-
-			msg := fmt.Sprintf("client-%d", id)
-
-			req := fmt.Sprintf("*2\r\n$4\r\nECHO\r\n$%d\r\n%s\r\n", len(msg), msg)
-			expected := fmt.Sprintf("$%d\r\n%s\r\n", len(msg), msg)
-
-			resp := send(conn, req)
-
-			if resp != expected {
-				failf(t, "client %d expected %q got %q", id, expected, resp)
-			}
-		}(i)
-	}
-
-	wg.Wait()
-
-	pass("100 concurrent clients OK")
-}

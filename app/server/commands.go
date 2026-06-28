@@ -8,6 +8,7 @@ import (
 )
 
 
+var database =make(map[string]string)
 
 /* 
   findCRLF returns the index of the first '\r' in the first CRLF sequence.
@@ -172,14 +173,24 @@ func parseRequest(request []byte) []byte{
 			    return nil
 		  }
 
-		  if bytes.EqualFold(args[0],[]byte("ECHO")){
+
+
+		  command:=args[0]
+
+
+		  if bytes.EqualFold(command,[]byte("ECHO")){
 			      if len(args)<2{
 						  return nil
 					}
 
 					return args[1]
-		  }else if bytes.EqualFold(args[0],[]byte("PING")){
+		  }else if bytes.EqualFold(command,[]byte("PING")){
 			       return  []byte("PONG")
+		  }else if bytes.EqualFold(command,[]byte("SET")){
+			          if len(args)<2{
+							   return nil
+						 }
+			          return setCommand(args[1:])
 		  }
 			     
 		  
@@ -188,6 +199,24 @@ func parseRequest(request []byte) []byte{
 
 		 
      
+}
+
+func setCommand(arguments [][]byte) []byte {
+	   if len(arguments)<2 {
+			   return []byte("Wrong number of arguments")
+		}
+
+	
+		/*
+
+		  Arguments[0]-->key
+		  Arguments[1]-->value
+
+		*/
+
+		database[string(arguments[0])]=string(arguments[1])
+
+		return []byte("OK")
 } 
 
 
