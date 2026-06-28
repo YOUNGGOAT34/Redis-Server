@@ -63,6 +63,12 @@ func TestMain(t *testing.T) {
 	 stage18_GetMultipleKeys(t)
 	 stage19_GetLongValue(t)
 	 stage20_ConcurrentGets(t)
+	 stage21_SetEX(t)
+	 stage22_EXExpires(t)
+	 stage23_SetPX(t)
+	 stage24_PXExpires(t)
+	 stage25_OverwriteRemovesOldExpiry(t)
+	 stage26_ConcurrentExpiry(t)
 	 
 	 
 	

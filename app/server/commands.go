@@ -6,12 +6,18 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 )
 
 
 var (
 	database =make(map[string]string)
-	mu sync.RWMutex
+	databaseMutex sync.RWMutex
+)
+
+var (
+	   expiry=make(map[string] time.Time)
+		expiryMutex sync.RWMutex
 )
 
 /* 
@@ -229,9 +235,26 @@ func getCommand(arguments [][]byte) []byte {
 			  return []byte("Wrong number of arguments")
 		}
 
-		mu.RLock()
+
+		expiryMutex.Lock()
+
+		expires,exists:=expiry[string(arguments[0])];
+
+		if exists{
+			    if time.Now().After(expires){
+					   databaseMutex.Lock()
+						delete (database,string(arguments[0]))
+						databaseMutex.Unlock()
+						delete (expiry,string(arguments[0]))
+				 }
+		}
+
+		expiryMutex.Unlock() 
+
+
+		databaseMutex.RLock()
       value,exists:=database[string(arguments[0])]
-		mu.RUnlock()
+		databaseMutex.RUnlock()
 
 		if exists{
 			     return []byte(value)
@@ -240,6 +263,7 @@ func getCommand(arguments [][]byte) []byte {
 
 		return []byte("")
 }
+
 
 func setCommand(arguments [][]byte) []byte {
 	   if len(arguments)<2 {
@@ -253,22 +277,62 @@ func setCommand(arguments [][]byte) []byte {
 		  Arguments[1]-->value
 
 		*/
+   
 
-		mu.Lock()
+		expiryMutex.Lock()
+		delete (expiry,string(arguments[0]))
+		expiryMutex.Unlock() 
 
+
+       
+		if len(arguments)>2{
+			    if compareBytes(arguments[2],[]byte("EX")) || compareBytes(arguments[2],[]byte("PX")){
+					     if len(arguments)<4{
+							  return []byte("")
+						  } 
+						  
+						  if compareBytes(arguments[2],[]byte("EX")){
+							   
+							    timeInSeconds,err:=strconv.Atoi(string(arguments[3]))
+								 if err!=nil{
+									 return []byte("Error invalid expiry time")
+									}
+
+
+                           expiryMutex.Lock()
+
+									duration:=time.Duration(timeInSeconds)*time.Second
+									expiresAt:=time.Now().Add(duration)
+									expiry[string(arguments[0])]=expiresAt
+
+									expiryMutex.Unlock()
+
+						  }else if compareBytes(arguments[2],[]byte("PX")){
+								timeInMilliSeconds,err:=strconv.Atoi(string(arguments[3]))
+								if err!=nil{
+									return []byte("Error invalid expiry time")
+								}
+  
+								 expiryMutex.Lock()
+								 duration:=time.Duration(timeInMilliSeconds)*time.Millisecond
+								 expiresAt:=time.Now().Add(duration)
+								 expiry[string(arguments[0])]=expiresAt
+								 expiryMutex.Unlock()
+						  }
+				 }
+		}
+
+
+		databaseMutex.Lock()
 		database[string(arguments[0])]=string(arguments[1])
-		mu.Unlock()
+		databaseMutex.Unlock()
 
 		return []byte("OK")
+
 } 
 
 
 
 
-// func echoCommand(request []byte){
-          
-// 		  //*2 
-// 		  //\r\n$4\r\nECHO\r\n$5\r\nhello\r\n
-// }
 
 
