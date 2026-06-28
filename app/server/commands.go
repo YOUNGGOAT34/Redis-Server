@@ -11,7 +11,7 @@ import (
 
 
 var (
-	database =make(map[string]string)
+	database =make(map[string]Data)
 	databaseMutex sync.RWMutex
 )
 
@@ -58,9 +58,12 @@ func getHeaderAndBody(request []byte) (header,body []byte){
 	Each bulk string is extracted and stored in args for dispatch.
  */
 
-func parseRequest(request []byte) []byte{
+func parseRequest(request []byte) Response{
         if len(request)<1{
-			  return nil
+			  return Response{
+				 Body:nil,
+				 Type:NIL,
+			  }
 		  }   
    
 		  
@@ -71,7 +74,10 @@ func parseRequest(request []byte) []byte{
 
 	
 		  if header==nil{
-			   return nil
+			   return Response{
+					 Body:nil,
+					 Type:NIL,
+				}
 		  }
 
 
@@ -96,7 +102,10 @@ func parseRequest(request []byte) []byte{
 		  size,err:=strconv.Atoi(string(header[1:index]))
 
 		  if err!=nil{
-			   return nil
+			   return Response{
+					 Body:nil,
+					 Type:NIL,
+				}
 		  }
 
 
@@ -108,7 +117,10 @@ func parseRequest(request []byte) []byte{
 
 				if len(body)<5{
 					   fmt.Fprint(os.Stderr,"Malformed body\n");
-						return nil
+						return Response{
+							  Body:nil,
+							  Type:NIL,
+						}
 				 }
 
 				 /* 
@@ -140,7 +152,10 @@ func parseRequest(request []byte) []byte{
 			    elementSize,err:=strconv.Atoi(string(digits))
 				 if err!=nil{
 					   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
-						return nil
+						return Response{
+							 Body:nil,
+							 Type:NIL,
+						}
 				 }
 
 
@@ -172,19 +187,15 @@ func parseRequest(request []byte) []byte{
 				}else{
 
 					  fmt.Fprintf(os.Stderr,"Malformed erro\n")
-					  return nil
+					  return Response{
+						          Body:nil,
+									 Type:NIL,
+					  }
 				}
 
 		  }
         
-
- 
-		  
-
 		  return dispatchCommands(args)
-
-		 
-     
 }
 
 
@@ -198,10 +209,13 @@ func compareBytes(a ,b []byte) bool{
 }
 
 
-func dispatchCommands(args [][]byte) []byte{
+func dispatchCommands(args [][]byte) Response{
 	   
 		  if len(args)<1{
-			    return nil
+			    return Response{
+					Body:nil,
+					Type:NIL,
+				}
 		  }
 
 
@@ -211,28 +225,46 @@ func dispatchCommands(args [][]byte) []byte{
 
 		  if compareBytes(command,[]byte("ECHO")){
 			      if len(args)<2{
-						  return nil
+						  return Response{
+							Body:nil,
+							Type:NIL,
+						}
 					}
 
-					return args[1]
+					return Response{
+						Body:args[1],
+						Type:BULK_STRING,
+					}
 		  }else if compareBytes(command,[]byte("PING")){
-			       return  []byte("PONG")
+			       return  Response{
+						Body:[]byte("PONG"),
+						Type:SIMPLE_STRING,
+					 }
 		  }else if compareBytes(command,[]byte("SET")){
 			          if len(args)<2{
-							   return nil
+							   return Response{
+									Body:nil,
+									Type:NIL,
+								}
 						 }
 			          return setCommand(args[1:])
 		  }else if compareBytes(command,[]byte("GET")){
 			       return getCommand(args[1:])
 		  }
    
-		  return nil
+		  return Response{
+			   Body:nil,
+				Type:NIL,
+			}
 			    
 }
 
-func getCommand(arguments [][]byte) []byte {
+func getCommand(arguments [][]byte) Response {
 	   if len(arguments)<1{
-			  return []byte("Wrong number of arguments")
+			  return Response{
+				Body:[]byte("Wrong number of arguments"),
+				Type:ERROR,
+			  }
 		}
 
 
@@ -253,21 +285,39 @@ func getCommand(arguments [][]byte) []byte {
 
 
 		databaseMutex.RLock()
-      value,exists:=database[string(arguments[0])]
+      dataObject,exists:=database[string(arguments[0])]
 		databaseMutex.RUnlock()
 
 		if exists{
-			     return []byte(value)
+			     
+			     if dataObject.Type!="String"{
+					     return Response{
+							Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
+							Type:ERROR,
+						  }
+				  }
+
+				  value:=dataObject.Value.(string)
+			     return Response{
+					    Body:[]byte(value),
+						 Type:BULK_STRING,
+				  }
 		}
 
-
-		return []byte("")
+      
+		return Response{
+			  Body:nil,
+			  Type:NIL,
+		}
 }
 
 
-func setCommand(arguments [][]byte) []byte {
+func setCommand(arguments [][]byte) Response {
 	   if len(arguments)<2 {
-			   return []byte("Wrong number of arguments")
+			   return Response{
+					Body:[]byte("Wrong number of arguments"),
+					Type:ERROR,
+				}
 		}
 
 	
@@ -288,14 +338,20 @@ func setCommand(arguments [][]byte) []byte {
 		if len(arguments)>2{
 			    if compareBytes(arguments[2],[]byte("EX")) || compareBytes(arguments[2],[]byte("PX")){
 					     if len(arguments)<4{
-							  return []byte("")
+							  return Response{
+								     Body:[]byte(""),
+									  Type:BULK_STRING,
+							     }
 						  } 
 						  
 						  if compareBytes(arguments[2],[]byte("EX")){
 							   
 							    timeInSeconds,err:=strconv.Atoi(string(arguments[3]))
 								 if err!=nil{
-									 return []byte("Error invalid expiry time")
+									 return Response{
+										   Body:[]byte("Error invalid expiry time"),
+											Type:ERROR,
+									 }
 									}
 
 
@@ -310,7 +366,10 @@ func setCommand(arguments [][]byte) []byte {
 						  }else if compareBytes(arguments[2],[]byte("PX")){
 								timeInMilliSeconds,err:=strconv.Atoi(string(arguments[3]))
 								if err!=nil{
-									return []byte("Error invalid expiry time")
+									return Response{
+										     Body:[]byte("Error invalid expiry time"),
+											  Type:ERROR,
+									}
 								}
   
 								 expiryMutex.Lock()
@@ -323,11 +382,20 @@ func setCommand(arguments [][]byte) []byte {
 		}
 
 
+		var dataObject Data
+
+		dataObject.Type="String"
+		dataObject.Value=string(arguments[1])
+
+
 		databaseMutex.Lock()
-		database[string(arguments[0])]=string(arguments[1])
+		database[string(arguments[0])]=dataObject
 		databaseMutex.Unlock()
 
-		return []byte("OK")
+		return Response{
+			   Body:[]byte("OK"),
+				Type:SIMPLE_STRING,
+		  }
 
 } 
 

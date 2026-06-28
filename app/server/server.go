@@ -8,17 +8,32 @@ import (
 	"strings"
 )
 
+//responsible for resp encoding
+func buildResponse(res Response) []byte{
 
-func buildResponse(body []byte) []byte{
-	  if compareBytes(body,[]byte("PONG")) || compareBytes(body,[]byte("OK")){
-		     return fmt.Appendf(nil, "+%s\r\n",body)
-	  }
-     
-	if compareBytes(body,[]byte("")){
-		     return fmt.Appendf(nil, "$-1\r\n")
+   body:=res.Body
+
+	switch res.Type{
+		   
+				case  ERROR:
+						return fmt.Appendf(nil, "-%s\r\n",body)
+				case SIMPLE_STRING:
+					   return fmt.Appendf(nil, "+%s\r\n",body)
+
+				case NIL:
+					   
+						return fmt.Appendf(nil, "$-1\r\n")
+
+				case BULK_STRING:
+					   
+						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+
+				default :
+				      
+						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+
 	}
-
-	  return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+	 
 }
 
 
@@ -46,12 +61,7 @@ func handleClient(conn net.Conn){
 				 
 	         response:=parseRequest(request[:bytesRead])
 
-		
-				if response==nil{
-					  return
-				}
-			 
-	 
+	
 				_,err=conn.Write(buildResponse(response))
 
 				if err!=nil{
