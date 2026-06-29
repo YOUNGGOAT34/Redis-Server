@@ -22,8 +22,9 @@ func encodeRespArray(elements [][]byte) []byte{
 
 
 func lRangeCommand(arguments [][]byte) Response {
+
 	   
-	   if len(arguments)<3 || len(arguments)>3{
+	   if len(arguments)!=3{
 			      return Response{
 						   Body:[]byte("Error: Wrong number of arguments passed to lrange command"),
 							Type: ERROR,
@@ -75,15 +76,23 @@ func lRangeCommand(arguments [][]byte) Response {
 				 elements:=data.Value.([][]byte)
 
 
+				 if len(elements)==0{
+					    return Response{
+										Body:encodeRespArray([][]byte{}),
+										Type:ARRAY,
+							}
+				 }
+
+
 				 if startIndex<0{
 					   startIndex=len(elements)+startIndex
 				 }
 
 				
-				 if startIndex>=len(elements) || (startIndex>endIndex && endIndex>=0) {
+				 if startIndex>=len(elements) {
 					            
 									return Response{
-										Body:[]byte(""),
+										Body:encodeRespArray([][]byte{}),
 										Type:ARRAY,
 							}
 
@@ -98,6 +107,23 @@ func lRangeCommand(arguments [][]byte) Response {
 				
 				 if endIndex<0{
 					   endIndex=len(elements)+endIndex
+				 }
+
+
+				 if startIndex<0{
+					   startIndex=0
+				 }
+
+				 if endIndex<0{
+					   endIndex=0
+				 }
+
+
+				 if startIndex>endIndex{
+					     return Response{
+										Body:encodeRespArray([][]byte{}),
+										Type:ARRAY,
+							}
 				 }
 
 				 
