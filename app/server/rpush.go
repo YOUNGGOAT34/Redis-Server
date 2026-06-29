@@ -79,10 +79,9 @@ func rPushCommand(arguments [][]byte) Response {
 
 	var dataObject Data
 	dataObject.Type="List"
-	
 	dataObject.Value=data
-	database[string(key)]=dataObject
 
+	database[string(key)]=dataObject
 	
 	var buf [32]byte
 

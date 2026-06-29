@@ -154,8 +154,8 @@ func parseRequest(request []byte) Response{
 				 // Convert the ASCII digits ("34") into an integer.
 			    elementSize,err:=strconv.Atoi(string(digits))
 				 if err!=nil{
-					  
-					   fmt.Println(index)
+					    fmt.Printf("Here\n")
+					   
 					   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
 						return Response{
 							 Body:nil,
@@ -183,8 +183,11 @@ func parseRequest(request []byte) Response{
            
 				if elementSize+offset<=len(body){
 					// Extract the payload and advance the body to the next bulk string.
+
                arg:=body[offset:elementSize+offset]
-					args=append(args,arg)
+					argCopy:=make([]byte,len(arg))
+					copy(argCopy,arg)
+					args=append(args,argCopy)
 					body=body[offset+elementSize:]
 					
 				}else{

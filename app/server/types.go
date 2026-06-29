@@ -17,6 +17,7 @@ const (
 	  BULK_STRING
 	  NIL
 	  INTEGER
+	  ARRAY
 )
 
 type Response struct{

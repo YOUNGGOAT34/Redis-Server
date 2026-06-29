@@ -22,7 +22,7 @@ func stage5_EchoBasic(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	resp := send(conn, "*2\r\n$4\r\nECHO\r\n$3\r\nhey\r\n")
+	resp := send(conn, "*2\r\n$4\r\nECHo\r\n$3\r\nhey\r\n")
 
 	expected := "$3\r\nhey\r\n"
 

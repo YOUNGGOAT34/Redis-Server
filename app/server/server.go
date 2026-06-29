@@ -28,8 +28,10 @@ func buildResponse(res Response) []byte{
 					   
 						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
 				case INTEGER:
-					   
 						return fmt.Appendf(nil, ":%s\r\n",body)
+				case ARRAY:
+					   //a resp array is already encoded from the parser
+						return res.Body
 					   
 
 				default :

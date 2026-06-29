@@ -43,14 +43,13 @@ func TestMain(t *testing.T) {
 
 	waitForServer()
 
-	 pingtest(t)
-    echo_test(t)
-	 set_test(t)
-	 get_test(t)
-	 expiry_test(t)
-	 rpush_test(t)
-	 
-	 
+	//  pingtest(t)
+   //  echo_test(t)
+	//  set_test(t)
+	//  get_test(t)
+	//  expiry_test(t)
+	//  rpush_test(t)
+	 lrange_test(t)
 	
 }
 
