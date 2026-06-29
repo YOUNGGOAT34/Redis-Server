@@ -112,6 +112,7 @@ func parseRequest(request []byte) Response{
 
 		  // Extract each RESP bulk string from the request body.
 		  
+		  
 		  for i:=0;i<size;i++{
 			  
 
@@ -134,7 +135,6 @@ func parseRequest(request []byte) Response{
 					  */
 
 				index:=4
-
 				 
 				 for index<len(body){
 
@@ -147,10 +147,15 @@ func parseRequest(request []byte) Response{
 				 
 				
 
+				 
+
 				 digits:=body[3:index]
+				 
 				 // Convert the ASCII digits ("34") into an integer.
 			    elementSize,err:=strconv.Atoi(string(digits))
 				 if err!=nil{
+					  
+					   fmt.Println(index)
 					   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
 						return Response{
 							 Body:nil,
@@ -158,7 +163,7 @@ func parseRequest(request []byte) Response{
 						}
 				 }
 
-
+            
 				/*
 
 				   Number of bytes before the payload.
@@ -178,12 +183,10 @@ func parseRequest(request []byte) Response{
            
 				if elementSize+offset<=len(body){
 					// Extract the payload and advance the body to the next bulk string.
-               arg:=body[5+len(digits):elementSize+offset]
+               arg:=body[offset:elementSize+offset]
 					args=append(args,arg)
 					body=body[offset+elementSize:]
 					
-
-
 				}else{
 
 					  fmt.Fprintf(os.Stderr,"Malformed erro\n")

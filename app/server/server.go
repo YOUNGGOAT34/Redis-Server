@@ -27,10 +27,14 @@ func buildResponse(res Response) []byte{
 				case BULK_STRING:
 					   
 						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+				case INTEGER:
+					   
+						return fmt.Appendf(nil, ":%s\r\n",body)
+					   
 
 				default :
 				      
-						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
+						panic("Unknown Response type")
 
 	}
 	 

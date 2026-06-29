@@ -6,6 +6,14 @@ import (
 	"testing"
 )
 
+func set_test(t * testing.T){
+	 Stage10_SetBasic(t)
+	 Stage11_SetOverwrite(t)
+	 Stage12_SetMultipleKeys(t)
+	 Stage13_SetLongValue(t)
+	 Stage14_SetConcurrentClients(t)
+}
+
 
 func Stage10_SetBasic(t *testing.T) {
 	stage("STAGE 10: SET BASIC")

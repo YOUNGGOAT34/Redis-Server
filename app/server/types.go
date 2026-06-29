@@ -16,6 +16,7 @@ const (
 	  SIMPLE_STRING
 	  BULK_STRING
 	  NIL
+	  INTEGER
 )
 
 type Response struct{

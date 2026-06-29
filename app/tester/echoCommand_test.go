@@ -7,6 +7,14 @@ import (
 )
 
 
+func echo_test(t *testing.T){
+	 stage5_EchoBasic(t)
+    stage6_EchoLongString(t)
+    stage7_EchoMultipleRequestsSameConnection(t)
+    stage8_PingThenEcho(t)
+    stage9_ConcurrentEcho(t)
+}
+
 
 func stage5_EchoBasic(t *testing.T) {
 	stage("STAGE 5: ECHO BASIC")

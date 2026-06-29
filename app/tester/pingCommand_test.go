@@ -6,6 +6,13 @@ import (
 )
 
 
+func pingtest(t *testing.T){
+	   stage1_PingOnce(t)
+		stage2_MultiplePingSameConnection(t)
+		stage3_MultipleClients(t)
+		stage4_ClientDisconnect(t)
+}
+
 func stage1_PingOnce(t *testing.T) {
 	stage("STAGE 1: PING ONCE")
 

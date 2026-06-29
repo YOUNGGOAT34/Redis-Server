@@ -43,6 +43,8 @@ func dispatchCommands(args [][]byte) Response{
 			          return setCommand(args[1:])
 		  }else if compareBytes(command,[]byte("GET")){
 			       return getCommand(args[1:])
+		  }else if compareBytes(command,[]byte("RPUSH")){
+			       return rPushCommand(args[1:])
 		  }
    
 		  return Response{
@@ -51,3 +53,5 @@ func dispatchCommands(args [][]byte) Response{
 			}
 			    
 }
+
+

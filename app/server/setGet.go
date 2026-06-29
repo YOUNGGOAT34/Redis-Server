@@ -10,7 +10,7 @@ import (
 func getCommand(arguments [][]byte) Response {
 	   if len(arguments)<1{
 			  return Response{
-				Body:[]byte("Wrong number of arguments"),
+				Body:[]byte("Wrong number of arguments for 'GET' command"),
 				Type:ERROR,
 			  }
 		}
@@ -63,7 +63,7 @@ func getCommand(arguments [][]byte) Response {
 func setCommand(arguments [][]byte) Response {
 	   if len(arguments)<2 {
 			   return Response{
-					Body:[]byte("Wrong number of arguments"),
+					Body:[]byte("Wrong number of arguments for 'SET' command"),
 					Type:ERROR,
 				}
 		}
@@ -126,16 +126,23 @@ func setCommand(arguments [][]byte) Response {
 								 expiry[string(arguments[0])]=expiresAt
 								 expiryMutex.Unlock()
 						  }
+				 }else{
+
+					    return Response{
+
+										     Body:[]byte("Syntax error:Unknown option"),
+											  Type:ERROR,
+									}
+					   
 				 }
 		}
 
 
 		var dataObject Data
-
+  
 		dataObject.Type="String"
 		dataObject.Value=string(arguments[1])
-
-
+       
 		databaseMutex.Lock()
 		database[string(arguments[0])]=dataObject
 		databaseMutex.Unlock()

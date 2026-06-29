@@ -8,6 +8,17 @@ import (
 )
 
 
+
+func expiry_test(t *testing.T){
+	 stage21_SetEX(t)
+	 stage22_EXExpires(t)
+	 stage23_SetPX(t)
+	 stage24_PXExpires(t)
+	 stage25_OverwriteRemovesOldExpiry(t)
+	 stage26_ConcurrentExpiry(t)
+}
+
+
 func stage21_SetEX(t *testing.T) {
 	stage("STAGE 21: SET EX")
 

@@ -6,6 +6,16 @@ import (
 	"testing"
 )
 
+
+func get_test(t *testing.T){
+	 stage15_GetBasic(t)
+	 stage16_GetMissingKey(t)
+	 stage17_GetOverwrite(t)
+	 stage18_GetMultipleKeys(t)
+	 stage19_GetLongValue(t)
+	 stage20_ConcurrentGets(t)
+}
+
 func stage15_GetBasic(t *testing.T) {
 	stage("STAGE 15: GET BASIC")
 
