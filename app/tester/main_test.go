@@ -51,9 +51,9 @@ func TestMain(t *testing.T) {
 	 rpush_test(t)
 	 lrange_test(t)
 	lpush_test(t)
+	llen_test(t)
 	
 }
-
 
 
 func failf(t *testing.T, format string, args ...any) {

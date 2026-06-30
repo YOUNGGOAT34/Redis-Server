@@ -60,7 +60,8 @@ func dispatchCommands(args [][]byte) Response{
 					case "LPUSH":
 						return lpushCommand(args[1:])
 						
-
+               case "LLEN":
+						 return llenCommand(args[1:])
 					default:
 						return Response{
                           Body:[]byte("Error: Unknown command"),
@@ -74,6 +75,8 @@ func dispatchCommands(args [][]byte) Response{
 
 	    
 }
+
+
 
 
 

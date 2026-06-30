@@ -37,7 +37,6 @@ func buildResponse(res Response) []byte{
 				default :
 				      
 						panic("Unknown Response type")
-
 	}
 	 
 }
