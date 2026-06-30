@@ -154,7 +154,7 @@ func parseRequest(request []byte) Response{
 				 // Convert the ASCII digits ("34") into an integer.
 			    elementSize,err:=strconv.Atoi(string(digits))
 				 if err!=nil{
-					    fmt.Printf("Here\n")
+					    
 					   
 					   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
 						return Response{

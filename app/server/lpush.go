@@ -20,7 +20,7 @@ func lpushCommand(arguments [][]byte) Response{
 
 		  if exists{
              
-			    if data.Type!="List"{
+			    if data.Type!=LIST{
 
 								return Response{
 									Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
@@ -68,7 +68,7 @@ func lpushCommand(arguments [][]byte) Response{
 
 			
 		  var dataObject Data
-		  dataObject.Type="List"
+		  dataObject.Type=LIST
 		  dataObject.Value=list
 		  database[key]=dataObject
 

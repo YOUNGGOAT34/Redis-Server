@@ -38,7 +38,7 @@ func getCommand(arguments [][]byte) Response {
 
 		if exists{
 			     
-			     if dataObject.Type!="String"{
+			     if dataObject.Type!=STRING{
 					     return Response{
 							Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 							Type:ERROR,
@@ -140,7 +140,7 @@ func setCommand(arguments [][]byte) Response {
 
 		var dataObject Data
   
-		dataObject.Type="String"
+		dataObject.Type=STRING
 		dataObject.Value=string(arguments[1])
        
 		databaseMutex.Lock()

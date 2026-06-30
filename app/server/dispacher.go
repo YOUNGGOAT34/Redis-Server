@@ -62,14 +62,14 @@ func dispatchCommands(args [][]byte) Response{
 						
                case "LLEN":
 						 return llenCommand(args[1:])
+
+					case "LPOP":
+						 return lpopCommand(args[1:])
 					default:
 						return Response{
                           Body:[]byte("Error: Unknown command"),
 								  Type: ERROR,
 						}
-
-
-
 
 		  }
 

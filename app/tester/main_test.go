@@ -52,6 +52,7 @@ func TestMain(t *testing.T) {
 	 lrange_test(t)
 	lpush_test(t)
 	llen_test(t)
+	lpop_test(t)
 	
 }
 

@@ -12,7 +12,7 @@ import (
 func buildResponse(res Response) []byte{
 
    body:=res.Body
-
+    
 	switch res.Type{
 		   
 				case  ERROR:

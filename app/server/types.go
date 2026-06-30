@@ -3,11 +3,23 @@ package server
 /*
    
 */
+
+
+type TYPE int
+
+const(
+	  STRING TYPE=iota
+	  LIST
+)
+
 type Data struct{
 
-	    Type string
+	    Type TYPE
 		 Value any
 }
+
+
+
 
 type ResponseType int
 
@@ -80,4 +92,23 @@ func (list *List) PushBack(value []byte){
 		}
 
 		list.len++
+}
+
+
+func (list *List) LPop() []byte{
+  
+	  if list==nil || list.len==0{
+		    return nil
+	  }
+
+	  tmp:=list.Head
+	  list.Head=tmp.Next
+	  if list.Head!=nil{
+		  list.Head.Prev=nil 
+	  }else{
+		   list.Tail=nil
+	  }
+	  list.len--
+
+	  return tmp.data
 }

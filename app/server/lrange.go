@@ -102,7 +102,7 @@ func lRangeCommand(arguments [][]byte) Response {
 		if exists{
            
 		
-			    if data.Type!="List"{
+			    if data.Type!=LIST{
 								return Response{
 									Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 									Type:ERROR,
