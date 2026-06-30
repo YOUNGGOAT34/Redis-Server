@@ -1,8 +1,7 @@
 package server
 
 import (
-	"fmt"
-	"os"
+	
 	"strconv"
 )
 
@@ -37,49 +36,63 @@ func rPushCommand(arguments [][]byte) Response {
 
 	values:=arguments[1:]
 
-	
-   var data [][]byte
-
 	databaseMutex.Lock()
 	defer databaseMutex.Unlock()
 
-	list,exists:=database[string(key)]
+	data,exists:=database[string(key)]
 
 	if exists{
 
 
 		   
 
-		   if list.Type!="List"{
+		   if data.Type!="List"{
 				  return Response{
 					      Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 							Type:ERROR,
 				  }
 			}
 
+			list:=data.Value.(*List)
 
-			 var ok bool
-		    data,ok=list.Value.([][]byte)
-			 if !ok{
-				   fmt.Fprintf(os.Stderr,"Database corruption: Expected [][]byte for a list\n")
-				   return Response{
-						 Body:[]byte("Internal error"),
-						 Type:ERROR,
-					}
-			 }
-			 data=append(data, values...)
-			
-			 
-	}else {
+         
+			for _,value:=range values{
+				   list.PushBack(value)
+			}
+
+
+			var buf [32]byte
+
+			return Response{
 		  
-		  data=values
+		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
+			Type:INTEGER,
+			
+	}
+			 
 	}
 
 
+	node:=&Node{
+        data:values[0],
+	}
+
+	list :=&List{ 
+		   Head:node,
+			Tail: node,
+			len:1,
+	}
+
+
+  
+
+	for _,value:=range values[1:]{
+		  list.PushBack(value)
+	}
 
 	var dataObject Data
 	dataObject.Type="List"
-	dataObject.Value=data
+	dataObject.Value=list
 
 	database[string(key)]=dataObject
 	
@@ -87,7 +100,7 @@ func rPushCommand(arguments [][]byte) Response {
 
    return Response{
 		  
-		   Body:strconv.AppendInt(buf[:0],int64(len(data)),10),
+		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
 			Type:INTEGER,
 			
 	}

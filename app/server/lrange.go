@@ -8,14 +8,51 @@ import (
 )
 
 
-func encodeRespArray(elements [][]byte) []byte{
+func encodeRespArray(list *List,startIndex int,endIndex int) []byte{
 
 	 var respArray []byte
-	 respArray=fmt.Appendf(respArray,"*%d\r\n",len(elements))   
-	 for i:=0;i<len(elements);i++{
-		    element:=elements[i]
+
+	 count:=endIndex-startIndex+1
+
+	 respArray=fmt.Appendf(respArray,"*%d\r\n",count)  
+	 
+	 
+	 /*
+	     To find the starting node 
+		  A small optimization is:
+		  if the distance between the head and startIndex is less than 
+		  the distance between Tail and startIndex
+		  find the startIndex by traversing the list from head 
+		  otherwise find the start index by traversing from the tail backwards since it is a doubly linked list
+	 */
+	 
+    currentNode:=list.Head
+    currentIndex:=0
+
+	 if startIndex<=(list.len-1)-startIndex{
+        
+			 for currentNode!=nil && currentIndex!=startIndex{
+				      currentNode=currentNode.Next
+				      currentIndex+=1
+			 }
+
+	 }else{
+
+		    currentIndex=list.len-1
+			 currentNode=list.Tail
+			 for currentNode!=nil && currentIndex!=startIndex{
+				      currentNode=currentNode.Prev
+				      currentIndex--
+			 }
+		   
+	 }
+
+
+	 for i:=startIndex;i<=endIndex;i++{
+		    element:=currentNode.data
 			 
 			 respArray=fmt.Appendf(respArray,"$%d\r\n%s\r\n",len(element),element)
+			 currentNode=currentNode.Next
 	 }
 	 return respArray
 }
@@ -57,7 +94,7 @@ func lRangeCommand(arguments [][]byte) Response {
 				}
 		}
 
-
+     
 		databaseMutex.RLock()
 		defer databaseMutex.RUnlock()
 		data,exists:=database[key]
@@ -73,26 +110,25 @@ func lRangeCommand(arguments [][]byte) Response {
 				 }
 
 				  
-				 elements:=data.Value.([][]byte)
-
-
-				 if len(elements)==0{
+				 list:=data.Value.(*List)
+             
+				 if list==nil || list.len==0{
 					    return Response{
-										Body:encodeRespArray([][]byte{}),
+										Body:[]byte("*0\r\n"),
 										Type:ARRAY,
 							}
 				 }
 
 
 				 if startIndex<0{
-					   startIndex=len(elements)+startIndex
+					   startIndex=list.len+startIndex
 				 }
 
 				
-				 if startIndex>=len(elements) {
+				 if startIndex>=list.len {
 					            
 									return Response{
-										Body:encodeRespArray([][]byte{}),
+										Body:[]byte("*0\r\n"),
 										Type:ARRAY,
 							}
 
@@ -100,13 +136,13 @@ func lRangeCommand(arguments [][]byte) Response {
 				 }
 
 				 
-				 if endIndex>=len(elements){
-					     endIndex=len(elements)-1
+				 if endIndex>=list.len{
+					     endIndex=list.len-1
 				 }
       
 				
 				 if endIndex<0{
-					   endIndex=len(elements)+endIndex
+					   endIndex=list.len+endIndex
 				 }
 
 
@@ -121,7 +157,7 @@ func lRangeCommand(arguments [][]byte) Response {
 
 				 if startIndex>endIndex{
 					     return Response{
-										Body:encodeRespArray([][]byte{}),
+										Body:[]byte("*0\r\n"),
 										Type:ARRAY,
 							}
 				 }
@@ -129,7 +165,7 @@ func lRangeCommand(arguments [][]byte) Response {
 				 
 				 return Response{
 					     
-					      Body:encodeRespArray(elements[startIndex:endIndex+1]),
+					      Body:encodeRespArray(list,startIndex,endIndex),
 							Type:ARRAY,
 				  }
 		 
@@ -137,7 +173,7 @@ func lRangeCommand(arguments [][]byte) Response {
 
 
 	return Response{
-					      Body:encodeRespArray([][]byte{}),
-							Type:ARRAY,
-				  }
+					Body:[]byte("*0\r\n"),
+					Type:ARRAY,
+							}
 }

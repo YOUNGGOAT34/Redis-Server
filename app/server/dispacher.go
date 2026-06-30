@@ -57,6 +57,8 @@ func dispatchCommands(args [][]byte) Response{
 
 					case "LRANGE":
 						return lRangeCommand(args[1:])
+					case "LPUSH":
+						return lpushCommand(args[1:])
 						
 
 					default:

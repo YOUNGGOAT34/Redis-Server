@@ -24,3 +24,60 @@ type Response struct{
 	   Body []byte
 		Type ResponseType
 }
+
+
+type Node struct{
+	   data []byte
+		Prev *Node
+		Next *Node
+}
+
+
+type List struct{
+	    Head *Node
+		 Tail *Node
+		 len int
+}
+
+
+func (list *List) PushFront(value []byte){
+	     
+	     node:=&Node{
+								  data:value,  
+							}
+
+							if list.Head!=nil{
+
+								tmp:=list.Head
+								node.Next=tmp
+								tmp.Prev=node
+								list.Head=node
+							}else{
+								  list.Head=node
+								  list.Tail=node
+				}
+			list.len++
+			
+}
+
+
+
+
+func (list *List) PushBack(value []byte){
+	   node:=&Node{
+			   data:value,
+		}
+
+		if list.Head!=nil{
+			  tmp:=list.Tail
+			  tmp.Next=node
+			  list.Tail=node
+			  node.Prev=tmp
+
+		}else{
+			  list.Head=node
+			  list.Tail=node
+		}
+
+		list.len++
+}
