@@ -70,6 +70,8 @@ func dispatchCommands(args [][]byte) Response{
 						  return blpopCommand(args[1:])
 					case "TYPE":
 						    return typeCommand(args[1:])
+					case "XADD":
+						    return xaddCommand(args[1:])
 					default:
 						return Response{
                           Body:[]byte("Error: Unknown command"),
@@ -78,6 +80,8 @@ func dispatchCommands(args [][]byte) Response{
 
 		  }
 }
+
+
 
 
 

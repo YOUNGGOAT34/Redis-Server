@@ -2,6 +2,7 @@ package server
 
 import (
 	"container/list"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -17,6 +18,7 @@ type TYPE int
 const(
 	  STRING TYPE=iota
 	  LIST
+	  STREAM
 )
 
 type Data struct{
@@ -132,4 +134,56 @@ func (list *List) LPop() []byte{
 	  list.len--
 
 	  return tmp.data
+}
+
+
+
+
+/*
+    Stream
+	 fields:
+	   Id
+		Entries(map)
+
+	Id:
+	   Time in milliseconds
+		Sequence of that exact time :i.e 0,1,2,3
+	          
+*/
+
+
+type StreamID struct{
+	   Milliseconds uint64
+		Sequence uint64
+}
+
+type StreamEntry struct{
+	    ID StreamID
+		 Fields map[string][]byte
+}
+
+
+type Stream struct{
+	   Entries []*StreamEntry
+		LastID StreamID
+		Len int
+}
+
+
+func (stream *Stream) NextID() StreamID{
+	   now:=uint64(time.Now().UnixMilli())
+
+		if now>stream.LastID.Milliseconds{
+			    stream.LastID.Milliseconds=now
+				 stream.LastID.Sequence=0
+		}else{
+			  stream.LastID.Sequence++
+		}
+
+		return stream.LastID
+}
+
+
+func (id StreamID) String()string{
+	   return  strconv.FormatUint(id.Milliseconds,10)+"-"+strconv.FormatUint(id.Sequence,10)
 }

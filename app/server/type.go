@@ -4,7 +4,7 @@ func typeCommand(arguments [][]byte) Response {
 	  if len(arguments)!=1{
 
 		    return Response{
-			    Body:[]byte("Wrong number of arguments for 'RPUSH' command"),
+			    Body:[]byte("Wrong number of arguments for 'TYPE' command"),
 				 Type:ERROR,
 
 		  }

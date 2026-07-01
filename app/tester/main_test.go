@@ -42,7 +42,7 @@ func TestMain(t *testing.T) {
 	go server.StartServer()
 
 	waitForServer()
-
+    
 	 pingtest(t)
     echo_test(t)
 	 set_test(t)
