@@ -2,6 +2,7 @@ package server
 
 import (
 	"container/list"
+	"errors"
 	"strconv"
 	"sync"
 	"time"
@@ -170,6 +171,7 @@ type Stream struct{
 }
 
 
+//auto generate the full id
 func (stream *Stream) NextID() StreamID{
 	   now:=uint64(time.Now().UnixMilli())
 
@@ -182,6 +184,38 @@ func (stream *Stream) NextID() StreamID{
 
 		return stream.LastID
 }
+
+//auto generate the sequence number
+
+func (stream *Stream) generateSequence(userSpecifiedId []byte) (StreamID,error){
+	 
+	     hyphenIndex:=0
+
+		  for index,char :=range userSpecifiedId{
+			        if char=='-'{
+						   hyphenIndex=index
+							break
+					  }
+		  }
+
+		  if hyphenIndex==0{
+			    return StreamID{},errors.New("Invalid stream id")
+		  }
+
+
+		 milliseconds,err:=strconv.ParseUint(string(userSpecifiedId[0:hyphenIndex]),10,64)
+
+		 if err!=nil{
+			   return StreamID{},err
+		 }
+
+		 return StreamID{
+			     Milliseconds: milliseconds,
+				  Sequence: uint64(stream.Len)+1,
+		 },err
+}
+
+
 
 
 func (id StreamID) String()string{

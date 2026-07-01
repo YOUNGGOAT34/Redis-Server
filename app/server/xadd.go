@@ -90,19 +90,73 @@ func xaddCommand(arguments [][]byte) Response {
 		
 		var Id StreamID
 
+     /* 
+	     The id format is millisecondsTime-sequence
+	      
+	      If the given id is just a * --> auto generate both the millisecondsTime portion and the  sequence portion
+			else if it is millisecondsTime-* --> auto generate the sequence number
+			else ---> use the specified id
+	  */
+
 		if string(arguments[1])=="*"{
 			     Id=stream.NextID()
 		}else{
 			    var err error
-			    Id,err=createStreamID(arguments[1])
 
-				 if err!=nil{
-					   return Response{
-							Body:[]byte("Invalid stream Id"),
+            if containsAsteric(arguments[1]){
+					     Id,err=stream.generateSequence(arguments[1])
+				}else{
+
+					Id,err=createStreamID(arguments[1])
+
+				}
+
+
+				if err!=nil{
+	
+						  return Response{
+							  Body:[]byte("Invalid stream Id"),
+							  Type:ERROR,
+							 }
+					}
+
+		}
+
+		/*
+		    Id validation
+			 0-0 is invalid
+          
+			 millisecondsTime portion of the new Id must be greater or equal to the last entry's  millisecondsTime
+			 If millisecondsTime values are equal the sequence number of the new id must be greater than the last entry's sequence number
+			
+		*/
+
+		if Id.Milliseconds==0 && Id.Sequence==0{
+			  return Response{
+							Body:[]byte("ERR The ID specified in XADD must be greater than 0-0"),
+							Type:ERROR,
+						  }
+		}
+
+		if Id.Milliseconds<stream.LastID.Milliseconds{
+			   return Response{
+							Body:[]byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
+							Type:ERROR,
+						  }
+		}
+
+		if Id.Milliseconds==stream.LastID.Milliseconds{
+			    if Id.Sequence<stream.LastID.Sequence || Id.Sequence==stream.LastID.Sequence{
+					      return Response{
+							Body:[]byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
 							Type:ERROR,
 						  }
 				 }
+
+				 
 		}
+
+
 
       fields:=make(map[string][]byte)
 
@@ -118,11 +172,20 @@ func xaddCommand(arguments [][]byte) Response {
 
       stream.LastID=Id
 		stream.Entries=append(stream.Entries, entry)
-     stream.Len++
+      stream.Len++
    
 		return Response{
 			   Body: []byte(Id.String()),
 				Type: BULK_STRING,
 		}
 
+}
+
+func containsAsteric(userSpecifiedId []byte) bool {
+	   for _,char :=range userSpecifiedId{
+			    if char=='*'{
+					   return true
+				 }
+		}
+	   return false
 }
