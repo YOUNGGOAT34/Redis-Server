@@ -53,6 +53,7 @@ func TestMain(t *testing.T) {
 	lpush_test(t)
 	llen_test(t)
 	lpop_test(t)
+	blpop_test(t)
 	
 }
 

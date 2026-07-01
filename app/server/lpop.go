@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-
-
 func encodeArray(body [][]byte) []byte{
 	   var respArray []byte
 	   respArray=fmt.Appendf(respArray,"*%d\r\n",len(body))
@@ -18,6 +16,7 @@ func encodeArray(body [][]byte) []byte{
 		
 		return respArray
 }
+
 
 func lpopCommand(arguments [][]byte) Response{
 

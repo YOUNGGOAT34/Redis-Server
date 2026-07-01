@@ -5,20 +5,11 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"sync"
-	"time"
+
 )
 
 
-var (
-	database =make(map[string]Data)
-	databaseMutex sync.RWMutex
-)
 
-var (
-	   expiry=make(map[string] time.Time)
-		expiryMutex sync.RWMutex
-)
 
 /* 
   findCRLF returns the index of the first '\r' in the first CRLF sequence.

@@ -1,9 +1,16 @@
 package server
 
-/*
-   
-*/
+import (
+	"container/list"
+	"sync"
+	"time"
+)
 
+/*
+
+ */
+
+ 
 
 type TYPE int
 
@@ -52,6 +59,23 @@ type List struct{
 }
 
 
+var (
+	blockedClients =make(map[string]*list.List)
+	blockedClientsMutex sync.RWMutex
+)
+
+
+var (
+	database =make(map[string]Data)
+	databaseMutex sync.RWMutex
+)
+
+var (
+	   expiry=make(map[string] time.Time)
+		expiryMutex sync.RWMutex
+)
+
+
 func (list *List) PushFront(value []byte){
 	     
 	     node:=&Node{
@@ -65,15 +89,13 @@ func (list *List) PushFront(value []byte){
 								tmp.Prev=node
 								list.Head=node
 							}else{
+
 								  list.Head=node
 								  list.Tail=node
 				}
 			list.len++
 			
 }
-
-
-
 
 func (list *List) PushBack(value []byte){
 	   node:=&Node{
@@ -93,8 +115,7 @@ func (list *List) PushBack(value []byte){
 
 		list.len++
 }
-
-
+ 
 func (list *List) LPop() []byte{
   
 	  if list==nil || list.len==0{

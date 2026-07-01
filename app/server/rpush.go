@@ -6,6 +6,46 @@ import (
 )
 
 
+func wakeUpWaitingClients(key string,values *[][]byte){
+	      blockedClientsMutex.Lock() 
+			
+
+			for len(*values)>0{
+
+
+				   q,ok:=blockedClients[key]
+
+					if!ok{
+
+						 break
+					}
+				   
+				   if front:=q.Front(); front!=nil{
+						   ch:=front.Value.(chan []byte)
+							q.Remove(front)
+							if q.Len()==0{
+								   delete(blockedClients,key)
+							}
+							blockedClientsMutex.Unlock()
+							res:=(*values)[0]
+							*values=(*values)[1:]
+							ch<-res
+                  
+					}else{
+					    delete(blockedClients,key)
+						  break
+					} 
+
+
+					blockedClientsMutex.Lock()
+					
+					
+			}
+
+			blockedClientsMutex.Unlock()
+}
+
+
 func rPushCommand(arguments [][]byte) Response {
 	if len(arguments)==0{
 		  return Response{
@@ -38,15 +78,16 @@ func rPushCommand(arguments [][]byte) Response {
 
 	databaseMutex.Lock()
 	defer databaseMutex.Unlock()
-
+	
 	data,exists:=database[string(key)]
 
 	if exists{
 
 
 		   
-
+         
 		   if data.Type!=LIST{
+				  
 				  return Response{
 					      Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 							Type:ERROR,
@@ -55,14 +96,15 @@ func rPushCommand(arguments [][]byte) Response {
 
 			list:=data.Value.(*List)
 
-         
+			wakeUpWaitingClients(string(arguments[0]),&values)
+
+
 			for _,value:=range values{
-				   list.PushBack(value)
+							list.PushBack(value)
 			}
 
-
+			
 			var buf [32]byte
-
 			return Response{
 		  
 		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
@@ -71,6 +113,24 @@ func rPushCommand(arguments [][]byte) Response {
 	}
 			 
 	}
+
+
+
+	wakeUpWaitingClients(string(arguments[0]),&values)
+
+
+
+	if len(values)==0{
+		  var buf [32]byte
+
+		  return Response{
+				
+					Body:strconv.AppendInt(buf[:0],0,10),
+					Type:INTEGER,
+					
+			}
+	}
+
 
 
 	node:=&Node{
@@ -84,8 +144,6 @@ func rPushCommand(arguments [][]byte) Response {
 	}
 
 
-  
-
 	for _,value:=range values[1:]{
 		  list.PushBack(value)
 	}
@@ -95,7 +153,7 @@ func rPushCommand(arguments [][]byte) Response {
 	dataObject.Value=list
 
 	database[string(key)]=dataObject
-	
+
 	var buf [32]byte
 
    return Response{
