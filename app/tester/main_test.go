@@ -54,6 +54,7 @@ func TestMain(t *testing.T) {
 	llen_test(t)
 	lpop_test(t)
 	blpop_test(t)
+	type_test(t)
 	
 }
 
