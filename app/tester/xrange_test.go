@@ -10,8 +10,8 @@ func xrange_test(t *testing.T) {
 	stage77_XRangeBasic(t)
 	stage78_XRangeSingleEntry(t)
 	stage79_XRangePartialRange(t)
-	// stage80_XRangeNoMatches(t)
-	// stage81_XRangeMissingKey(t)
+	stage80_XRangeNoMatches(t)
+	stage81_XRangeMissingKey(t)
 	// stage82_XRangeWrongType(t)
 	// stage83_XRangeWrongArguments(t)
 	// stage84_XRangeConcurrentReads(t)
@@ -124,9 +124,9 @@ func stage80_XRangeNoMatches(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-80\r\n$5\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-80\r\n$3\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
 
-	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-80\r\n$5\r\n9-0\r\n$6\r\n10-0\r\n")
+	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-80\r\n$3\r\n9-0\r\n$4\r\n10-0\r\n")
 
 	expected := "*0\r\n"
 
