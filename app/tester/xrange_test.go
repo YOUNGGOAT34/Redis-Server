@@ -8,8 +8,8 @@ import (
 
 func xrange_test(t *testing.T) {
 	stage77_XRangeBasic(t)
-	// stage78_XRangeSingleEntry(t)
-	// stage79_XRangePartialRange(t)
+	stage78_XRangeSingleEntry(t)
+	stage79_XRangePartialRange(t)
 	// stage80_XRangeNoMatches(t)
 	// stage81_XRangeMissingKey(t)
 	// stage82_XRangeWrongType(t)
@@ -66,13 +66,22 @@ func stage78_XRangeSingleEntry(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-78\r\n$5\r\n5-0\r\n$4\r\nname\r\n$4\r\ngoat\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-78\r\n$3\r\n5-0\r\n$4\r\nname\r\n$4\r\ngoat\r\n")
 
-	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-78\r\n$5\r\n5-0\r\n$5\r\n5-0\r\n")
+	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-78\r\n$3\r\n5-0\r\n$3\r\n5-0\r\n")
 
-	if len(resp) == 0 || resp[0] != '*' {
-		failf(t, "expected array got %q", resp)
-	}
+	expected :=
+	"*1\r\n" +
+	"*2\r\n" +
+	"$3\r\n5-0\r\n" +
+	"*2\r\n" +
+	"$4\r\nname\r\n" +
+	"$4\r\ngoat\r\n"
+
+
+	if resp != expected {
+			failf(t, "expected %q got %q", expected, resp)
+		}
 
 	pass("single entry returned")
 }
@@ -83,14 +92,27 @@ func stage79_XRangePartialRange(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$5\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$5\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$5\r\n3-0\r\n$1\r\nc\r\n$1\r\n3\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$3\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$3\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-79\r\n$3\r\n3-0\r\n$1\r\nc\r\n$1\r\n3\r\n")
 
-	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-79\r\n$5\r\n2-0\r\n$5\r\n3-0\r\n")
+	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-79\r\n$3\r\n2-0\r\n$3\r\n3-0\r\n")
 
-	if len(resp) == 0 || resp[0] != '*' {
-		failf(t, "expected array got %q", resp)
+		expected :=
+		"*2\r\n" +
+		"*2\r\n" +
+		"$3\r\n2-0\r\n" +
+		"*2\r\n" +
+		"$1\r\nb\r\n" +
+		"$1\r\n2\r\n" +
+		"*2\r\n" +
+		"$3\r\n3-0\r\n" +
+		"*2\r\n" +
+		"$1\r\nc\r\n" +
+		"$1\r\n3\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
 	}
 
 	pass("partial range OK")
