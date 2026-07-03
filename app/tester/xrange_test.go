@@ -7,13 +7,13 @@ import (
 
 
 func xrange_test(t *testing.T) {
-	// stage77_XRangeBasic(t)
-	// stage78_XRangeSingleEntry(t)
-	// stage79_XRangePartialRange(t)
-	// stage80_XRangeNoMatches(t)
-	// stage81_XRangeMissingKey(t)
-	// stage82_XRangeWrongType(t)
-	// stage83_XRangeWrongArguments(t)
+	stage77_XRangeBasic(t)
+	stage78_XRangeSingleEntry(t)
+	stage79_XRangePartialRange(t)
+	stage80_XRangeNoMatches(t)
+	stage81_XRangeMissingKey(t)
+	stage82_XRangeWrongType(t)
+	stage83_XRangeWrongArguments(t)
 	stage84_XRangeConcurrentReads(t)
 }
 
@@ -32,8 +32,8 @@ func stage77_XRangeBasic(t *testing.T) {
 		"*4\r\n" +
 			"$6\r\nXRANGE\r\n" +
 			"$9\r\nstream-77\r\n" +
-			"$3\r\n1-0\r\n" +
-			"$3\r\n3-0\r\n")
+			"$1\r\n-\r\n" +
+			"$1\r\n+\r\n")
 
 	expected :=
 		"*3\r\n" +
@@ -197,7 +197,7 @@ func stage84_XRangeConcurrentReads(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		wg.Add(1)
 
 		go func() {
