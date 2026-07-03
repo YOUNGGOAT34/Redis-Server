@@ -166,6 +166,7 @@ type StreamEntry struct{
 
 type Stream struct{
 	   Entries []*StreamEntry
+		Tree *Radix
 		LastID StreamID
 		Len int
 }
@@ -211,13 +212,185 @@ func (stream *Stream) generateSequence(userSpecifiedId []byte) (StreamID,error){
 
 		 return StreamID{
 			     Milliseconds: milliseconds,
-				  Sequence: uint64(stream.Len)+1,
+				  Sequence: uint64(stream.LastID.Sequence)+1,
 		 },err
 }
 
 
-
+//converts a streamId into a string
 
 func (id StreamID) String()string{
 	   return  strconv.FormatUint(id.Milliseconds,10)+"-"+strconv.FormatUint(id.Sequence,10)
 }
+
+
+//converts a string version of stream id into []bytes
+func(id StreamID) Bytes() []byte{
+	   return []byte(id.String())
+}
+
+
+
+
+type Radix struct {
+    Root *RadixNode
+}
+
+type RadixNode struct {
+    Children map[byte]*RadixNode
+    IsId  bool
+	 Label []byte
+	 Entry *StreamEntry
+}
+
+
+func NewRadix() *Radix{
+	   
+	return&Radix{
+
+	   Root:&RadixNode{
+			  Children: make(map[byte]*RadixNode),
+		},
+	}
+
+}
+
+
+func commonPrefix(a ,b []byte) int{
+	  
+	  index:=0
+
+	  for i:=0;i<len(a)&& i<len(b);i++{
+		    if a[i]!=b[i]{
+					break
+			 }
+
+			 index++
+	  }
+
+	  return index
+
+}
+
+
+
+func (t *Radix) Insert(entry *StreamEntry){
+	   current:=t.Root
+
+
+		remaining:=entry.ID.Bytes()
+  
+		for{
+			 b:=remaining[0]
+
+			 child,exists:=current.Children[b]
+ 
+			 if exists{
+              
+				prefix:=commonPrefix(child.Label,remaining)
+				
+			   if len(child.Label)==prefix{
+					  remaining=remaining[prefix:]
+					  current=child
+				}else if prefix<len(child.Label){
+					   remainingLabel:=child.Label[prefix:]
+						remaining=remaining[prefix:]
+						child.Label=child.Label[:prefix]
+						node1:=&RadixNode{
+							   Label: remainingLabel,
+								Children: child.Children,
+								IsId: child.IsId,
+								Entry: child.Entry,
+						}
+
+						child.Children=make(map[byte]*RadixNode)
+
+						if len(remaining)>0{
+                   
+
+							node2:=&RadixNode{
+									Label: remaining,
+									Children: make(map[byte]*RadixNode),
+									Entry: entry,
+									IsId: true,
+							}
+
+							child.IsId=false
+
+							child.Children[node2.Label[0]]=node2
+						}else{
+							   child.Entry=entry
+							   child.IsId=true
+						}
+
+
+						child.Children[node1.Label[0]]=node1
+
+						return
+				}
+      
+
+
+				if len(remaining)==0{
+					  current.Entry=entry
+					  current.IsId=true
+					  return
+				}
+            
+			 }else{
+				  node:=&RadixNode{
+					     Label: remaining,
+					     Children: make(map[byte]*RadixNode),
+						  Entry: entry,
+						  IsId: true,
+
+				  }
+
+				  current.Children[b]=node
+				  
+				 return
+			 }
+		}
+      
+
+
+}
+
+
+
+func (t *Radix) Search(Id []byte) *StreamEntry{
+	   current:=t.Root
+		remaining:=Id
+		for {
+
+			b:=remaining[0]
+
+			node,exists:=current.Children[b]
+			
+          
+			if exists{
+              prefix:=commonPrefix(node.Label,remaining)
+				  if prefix!=len(node.Label){
+					  return nil
+				  }
+				  current=node
+				  remaining=remaining[prefix:]
+				  if len(remaining)==0{
+					 break
+				  }
+  
+			}else{
+				  return nil
+			}
+			  
+		}
+
+		if current.IsId{
+
+			return current.Entry
+		}
+
+		return nil
+}
+
+

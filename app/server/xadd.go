@@ -78,10 +78,12 @@ func xaddCommand(arguments [][]byte) Response {
 
 				 stream=data.Value.(*Stream)
 
-
+      
 		}else{
 			  
-			  stream=&Stream{}
+			  stream=&Stream{
+				   Tree:NewRadix(),
+			  }
 			  database[string(arguments[0])]=Data{
 			      Type: STREAM,
 		  			Value: stream,
@@ -91,7 +93,6 @@ func xaddCommand(arguments [][]byte) Response {
 		}
 
 
-		
 		var Id StreamID
 
      /* 
@@ -109,7 +110,7 @@ func xaddCommand(arguments [][]byte) Response {
 		}else{
 			    var err error
 
-            if containsAsteric(arguments[1]){
+            if hasWildCard(arguments[1]){
 					     Id,err=stream.generateSequence(arguments[1])
 				}else{
 
@@ -152,7 +153,7 @@ func xaddCommand(arguments [][]byte) Response {
 
 				if Id.Milliseconds==stream.LastID.Milliseconds{
 						fmt.Printf("Hello sequenceId: %d streamId:%d, id:%d,%d\n",Id.Sequence,stream.LastID.Sequence,Id.Milliseconds,stream.LastID.Milliseconds);
-						if Id.Sequence<stream.LastID.Sequence || Id.Sequence==stream.LastID.Sequence{
+						if Id.Sequence<=stream.LastID.Sequence{
 									return Response{
 										Body:[]byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
 										Type:ERROR,
@@ -160,10 +161,7 @@ func xaddCommand(arguments [][]byte) Response {
 						}
 				}
 
-
-
 		}
-
 		
       fields:=make(map[string][]byte)
 
@@ -175,9 +173,10 @@ func xaddCommand(arguments [][]byte) Response {
 			     ID: Id,
 				  Fields: fields,
 		}
-
+        
       stream.LastID=Id
 		stream.Entries=append(stream.Entries, entry)
+		stream.Tree.Insert(entry)
       stream.Len++
    
 		return Response{
@@ -187,7 +186,7 @@ func xaddCommand(arguments [][]byte) Response {
 
 }
 
-func containsAsteric(userSpecifiedId []byte) bool {
+func hasWildCard(userSpecifiedId []byte) bool {
 	   for _,char :=range userSpecifiedId{
 			    if char=='*'{
 					   return true

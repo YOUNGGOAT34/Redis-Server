@@ -72,6 +72,8 @@ func dispatchCommands(args [][]byte) Response{
 						    return typeCommand(args[1:])
 					case "XADD":
 						    return xaddCommand(args[1:])
+					case "XRANGE":
+							panic("Xrange not implemented")
 					default:
 						return Response{
                           Body:[]byte("Error: Unknown command"),
