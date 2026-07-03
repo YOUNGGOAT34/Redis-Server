@@ -197,7 +197,7 @@ func stage84_XRangeConcurrentReads(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 10000; i++ {
 		wg.Add(1)
 
 		go func() {
@@ -206,7 +206,7 @@ func stage84_XRangeConcurrentReads(t *testing.T) {
 			conn := dial(t)
 			defer conn.Close()
 
-			resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$3\r\n2-0\r\n")
+			resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$1\r\n+\r\n")
 
 			if len(resp) == 0 || resp[0] != '*' {
 				failf(t, "expected RESP array got %q", resp)

@@ -162,6 +162,11 @@ func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 			   return stream.Entries[0].ID,nil
 		 }
 
+
+		 if compareBytes(id,[]byte("+")){
+			  return stream.Entries[stream.Len-1].ID,nil
+		 }
+
 	    hyphenIndex:=-1
 		 for index,char:=range id{
 			    if char=='-'{

@@ -44,8 +44,6 @@ func xrangeCommand(arguments [][]byte) Response {
 		}
 
 
-	   
-
 		var entries []*StreamEntry
 
 		databaseMutex.RLock()
