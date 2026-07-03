@@ -156,6 +156,42 @@ type Stream struct {
 	Len    int
 }
 
+func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
+	    
+	    if compareBytes(id,[]byte("-")){
+			   return stream.Entries[0].ID,nil
+		 }
+
+	    hyphenIndex:=-1
+		 for index,char:=range id{
+			    if char=='-'{
+					   hyphenIndex=index
+						break
+				 }
+		 }
+
+
+		 if hyphenIndex==-1{
+			   
+			   return StreamID{},errors.New("invalid stream Id")
+		 }
+      
+
+		 milliseconds,err:=strconv.ParseUint(string(id[0:hyphenIndex]),10,64)
+		 if err!=nil{
+			   return StreamID{},err
+		 }
+		 sequence,err:=strconv.ParseUint(string(id[hyphenIndex+1:]),10,64)
+
+		 if err!=nil{
+			   return StreamID{},err
+		 }
+
+		 return StreamID{
+			     Milliseconds:milliseconds,
+				  Sequence:sequence,
+		 },err
+}
 
 // auto generate the full id
 func (stream *Stream) NextID() StreamID {
@@ -206,47 +242,43 @@ func (id StreamID) String() string {
 	return strconv.FormatUint(id.Milliseconds, 10) + "-" + strconv.FormatUint(id.Sequence, 10)
 }
 
-
-//find all entries in a given range
-func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry{
-	      if stream.Len==0{
-				   return nil
-			}
-
-			startIndex:=sort.Search(stream.Len,func(i int) bool {
-				           current:=stream.Entries[i].ID
-
-							  if  current.Milliseconds>startId.Milliseconds{
-								    return true
-							  }
-
-							  if current.Milliseconds<startId.Milliseconds{
-								  return false
-							  }
-
-							  return current.Sequence>=startId.Sequence
-			})
+// find all entries in a given range
+func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
+	if stream.Len == 0 {
+		return nil
+	}
 
 
-			
 
-			var entries []*StreamEntry
-        
-			for i:=startIndex;i<stream.Len;i++{
-				    current:=stream.Entries[i].ID
-                 
-				    if current.Milliseconds>endId.Milliseconds || (current.Milliseconds==endId.Milliseconds && current.Sequence>endId.Sequence){
-						   
-						   break
-					 }
+	startIndex := sort.Search(stream.Len, func(i int) bool {
+		current := stream.Entries[i].ID
 
-					 entries = append(entries, stream.Entries[i])
+		if current.Milliseconds > startId.Milliseconds {
+			return true
+		}
 
+		if current.Milliseconds < startId.Milliseconds {
+			return false
+		}
 
-			}
+		return current.Sequence >= startId.Sequence
+	})
 
+	var entries []*StreamEntry
 
-			return entries
+	for i := startIndex; i < stream.Len; i++ {
+		current := stream.Entries[i].ID
+
+		if current.Milliseconds > endId.Milliseconds || (current.Milliseconds == endId.Milliseconds && current.Sequence > endId.Sequence) {
+
+			break
+		}
+
+		entries = append(entries, stream.Entries[i])
+
+	}
+
+	return entries
 }
 
 // //converts a string version of stream id into []bytes

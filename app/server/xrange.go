@@ -33,6 +33,7 @@ func encodeEntries(entries []*StreamEntry) []byte{
 
 
 func xrangeCommand(arguments [][]byte) Response {
+	  
 
 	   if len(arguments)!=3{
 			    return Response{
@@ -43,7 +44,7 @@ func xrangeCommand(arguments [][]byte) Response {
 		}
 
 
-	  
+	   
 
 		var entries []*StreamEntry
 
@@ -59,20 +60,35 @@ func xrangeCommand(arguments [][]byte) Response {
 				 }
 
 				  
-
+              
 				 stream:=data.Value.(*Stream)
-				
-				 startId,err:=createStreamID(arguments[1])
 
+				 /*
+				    This guard will prevent against accessing invalid memory when the use queries with -
+					 Since for empty entries the stream.createStreamID function will never be called 
+					 Inside the stream.Entities entities[0] can be safely accessed ,with a guarantee that there is data inside the stream
+				 */
+				 if stream.Len==0{
+					   return Response{
+							  Body: encodeEntries(stream.Entries),
+							  Type: ARRAY,
+						}
+				 }
+				
+				 startId,err:=stream.createStreamID(arguments[1])
+            
 				 if err!=nil{
+					    
 					    return Response{
 							   Body: []byte(err.Error()),
 								Type: ERROR,
 						 }
 				 }
+           
+				  
 
-				 endId,err:=createStreamID(arguments[2])
-
+				 endId,err:=stream.createStreamID(arguments[2])
+             
 				 if err!=nil{
 					    return Response{
 							   Body: []byte(err.Error()),
@@ -85,6 +101,7 @@ func xrangeCommand(arguments [][]byte) Response {
 		}
 
 	
+		
 
 		return Response{
 			   Body: encodeEntries(entries),

@@ -2,12 +2,12 @@ package server
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 )
 
 func createStreamID(id []byte) (StreamID,error){
 	    //find the hyphen in the user's id
+        
 
 		 hyphenIndex:=-1
 		 for index,char:=range id{
@@ -21,7 +21,7 @@ func createStreamID(id []byte) (StreamID,error){
 		 if hyphenIndex==-1{
 			   return StreamID{},errors.New("invalid stream Id")
 		 }
-
+      
 
 		 milliseconds,err:=strconv.ParseUint(string(id[0:hyphenIndex]),10,64)
 		 if err!=nil{
@@ -115,6 +115,10 @@ func xaddCommand(arguments [][]byte) Response {
 				}else{
 
 					Id,err=createStreamID(arguments[1])
+					
+					if err!=nil && compareBytes(arguments[1],[]byte("-")){
+						   
+					}
 
 				}
 
@@ -152,7 +156,7 @@ func xaddCommand(arguments [][]byte) Response {
 				}
 
 				if Id.Milliseconds==stream.LastID.Milliseconds{
-						fmt.Printf("Hello sequenceId: %d streamId:%d, id:%d,%d\n",Id.Sequence,stream.LastID.Sequence,Id.Milliseconds,stream.LastID.Milliseconds);
+						
 						if Id.Sequence<=stream.LastID.Sequence{
 									return Response{
 										Body:[]byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),

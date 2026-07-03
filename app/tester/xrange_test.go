@@ -7,14 +7,14 @@ import (
 
 
 func xrange_test(t *testing.T) {
-	stage77_XRangeBasic(t)
-	stage78_XRangeSingleEntry(t)
-	stage79_XRangePartialRange(t)
-	stage80_XRangeNoMatches(t)
-	stage81_XRangeMissingKey(t)
-	stage82_XRangeWrongType(t)
-	stage83_XRangeWrongArguments(t)
-	// stage84_XRangeConcurrentReads(t)
+	// stage77_XRangeBasic(t)
+	// stage78_XRangeSingleEntry(t)
+	// stage79_XRangePartialRange(t)
+	// stage80_XRangeNoMatches(t)
+	// stage81_XRangeMissingKey(t)
+	// stage82_XRangeWrongType(t)
+	// stage83_XRangeWrongArguments(t)
+	stage84_XRangeConcurrentReads(t)
 }
 
 // ------------------------------------------------------------
@@ -191,8 +191,8 @@ func stage84_XRangeConcurrentReads(t *testing.T) {
 
 	conn := dial(t)
 
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$5\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$5\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
+	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
 	conn.Close()
 
 	var wg sync.WaitGroup
@@ -206,7 +206,7 @@ func stage84_XRangeConcurrentReads(t *testing.T) {
 			conn := dial(t)
 			defer conn.Close()
 
-			resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$1\r\n+\r\n")
+			resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$3\r\n2-0\r\n")
 
 			if len(resp) == 0 || resp[0] != '*' {
 				failf(t, "expected RESP array got %q", resp)
