@@ -228,12 +228,15 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry{
 			})
 
 
-			var entries []*StreamEntry
+			
 
+			var entries []*StreamEntry
+        
 			for i:=startIndex;i<stream.Len;i++{
 				    current:=stream.Entries[i].ID
-
+                 
 				    if current.Milliseconds>endId.Milliseconds || (current.Milliseconds==endId.Milliseconds && current.Sequence>endId.Sequence){
+						   
 						   break
 					 }
 

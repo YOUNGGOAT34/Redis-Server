@@ -42,18 +42,23 @@ func xrangeCommand(arguments [][]byte) Response {
 				         }
 		}
 
+
+	  
+
 		var entries []*StreamEntry
 
 		databaseMutex.RLock()
 		defer databaseMutex.RUnlock()
-		if data,exists:=database[string(arguments[1])];exists{
-			    
+		if data,exists:=database[string(arguments[0])];exists{
+			       
 			    if data.Type!=STREAM{
 					    return Response{
 							Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 							Type:ERROR,
 						  }
 				 }
+
+				  
 
 				 stream:=data.Value.(*Stream)
 				
@@ -66,7 +71,7 @@ func xrangeCommand(arguments [][]byte) Response {
 						 }
 				 }
 
-				 endId,err:=createStreamID(arguments[1])
+				 endId,err:=createStreamID(arguments[2])
 
 				 if err!=nil{
 					    return Response{
@@ -79,6 +84,7 @@ func xrangeCommand(arguments [][]byte) Response {
            
 		}
 
+	
 
 		return Response{
 			   Body: encodeEntries(entries),

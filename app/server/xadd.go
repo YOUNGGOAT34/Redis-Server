@@ -178,7 +178,7 @@ func xaddCommand(arguments [][]byte) Response {
 		stream.Entries=append(stream.Entries, entry)
 		// stream.Tree.Insert(entry)
       stream.Len++
-   
+
 		return Response{
 			   Body: []byte(Id.String()),
 				Type: BULK_STRING,
