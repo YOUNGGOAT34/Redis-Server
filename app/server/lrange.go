@@ -15,8 +15,7 @@ func encodeRespArray(list *List,startIndex int,endIndex int) []byte{
 	 count:=endIndex-startIndex+1
 
 	 respArray=fmt.Appendf(respArray,"*%d\r\n",count)  
-	 
-	 
+	  
 	 /*
 	     To find the starting node 
 		  A small optimization is:

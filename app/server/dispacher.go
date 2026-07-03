@@ -73,7 +73,7 @@ func dispatchCommands(args [][]byte) Response{
 					case "XADD":
 						    return xaddCommand(args[1:])
 					case "XRANGE":
-							panic("Xrange not implemented")
+							return xrangeCommand(args[1:])
 					default:
 						return Response{
                           Body:[]byte("Error: Unknown command"),
@@ -82,6 +82,8 @@ func dispatchCommands(args [][]byte) Response{
 
 		  }
 }
+
+
 
 
 

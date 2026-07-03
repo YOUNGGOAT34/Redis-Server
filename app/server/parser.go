@@ -10,7 +10,6 @@ import (
 
 
 
-
 /* 
   findCRLF returns the index of the first '\r' in the first CRLF sequence.
   If no CRLF exists, the request is considered malformed.

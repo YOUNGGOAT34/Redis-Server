@@ -55,7 +55,8 @@ func TestMain(t *testing.T) {
 	// lpop_test(t)
 	// blpop_test(t)
 	// type_test(t)
-	xadd_test(t)
+	// xadd_test(t)
+	xrange_test(t)
 	
 }
 

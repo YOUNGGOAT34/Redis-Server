@@ -82,7 +82,7 @@ func xaddCommand(arguments [][]byte) Response {
 		}else{
 			  
 			  stream=&Stream{
-				   Tree:NewRadix(),
+				   // Tree:NewRadix(),
 			  }
 			  database[string(arguments[0])]=Data{
 			      Type: STREAM,
@@ -176,7 +176,7 @@ func xaddCommand(arguments [][]byte) Response {
         
       stream.LastID=Id
 		stream.Entries=append(stream.Entries, entry)
-		stream.Tree.Insert(entry)
+		// stream.Tree.Insert(entry)
       stream.Len++
    
 		return Response{
