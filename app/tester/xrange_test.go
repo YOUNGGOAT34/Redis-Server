@@ -12,7 +12,7 @@ func xrange_test(t *testing.T) {
 	stage79_XRangePartialRange(t)
 	stage80_XRangeNoMatches(t)
 	stage81_XRangeMissingKey(t)
-	// stage82_XRangeWrongType(t)
+	stage82_XRangeWrongType(t)
 	// stage83_XRangeWrongArguments(t)
 	// stage84_XRangeConcurrentReads(t)
 }
