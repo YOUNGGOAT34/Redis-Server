@@ -65,11 +65,16 @@ func xReadCommand(arguments [][]byte) Response {
 		databaseMutex.RLock()
 		defer databaseMutex.RUnlock()
 
+		var streams [][]*StreamEntry
+
 		for key,startingId:=range keys{
 
 			if data,exists:=database[string(key)];exists{
-	
+	  
+				 
+				 
 				  if data.Type!=STREAM{
+					     
 						  return Response{
 									Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 									Type: ERROR,
@@ -87,26 +92,31 @@ func xReadCommand(arguments [][]byte) Response {
 						}
 				  }
 	
-				  var streams [][]*StreamEntry
+				  
 	
 				  s:=stream.xRead(startId)
 	
 				  if len(s)>0{
 	
-					  streams = append(streams, stream.xRead(startId))
-	
-						 return Response{
-							  Body: encodeStreams(streams),
-							  Type: ARRAY,
-				  }
+					  streams = append(streams,s)
+
 				  }
 					
 			}
 		}
 
 
-		return Response{
-			       Body: []byte("-1\r\n"),
-					 Type: NIL,
-		}
+	 if len(streams)==0{
+
+		 return Response{
+					  Body: []byte("-1\r\n"),
+					  Type: NIL,
+		 }
+	 }
+
+	 return Response{
+		   Body: encodeStreams(streams),
+			Type: ARRAY,
+	 }
+
 }

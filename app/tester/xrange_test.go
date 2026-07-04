@@ -153,68 +153,77 @@ func stage81_XRangeMissingKey(t *testing.T) {
 
 	pass("missing stream handled")
 }
-
 func stage82_XRangeWrongType(t *testing.T) {
-	stage("STAGE 82: XRANGE WRONG TYPE")
+   stage("STAGE 82: XRANGE WRONG TYPE")
 
-	conn := dial(t)
-	defer conn.Close()
+   conn := dial(t)
+   defer conn.Close()
 
-	send(conn, "*3\r\n$3\r\nSET\r\n$9\r\nstream-82\r\n$5\r\nhello\r\n")
+   send(conn, "*3\r\n$3\r\nSET\r\n$9\r\nstream-82\r\n$5\r\nhello\r\n")
 
-	resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-82\r\n$1\r\n-\r\n$1\r\n+\r\n")
+   resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-82\r\n$1\r\n-\r\n$1\r\n+\r\n")
 
-	if len(resp) == 0 || resp[0] != '-' {
-		failf(t, "expected WRONGTYPE error got %q", resp)
-	}
+   // Validate the exact standard Redis WRONGTYPE error payload
+   expectedErr := "-WRONGTYPE Operation against a key holding the wrong kind of value\r\n"
+   if resp != expectedErr {
+      failf(t, "expected %q got %q", expectedErr, resp)
+   }
 
-	pass("wrong type handled")
+   pass("wrong type handled")
 }
 
 func stage83_XRangeWrongArguments(t *testing.T) {
-	stage("STAGE 83: XRANGE WRONG ARGUMENTS")
+   stage("STAGE 83: XRANGE WRONG ARGUMENTS")
 
-	conn := dial(t)
-	defer conn.Close()
+   conn := dial(t)
+   defer conn.Close()
 
-	resp := send(conn, "*1\r\n$6\r\nXRANGE\r\n")
+   resp := send(conn, "*1\r\n$6\r\nXRANGE\r\n")
 
-	if len(resp) == 0 || resp[0] != '-' {
-		failf(t, "expected error got %q", resp)
-	}
+   // Validate that it returns a clear syntax/argument count error
+   expectedErr := "-Wrong number of arguments for 'XRANGE' command\r\n"
+   if resp != expectedErr {
+      failf(t, "expected %q got %q", expectedErr, resp)
+   }
 
-	pass("wrong arguments handled")
+   pass("wrong arguments handled")
 }
 
 func stage84_XRangeConcurrentReads(t *testing.T) {
-	stage("STAGE 84: CONCURRENT XRANGE")
+   stage("STAGE 84: CONCURRENT XRANGE")
 
-	conn := dial(t)
+   conn := dial(t)
 
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
-	send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
-	conn.Close()
+   send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n1-0\r\n$1\r\na\r\n$1\r\n1\r\n")
+   send(conn, "*5\r\n$4\r\nXADD\r\n$9\r\nstream-84\r\n$3\r\n2-0\r\n$1\r\nb\r\n$1\r\n2\r\n")
+   conn.Close()
 
-	var wg sync.WaitGroup
+   // Pre-calculate the exact nested array payload we expect all 100 readers to get back
+   expectedArray := "*2\r\n" +
+      "*2\r\n$3\r\n1-0\r\n*2\r\n$1\r\na\r\n$1\r\n1\r\n" +
+      "*2\r\n$3\r\n2-0\r\n*2\r\n$1\r\nb\r\n$1\r\n2\r\n"
 
-	for i := 0; i < 100; i++ {
-		wg.Add(1)
+   var wg sync.WaitGroup
 
-		go func() {
-			defer wg.Done()
+   for i := 0; i < 100; i++ {
+      wg.Add(1)
 
-			conn := dial(t)
-			defer conn.Close()
+      go func() {
+         defer wg.Done()
 
-			resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$1\r\n+\r\n")
+         conn := dial(t)
+         defer conn.Close()
 
-			if len(resp) == 0 || resp[0] != '*' {
-				failf(t, "expected RESP array got %q", resp)
-			}
-		}()
-	}
+         resp := send(conn, "*4\r\n$6\r\nXRANGE\r\n$9\r\nstream-84\r\n$1\r\n-\r\n$1\r\n+\r\n")
 
-	wg.Wait()
+         // Strict check that the data is neither corrupted nor missing under load
+         if resp != expectedArray {
+            failf(t, "expected %q got %q", expectedArray, resp)
+         }
+      }()
+   }
 
-	pass("100 concurrent XRANGE clients OK")
+   wg.Wait()
+
+   pass("100 concurrent XRANGE clients OK")
 }

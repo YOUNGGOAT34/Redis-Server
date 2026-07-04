@@ -21,6 +21,20 @@ const (
 	STREAM
 )
 
+func typeToString(t TYPE) string{
+	    switch t{
+		 case STRING:
+			 return "STRING"
+		 case LIST:
+			return "LIST"
+		 case STREAM:
+			return "STREAM"
+
+		 default:
+			 return "UNKNOWN"
+		 }
+}
+
 type Data struct {
 	Type  TYPE
 	Value any

@@ -76,6 +76,7 @@ func xAddCommand(arguments [][]byte) Response {
 		stream = &Stream{
 			// Tree:NewRadix(),
 		}
+
 		database[string(arguments[0])] = Data{
 			Type:  STREAM,
 			Value: stream,
