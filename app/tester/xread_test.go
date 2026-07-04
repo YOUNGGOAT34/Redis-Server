@@ -6,9 +6,9 @@ func xread_test(t *testing.T) {
 	// stage82_XReadBasic(t)
 	// stage83_XReadAfterID(t)
 	// stage84_XReadLatestOnly(t)
-	// stage85_XReadMultipleStreams(t)
+	stage85_XReadMultipleStreams(t)
 	// stage86_XReadMissingStream(t)
-	stage87_XReadEmptyResult(t)
+	// stage87_XReadEmptyResult(t)
 }
 
 func stage82_XReadBasic(t *testing.T) {

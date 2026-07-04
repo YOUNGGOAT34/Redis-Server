@@ -43,54 +43,67 @@ func encodeStreams(streams [][]*StreamEntry) []byte{
 }
 
 func xReadCommand(arguments [][]byte) Response {
-	   if len(arguments)!=2{
+	   if len(arguments)<2 || len(arguments)%2!=0{
 			   return Response{
 						Body: []byte("Wrong number of arguments for 'XREAD' command"),
 						Type: ERROR,
 					}
 		}
 
-		key:=arguments[0]
-		startingId:=arguments[1]
 
+       //map to store key-starting id, incase it is a query of a multiple streams
+       
+		 keys:=make(map[string][]byte)
+ 
+		 mid:=len(arguments)/2
+		  
+		 for i:=0;i<mid;i++{
+			     keys[string(arguments[i])]=arguments[i+mid]
+		 }
+
+		 
 		databaseMutex.RLock()
 		defer databaseMutex.RUnlock()
 
-		if data,exists:=database[string(key)];exists{
+		for key,startingId:=range keys{
 
-			  if data.Type!=STREAM{
-				     return Response{
-								Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
+			if data,exists:=database[string(key)];exists{
+	
+				  if data.Type!=STREAM{
+						  return Response{
+									Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
+									Type: ERROR,
+								}
+				  }
+				  
+				  stream:=data.Value.(*Stream)
+	
+				  startId,err:=stream.createStreamID(startingId)
+	
+				  if err!=nil{
+						return Response{
+								Body: []byte(err.Error()),
 								Type: ERROR,
-							}
-			  }
-           
-			  stream:=data.Value.(*Stream)
-
-			  startId,err:=stream.createStreamID(startingId)
-
-			  if err!=nil{
-				   return Response{
-						   Body: []byte(err.Error()),
-							Type: ERROR,
-					}
-			  }
-
-			  var streams [][]*StreamEntry
-
-			  s:=stream.xRead(startId)
-
-			  if len(s)>0{
-
-				  streams = append(streams, stream.xRead(startId))
-
-				    return Response{
-				        Body: encodeStreams(streams),
-						  Type: ARRAY,
-			  }
-			  }
-			   
+						}
+				  }
+	
+				  var streams [][]*StreamEntry
+	
+				  s:=stream.xRead(startId)
+	
+				  if len(s)>0{
+	
+					  streams = append(streams, stream.xRead(startId))
+	
+						 return Response{
+							  Body: encodeStreams(streams),
+							  Type: ARRAY,
+				  }
+				  }
+					
+			}
 		}
+
 
 		return Response{
 			       Body: []byte("-1\r\n"),
