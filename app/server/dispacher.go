@@ -18,67 +18,67 @@ func dispatchCommands(args [][]byte) Response {
 
 	switch cmd {
 
-	case "ECHO":
-		if len(args) < 2 {
-			return Response{
-				Body: nil,
-				Type: NIL,
-			}
-		}
+			case "ECHO":
+				if len(args) < 2 {
+					return Response{
+						Body: nil,
+						Type: NIL,
+					}
+				}
 
-		return Response{
-			Body: args[1],
-			Type: BULK_STRING,
-		}
+				return Response{
+					Body: args[1],
+					Type: BULK_STRING,
+				}
 
-	case "PING":
+			case "PING":
 
-		return Response{
-			Body: []byte("PONG"),
-			Type: SIMPLE_STRING,
-		}
+				return Response{
+					Body: []byte("PONG"),
+					Type: SIMPLE_STRING,
+				}
 
-	case "SET":
+			case "SET":
 
-		if len(args) < 2 {
-			return Response{
-				Body: nil,
-				Type: NIL,
-			}
-		}
-		return setCommand(args[1:])
+				if len(args) < 2 {
+					return Response{
+						Body: nil,
+						Type: NIL,
+					}
+				}
+				return setCommand(args[1:])
 
-	case "GET":
-		return getCommand(args[1:])
-	case "RPUSH":
-		return rPushCommand(args[1:])
+			case "GET":
+				return getCommand(args[1:])
+			case "RPUSH":
+				return rPushCommand(args[1:])
 
-	case "LRANGE":
-		return lRangeCommand(args[1:])
-	case "LPUSH":
-		return lPushCommand(args[1:])
+			case "LRANGE":
+				return lRangeCommand(args[1:])
+			case "LPUSH":
+				return lPushCommand(args[1:])
 
-	case "LLEN":
-		return llenCommand(args[1:])
+			case "LLEN":
+				return llenCommand(args[1:])
 
-	case "LPOP":
-		return lPopCommand(args[1:])
+			case "LPOP":
+				return lPopCommand(args[1:])
 
-	case "BLPOP":
-		return bLPopCommand(args[1:])
-	case "TYPE":
-		return typeCommand(args[1:])
-	case "XADD":
-		return xAddCommand(args[1:])
-	case "XRANGE":
-		return xRangeCommand(args[1:])
-	case "XREAD":
-		return xReadCommand(args[2:])
-	default:
-		return Response{
-			Body: []byte("Error: Unknown command"),
-			Type: ERROR,
-		}
+			case "BLPOP":
+				return bLPopCommand(args[1:])
+			case "TYPE":
+				return typeCommand(args[1:])
+			case "XADD":
+				return xAddCommand(args[1:])
+			case "XRANGE":
+				return xRangeCommand(args[1:])
+			case "XREAD":
+				return xReadCommand(args[2:])
+			default:
+				return Response{
+					Body: []byte("Error: Unknown command"),
+					Type: ERROR,
+				}
 
 	}
 }

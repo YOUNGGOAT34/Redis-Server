@@ -56,8 +56,10 @@ func xAddCommand(arguments [][]byte) Response {
 
 	databaseMutex.Lock()
 	defer databaseMutex.Unlock()
+    
+	key:=string(arguments[0])
 
-	data, exists := database[string(arguments[0])]
+	data, exists := database[key]
 
 	if exists {
 		if data.Type != STREAM {
@@ -165,9 +167,10 @@ func xAddCommand(arguments [][]byte) Response {
 		Fields: fields,
 	}
 
+	entry.stream=key
+
 	stream.LastID = Id
 	stream.Entries = append(stream.Entries, entry)
-	// stream.Tree.Insert(entry)
 	stream.Len++
 
 	return Response{

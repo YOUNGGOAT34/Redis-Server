@@ -146,6 +146,7 @@ type StreamID struct {
 
 type StreamEntry struct {
 	ID     StreamID
+	stream string//name of the associated stream
 	Fields map[string][]byte
 }
 
@@ -292,8 +293,23 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 
 
 
-func (stream *Stream) xRead(startId StreamID) {
-	panic("unimplemented")
+func (stream *Stream) xRead(startId StreamID) []*StreamEntry{
+	if stream.Len==0{
+		  return nil
+	}
+
+	startIndex := stream.binarySearch(startId)
+
+	var entries []*StreamEntry
+
+	for i := startIndex+1; i < stream.Len; i++ {
+		
+		entries = append(entries, stream.Entries[i])
+
+	}
+   
+	return entries
+	
 }
 
 // //converts a string version of stream id into []bytes
