@@ -248,7 +248,7 @@ func (id StreamID) String() string {
 }
 
 
-func (stream *Stream) binarySearch(startId StreamID) int{
+func (stream *Stream) binarySearch(startId StreamID,inclusive bool) int{
 	    startIndex := sort.Search(stream.Len, func(i int) bool {
 		current := stream.Entries[i].ID
 
@@ -260,7 +260,12 @@ func (stream *Stream) binarySearch(startId StreamID) int{
 			return false
 		}
 
-		return current.Sequence >= startId.Sequence
+		if inclusive{
+
+			return current.Sequence >= startId.Sequence
+		}else{
+			  return current.Sequence > startId.Sequence
+		}
 	})
 
 	 return startIndex
@@ -272,7 +277,7 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 		return nil
 	}
 
-	startIndex := stream.binarySearch(startId)
+	startIndex := stream.binarySearch(startId,true)
 
 	var entries []*StreamEntry
 
@@ -298,11 +303,11 @@ func (stream *Stream) xRead(startId StreamID) []*StreamEntry{
 		  return nil
 	}
 
-	startIndex := stream.binarySearch(startId)
-
+	startIndex := stream.binarySearch(startId,false)
+  
 	var entries []*StreamEntry
 
-	for i := startIndex+1; i < stream.Len; i++ {
+	for i := startIndex; i < stream.Len; i++ {
 		
 		entries = append(entries, stream.Entries[i])
 

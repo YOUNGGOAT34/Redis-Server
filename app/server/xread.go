@@ -5,23 +5,23 @@ import "fmt"
 
 func encodeStreams(streams [][]*StreamEntry) []byte{
 	
-	  if len(streams) == 0 {
-		return []byte("*0\r\n")
-		}
-
-
+	
 		var respArray []byte
 		count := len(streams)
 		respArray = fmt.Appendf(respArray, "*%d\r\n", count)
 
 		for _,entries:=range streams{
          
-			 respArray = fmt.Appendf(respArray, "*%d\r\n", len(entries))
-			
-			for index, entry := range entries {
-				if index==0{
-					   respArray = fmt.Appendf(respArray, "*%d\r\n%s\r\n", len(entry.stream),entry.stream)
-				}
+			 if len(entries)==0{
+				  continue
+			 }
+
+			 respArray = fmt.Appendf(respArray, "*2\r\n")
+			 respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(entries[0].stream),entries[0].stream)
+			 respArray = fmt.Appendf(respArray, "*%d\r\n",len(entries))
+
+			for _, entry := range entries {
+				
 				respArray = fmt.Appendf(respArray, "*2\r\n")
 				respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(entry.ID.String()), entry.ID.String())
 	
@@ -64,7 +64,7 @@ func xReadCommand(arguments [][]byte) Response {
 								Type: ERROR,
 							}
 			  }
-
+           
 			  stream:=data.Value.(*Stream)
 
 			  startId,err:=stream.createStreamID(startingId)
@@ -78,18 +78,22 @@ func xReadCommand(arguments [][]byte) Response {
 
 			  var streams [][]*StreamEntry
 
-			  
-			  streams = append(streams, stream.xRead(startId))
+			  s:=stream.xRead(startId)
 
-			  return Response{
+			  if len(s)>0{
+
+				  streams = append(streams, stream.xRead(startId))
+
+				    return Response{
 				        Body: encodeStreams(streams),
 						  Type: ARRAY,
 			  }
-			    
+			  }
+			   
 		}
 
 		return Response{
-			       Body: []byte("*0\r\n"),
-					 Type: ARRAY,
+			       Body: []byte("-1\r\n"),
+					 Type: NIL,
 		}
 }
