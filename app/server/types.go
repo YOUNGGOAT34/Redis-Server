@@ -156,46 +156,45 @@ type Stream struct {
 	Len    int
 }
 
+
+
 func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
-	    
-	    if compareBytes(id,[]byte("-")){
-			   return stream.Entries[0].ID,nil
-		 }
 
+	if compareBytes(id, []byte("-")) {
+		return stream.Entries[0].ID, nil
+	}
 
-		 if compareBytes(id,[]byte("+")){
-			  return stream.Entries[stream.Len-1].ID,nil
-		 }
+	if compareBytes(id, []byte("+")) {
+		return stream.Entries[stream.Len-1].ID, nil
+	}
 
-	    hyphenIndex:=-1
-		 for index,char:=range id{
-			    if char=='-'{
-					   hyphenIndex=index
-						break
-				 }
-		 }
+	hyphenIndex := -1
+	for index, char := range id {
+		if char == '-' {
+			hyphenIndex = index
+			break
+		}
+	}
 
+	if hyphenIndex == -1 {
 
-		 if hyphenIndex==-1{
-			   
-			   return StreamID{},errors.New("invalid stream Id")
-		 }
-      
+		return StreamID{}, errors.New("invalid stream Id")
+	}
 
-		 milliseconds,err:=strconv.ParseUint(string(id[0:hyphenIndex]),10,64)
-		 if err!=nil{
-			   return StreamID{},err
-		 }
-		 sequence,err:=strconv.ParseUint(string(id[hyphenIndex+1:]),10,64)
+	milliseconds, err := strconv.ParseUint(string(id[0:hyphenIndex]), 10, 64)
+	if err != nil {
+		return StreamID{}, err
+	}
+	sequence, err := strconv.ParseUint(string(id[hyphenIndex+1:]), 10, 64)
 
-		 if err!=nil{
-			   return StreamID{},err
-		 }
+	if err != nil {
+		return StreamID{}, err
+	}
 
-		 return StreamID{
-			     Milliseconds:milliseconds,
-				  Sequence:sequence,
-		 },err
+	return StreamID{
+		Milliseconds: milliseconds,
+		Sequence:     sequence,
+	}, err
 }
 
 // auto generate the full id
@@ -247,15 +246,9 @@ func (id StreamID) String() string {
 	return strconv.FormatUint(id.Milliseconds, 10) + "-" + strconv.FormatUint(id.Sequence, 10)
 }
 
-// find all entries in a given range
-func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
-	if stream.Len == 0 {
-		return nil
-	}
 
-
-
-	startIndex := sort.Search(stream.Len, func(i int) bool {
+func (stream *Stream) binarySearch(startId StreamID) int{
+	    startIndex := sort.Search(stream.Len, func(i int) bool {
 		current := stream.Entries[i].ID
 
 		if current.Milliseconds > startId.Milliseconds {
@@ -268,6 +261,17 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 
 		return current.Sequence >= startId.Sequence
 	})
+
+	 return startIndex
+}
+
+// find all entries in a given range
+func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
+	if stream.Len == 0 {
+		return nil
+	}
+
+	startIndex := stream.binarySearch(startId)
 
 	var entries []*StreamEntry
 
@@ -284,6 +288,12 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 	}
 
 	return entries
+}
+
+
+
+func (stream *Stream) xRead(startId StreamID) {
+	panic("unimplemented")
 }
 
 // //converts a string version of stream id into []bytes
