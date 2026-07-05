@@ -179,12 +179,17 @@ func blockingXread(arguments [][]byte) Response {
 					}
 			  }
 
+			  
 
 			     stream:=data.Value.(*Stream)
 	           stream.streamMutex.RLock()
 				  startId,err:=stream.createStreamID(arguments[1])
-	
+	           
+				  
+
 				  if err!=nil{
+					
+					  
 						return Response{
 								Body: []byte(err.Error()),
 								Type: ERROR,
@@ -203,6 +208,7 @@ func blockingXread(arguments [][]byte) Response {
 					    streams=waitForData(stream,timeout,startId,string(arguments[0]))
 				  }
 	  }else{
+		      
 		      databaseMutex.Lock()
 				stream:=&Stream{}
 				database[string(arguments[0])]=Data{
@@ -260,6 +266,8 @@ func waitForData(stream *Stream,timeout int,startId StreamID,key string) [][]*St
 
 		waitingClientsMutex.Unlock()
 
+		
+
 		if timeout==0{
 
 			  for{
@@ -277,7 +285,7 @@ func waitForData(stream *Stream,timeout int,startId StreamID,key string) [][]*St
 					 waitingClientsMutex.Unlock()
 					 break
 				 }
-				 
+
 			  }
 			    
 

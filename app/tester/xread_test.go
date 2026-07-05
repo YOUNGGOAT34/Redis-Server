@@ -6,16 +6,17 @@ import (
 )
 
 func xread_test(t *testing.T) {
-	// stage82_XReadBasic(t)
-	// stage83_XReadAfterID(t)
-	// stage84_XReadLatestOnly(t)
-	// stage85_XReadMultipleStreams(t)
-	// stage86_XReadMissingStream(t)
-	// stage87_XReadEmptyResult(t)
-	// stage88_XReadBlockWakeup(t)
-	// stage89_XReadBlockTimeout(t)
-	// stage90_XReadBlockImmediate(t) 
+	stage82_XReadBasic(t)
+	stage83_XReadAfterID(t)
+	stage84_XReadLatestOnly(t)
+	stage85_XReadMultipleStreams(t)
+	stage86_XReadMissingStream(t)
+	stage87_XReadEmptyResult(t)
+	stage88_XReadBlockWakeup(t)
+	stage89_XReadBlockTimeout(t)
+	stage90_XReadBlockImmediate(t) 
 	stage91_XReadBlockForever(t)
+	stage92_XReadDollarID(t)
 }
 
 func stage82_XReadBasic(t *testing.T) {
@@ -382,4 +383,67 @@ func stage91_XReadBlockForever(t *testing.T) {
 	}
 
 	pass("BLOCK 0 waits indefinitely until XADD")
+}
+
+
+func stage92_XReadDollarID(t *testing.T) {
+	stage("STAGE 92: XREAD $")
+
+	reader := dial(t)
+	writer := dial(t)
+
+	defer reader.Close()
+	defer writer.Close()
+
+	send(writer,
+		"*5\r\n" +
+			"$4\r\nXADD\r\n" +
+			"$9\r\nstream-92\r\n" +
+			"$3\r\n1-0\r\n" +
+			"$1\r\na\r\n" +
+			"$1\r\n1\r\n")
+
+	done := make(chan string)
+
+	go func() {
+		resp := send(reader,
+			"*6\r\n" +
+				"$5\r\nXREAD\r\n" +
+				"$5\r\nBLOCK\r\n" +
+				"$4\r\n5000\r\n" +
+				"$7\r\nSTREAMS\r\n" +
+				"$9\r\nstream-92\r\n" +
+				"$1\r\n$\r\n")
+
+		done <- resp
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	send(writer,
+		"*5\r\n" +
+			"$4\r\nXADD\r\n" +
+			"$9\r\nstream-92\r\n" +
+			"$3\r\n2-0\r\n" +
+			"$1\r\nb\r\n" +
+			"$1\r\n2\r\n")
+
+	resp := <-done
+
+	expected :=
+		"*1\r\n" +
+			"*2\r\n" +
+			"$9\r\nstream-92\r\n" +
+			"*1\r\n" +
+			"*2\r\n" +
+			"$3\r\n2-0\r\n" +
+			"*2\r\n" +
+			"$1\r\nb\r\n" +
+			"$1\r\n2\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("XREAD $ returns only entries added after the call")
 }

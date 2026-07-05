@@ -186,14 +186,20 @@ type Stream struct {
 
 
 func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
-
+   
 	if compareBytes(id, []byte("-")) {
 		return stream.Entries[0].ID, nil
 	}
 
 	if compareBytes(id, []byte("+")) {
-		return stream.Entries[stream.Len-1].ID, nil
+		return stream.LastID, nil
 	}
+
+	if compareBytes(id,[]byte("$")){
+		   return stream.LastID, nil
+	}
+
+	
 
 	hyphenIndex := -1
 	for index, char := range id {
@@ -203,12 +209,17 @@ func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 		}
 	}
 
-	if hyphenIndex == -1 {
+	
 
+	if hyphenIndex == -1 {
+      
 		return StreamID{}, errors.New("invalid stream Id")
 	}
 
+	
+
 	milliseconds, err := strconv.ParseUint(string(id[0:hyphenIndex]), 10, 64)
+	
 	if err != nil {
 		return StreamID{}, err
 	}
@@ -217,6 +228,8 @@ func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 	if err != nil {
 		return StreamID{}, err
 	}
+
+	
 
 	return StreamID{
 		Milliseconds: milliseconds,
