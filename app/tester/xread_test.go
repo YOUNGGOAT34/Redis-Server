@@ -13,6 +13,7 @@ func xread_test(t *testing.T) {
 	// stage86_XReadMissingStream(t)
 	// stage87_XReadEmptyResult(t)
 	stage88_XReadBlockWakeup(t)
+	stage89_XReadBlockTimeout(t)
 }
 
 func stage82_XReadBasic(t *testing.T) {
@@ -235,4 +236,36 @@ func stage88_XReadBlockWakeup(t *testing.T) {
 	}
 
 	pass("blocking XREAD wakes after XADD")
+}
+
+
+
+func stage89_XReadBlockTimeout(t *testing.T) {
+    stage("STAGE 89: XREAD BLOCK TIMEOUT")
+
+    conn := dial(t)
+    defer conn.Close()
+
+    start := time.Now()
+
+    resp := send(conn,
+        "*6\r\n" +
+            "$5\r\nXREAD\r\n" +
+            "$5\r\nBLOCK\r\n" +
+            "$3\r\n200\r\n" +
+            "$7\r\nSTREAMS\r\n" +
+            "$9\r\nstream-89\r\n" +
+            "$3\r\n0-0\r\n")
+
+    if time.Since(start) < 150*time.Millisecond {
+        failf(t, "returned before timeout")
+    }
+
+    expected := "$-1\r\n"
+
+    if resp != expected {
+        failf(t, "expected %q got %q", expected, resp)
+    }
+
+    pass("blocking timeout works")
 }
