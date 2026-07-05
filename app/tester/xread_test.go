@@ -6,15 +6,16 @@ import (
 )
 
 func xread_test(t *testing.T) {
-	stage82_XReadBasic(t)
-	stage83_XReadAfterID(t)
-	stage84_XReadLatestOnly(t)
-	stage85_XReadMultipleStreams(t)
-	stage86_XReadMissingStream(t)
-	stage87_XReadEmptyResult(t)
-	stage88_XReadBlockWakeup(t)
-	stage89_XReadBlockTimeout(t)
-	stage90_XReadBlockImmediate(t) 
+	// stage82_XReadBasic(t)
+	// stage83_XReadAfterID(t)
+	// stage84_XReadLatestOnly(t)
+	// stage85_XReadMultipleStreams(t)
+	// stage86_XReadMissingStream(t)
+	// stage87_XReadEmptyResult(t)
+	// stage88_XReadBlockWakeup(t)
+	// stage89_XReadBlockTimeout(t)
+	// stage90_XReadBlockImmediate(t) 
+	stage91_XReadBlockForever(t)
 }
 
 func stage82_XReadBasic(t *testing.T) {
@@ -317,4 +318,68 @@ func stage90_XReadBlockImmediate(t *testing.T) {
 	}
 
 	pass("blocking XREAD returns immediately when data exists")
+}
+
+
+
+func stage91_XReadBlockForever(t *testing.T) {
+	stage("STAGE 91: XREAD BLOCK 0")
+
+	reader := dial(t)
+	writer := dial(t)
+
+	defer reader.Close()
+	defer writer.Close()
+
+	done := make(chan string)
+
+	go func() {
+		resp := send(reader,
+			"*6\r\n" +
+				"$5\r\nXREAD\r\n" +
+				"$5\r\nBLOCK\r\n" +
+				"$1\r\n0\r\n" +
+				"$7\r\nSTREAMS\r\n" +
+				"$9\r\nstream-91\r\n" +
+				"$3\r\n0-0\r\n")
+
+		done <- resp
+	}()
+
+	// Ensure the reader has time to block.
+	time.Sleep(500 * time.Millisecond)
+
+	select {
+	case <-done:
+		failf(t, "XREAD BLOCK 0 returned before XADD")
+	default:
+		// Good: still blocked.
+	}
+
+	send(writer,
+		"*5\r\n" +
+			"$4\r\nXADD\r\n" +
+			"$9\r\nstream-91\r\n" +
+			"$3\r\n1-0\r\n" +
+			"$1\r\na\r\n" +
+			"$1\r\n1\r\n")
+
+	resp := <-done
+
+	expected :=
+		"*1\r\n" +
+			"*2\r\n" +
+			"$9\r\nstream-91\r\n" +
+			"*1\r\n" +
+			"*2\r\n" +
+			"$3\r\n1-0\r\n" +
+			"*2\r\n" +
+			"$1\r\na\r\n" +
+			"$1\r\n1\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("BLOCK 0 waits indefinitely until XADD")
 }

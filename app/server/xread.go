@@ -260,36 +260,62 @@ func waitForData(stream *Stream,timeout int,startId StreamID,key string) [][]*St
 
 		waitingClientsMutex.Unlock()
 
+		if timeout==0{
 
-		timer:=time.NewTimer(time.Duration(timeout)*time.Millisecond)
-		defer timer.Stop()
-		WaitLoop:
-				for{
-					
-						select{
-						case <-ch:
+			  for{
 
-									stream.streamMutex.RLock()
-									s:=stream.xRead(startId)
-									stream.streamMutex.RUnlock()
-									
-									if len(s)>0{
-										streams=append(streams, s)
+				  <-ch
+	
+				  stream.streamMutex.RLock()
+										 s:=stream.xRead(startId)
+										 stream.streamMutex.RUnlock()
+										 
+				 if len(s)>0{
+					 streams=append(streams, s)
+					 waitingClientsMutex.Lock()
+					 q.Remove(element)
+					 waitingClientsMutex.Unlock()
+					 break
+				 }
+				 
+			  }
+			    
+
+			   
+		}else{
+
+			timer:=time.NewTimer(time.Duration(timeout)*time.Millisecond)
+			defer timer.Stop()
+			WaitLoop:
+					for{
+						
+							select{
+	
+									case <-ch:
+	
+										stream.streamMutex.RLock()
+										s:=stream.xRead(startId)
+										stream.streamMutex.RUnlock()
+										
+										if len(s)>0{
+											streams=append(streams, s)
+											waitingClientsMutex.Lock()
+											q.Remove(element)
+											waitingClientsMutex.Unlock()
+											break WaitLoop
+										}
+	
+									case <-timer.C:
 										waitingClientsMutex.Lock()
 										q.Remove(element)
 										waitingClientsMutex.Unlock()
 										break WaitLoop
-									}
+	
+							}
+										
+					}
+		}
 
-								case <-timer.C:
-									waitingClientsMutex.Lock()
-									q.Remove(element)
-									waitingClientsMutex.Unlock()
-									break WaitLoop
-
-						}
-									
-				}
 
 
 				return streams

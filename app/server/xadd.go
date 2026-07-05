@@ -53,7 +53,7 @@ func xAddCommand(arguments [][]byte) Response {
 	}
 
 	var stream *Stream
-	
+
 	key:=string(arguments[0])
 
 	databaseMutex.Lock()
@@ -181,7 +181,13 @@ func xAddCommand(arguments [][]byte) Response {
 	if q,ok:=waitingClients[key];ok{
 		    
 		     for element:=q.Front();element!=nil;element=element.Next(){
-				      element.Value.(chan bool)<-true
+				      ch:=element.Value.(chan bool)
+
+						select{
+							case  ch<-true:
+							default:
+
+						}
 			  }
 	}
 
