@@ -14,6 +14,7 @@ func xread_test(t *testing.T) {
 	// stage87_XReadEmptyResult(t)
 	stage88_XReadBlockWakeup(t)
 	stage89_XReadBlockTimeout(t)
+	stage90_XReadBlockImmediate(t) 
 }
 
 func stage82_XReadBasic(t *testing.T) {
@@ -268,4 +269,52 @@ func stage89_XReadBlockTimeout(t *testing.T) {
     }
 
     pass("blocking timeout works")
+}
+
+
+func stage90_XReadBlockImmediate(t *testing.T) {
+	stage("STAGE 90: XREAD BLOCK IMMEDIATE")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	send(conn,
+		"*5\r\n" +
+			"$4\r\nXADD\r\n" +
+			"$9\r\nstream-90\r\n" +
+			"$3\r\n1-0\r\n" +
+			"$1\r\na\r\n" +
+			"$1\r\n1\r\n")
+
+	start := time.Now()
+
+	resp := send(conn,
+		"*6\r\n" +
+			"$5\r\nXREAD\r\n" +
+			"$5\r\nBLOCK\r\n" +
+			"$4\r\n5000\r\n" +
+			"$7\r\nSTREAMS\r\n" +
+			"$9\r\nstream-90\r\n" +
+			"$3\r\n0-0\r\n")
+
+	if time.Since(start) > 200*time.Millisecond {
+		failf(t, "blocked despite data already existing")
+	}
+
+	expected :=
+		"*1\r\n" +
+			"*2\r\n" +
+			"$9\r\nstream-90\r\n" +
+			"*1\r\n" +
+			"*2\r\n" +
+			"$3\r\n1-0\r\n" +
+			"*2\r\n" +
+			"$1\r\na\r\n" +
+			"$1\r\n1\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("blocking XREAD returns immediately when data exists")
 }
