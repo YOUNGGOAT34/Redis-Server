@@ -53,14 +53,13 @@ func xAddCommand(arguments [][]byte) Response {
 	}
 
 	var stream *Stream
+	
+	key:=string(arguments[0])
 
 	databaseMutex.Lock()
-	key:=string(arguments[0])
+	data, exists := database[key]
 	databaseMutex.Unlock()
     
-
-	data, exists := database[key]
-
 	if exists {
 		if data.Type != STREAM {
 			return Response{

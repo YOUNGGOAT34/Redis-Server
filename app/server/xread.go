@@ -142,6 +142,8 @@ func decideTypeOfRead(arguments [][]byte) Response {
 
 }
 
+
+
 func blockingXread(arguments [][]byte) Response {
 	
 	  timeout, err := strconv.Atoi(string(arguments[0]))
@@ -195,50 +197,30 @@ func blockingXread(arguments [][]byte) Response {
 	
 					  streams = append(streams,s)
 				  }else{
+
+					   
 					
-					    ch:=make(chan bool,1)
-
-						 waitingClientsMutex.Lock()
-						 
-						q, ok := waitingClients[string(arguments[0])]
-
-						if !ok {
-							q = list.New()
-							waitingClients[string(arguments[0])] = q
-						}
-
-						element:=q.PushBack(ch)
-
-						waitingClientsMutex.Unlock()
-
-						deadline:=time.Now().Add(time.Duration(timeout)*time.Millisecond)
-
-						for{
-							  _=<-ch
-
-							      if time.Now().After(deadline){
-										   waitingClientsMutex.Lock()
-										    q.Remove(element)
-											 waitingClientsMutex.Unlock()
-											 break
-									}
-
-									stream.streamMutex.RLock()
-									s=stream.xRead(startId)
-									stream.streamMutex.RUnlock()
-                           
-									if len(s)>0{
-										 streams=append(streams, s)
-										 waitingClientsMutex.RLock()
-										 q.Remove(element)
-										 waitingClientsMutex.RUnlock()
-										 break
-									}
-							      	   
-						}
-   
+					    streams=waitForData(stream,timeout,startId,string(arguments[0]))
 				  }
-			  
+	  }else{
+		      databaseMutex.Lock()
+				stream:=&Stream{}
+				database[string(arguments[0])]=Data{
+					    Type: STREAM,
+						 Value: stream,
+				}
+				databaseMutex.Unlock()
+
+				startId,err:=stream.createStreamID(arguments[1])
+
+				if err!=nil{
+					   return Response{
+								Body: []byte(err.Error()),
+								Type: ERROR,
+						}
+				}
+
+		     streams=waitForData(stream,timeout,startId,string(arguments[0]))
 	  }
 
 
@@ -255,4 +237,60 @@ func blockingXread(arguments [][]byte) Response {
 						Body: encodeStreams(streams),
 						Type: ARRAY,
 				}
+}
+
+
+
+func waitForData(stream *Stream,timeout int,startId StreamID,key string) [][]*StreamEntry{
+
+	  var streams [][]*StreamEntry
+	  
+	  ch:=make(chan bool,1)
+
+		waitingClientsMutex.Lock()
+			
+		q, ok := waitingClients[key]
+
+		if !ok {
+			q = list.New()
+			waitingClients[key] = q
+		}
+
+		element:=q.PushBack(ch)
+
+		waitingClientsMutex.Unlock()
+
+
+		timer:=time.NewTimer(time.Duration(timeout)*time.Millisecond)
+		defer timer.Stop()
+		WaitLoop:
+				for{
+					
+						select{
+						case <-ch:
+
+									stream.streamMutex.RLock()
+									s:=stream.xRead(startId)
+									stream.streamMutex.RUnlock()
+									
+									if len(s)>0{
+										streams=append(streams, s)
+										waitingClientsMutex.Lock()
+										q.Remove(element)
+										waitingClientsMutex.Unlock()
+										break WaitLoop
+									}
+
+								case <-timer.C:
+									waitingClientsMutex.Lock()
+									q.Remove(element)
+									waitingClientsMutex.Unlock()
+									break WaitLoop
+
+						}
+									
+				}
+
+
+				return streams
 }
