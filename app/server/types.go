@@ -21,6 +21,8 @@ const (
 	STREAM
 )
 
+
+//for debugging
 func typeToString(t TYPE) string{
 	    switch t{
 		 case STRING:
@@ -66,11 +68,20 @@ type List struct {
 	Head *Node
 	Tail *Node
 	len  int
+	listMutex sync.RWMutex
 }
 
+//for blocking pops
 var (
 	blockedClients      = make(map[string]*list.List)
 	blockedClientsMutex sync.RWMutex
+)
+
+
+//for blocking reads(of streams)
+var (
+	waitingClients      = make(map[string]*list.List)
+	waitingClientsMutex sync.RWMutex
 )
 
 var (
@@ -168,6 +179,7 @@ type Stream struct {
 	Entries []*StreamEntry
 	// Tree *Radix
 	LastID StreamID
+	streamMutex sync.RWMutex
 	Len    int
 }
 

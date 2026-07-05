@@ -95,12 +95,11 @@ func lRangeCommand(arguments [][]byte) Response {
 
      
 		databaseMutex.RLock()
-		defer databaseMutex.RUnlock()
 		data,exists:=database[key]
+		databaseMutex.RUnlock()
 
 		if exists{
            
-		
 			    if data.Type!=LIST{
 								return Response{
 									Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
@@ -110,6 +109,9 @@ func lRangeCommand(arguments [][]byte) Response {
 
 				  
 				 list:=data.Value.(*List)
+
+				 list.listMutex.RLock()
+				 defer list.listMutex.RUnlock()
              
 				 if list==nil || list.len==0{
 					    return Response{

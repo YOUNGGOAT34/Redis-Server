@@ -73,10 +73,12 @@ func bLPopCommand(arguments [][]byte) Response {
 
 	databaseMutex.RLock()
 	data, exists := database[string(arguments[0])]
+	databaseMutex.RUnlock()
+
 	if exists {
 
 		if data.Type != LIST {
-			databaseMutex.RUnlock()
+		
 			return Response{
 				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
 				Type: ERROR,
@@ -86,20 +88,16 @@ func bLPopCommand(arguments [][]byte) Response {
 		listData := data.Value.(*List)
 
 		if listData == nil || listData.len == 0 {
-
-			databaseMutex.RUnlock()
-
 			return blockClient(arguments)
 
 		}
 
-		databaseMutex.RUnlock()
-
-		databaseMutex.Lock()
-
+		
+      listData.listMutex.Lock()
 		value := listData.LPop()
+		listData.listMutex.Unlock()
 
-		databaseMutex.Unlock()
+		
 
 		return Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
@@ -107,7 +105,7 @@ func bLPopCommand(arguments [][]byte) Response {
 		}
 	}
 
-	databaseMutex.RUnlock()
+	
 
 	return blockClient(arguments)
 }

@@ -13,9 +13,9 @@ func lPushCommand(arguments [][]byte) Response {
 	key := string(arguments[0])
 
 	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
-
 	data, exists := database[key]
+	databaseMutex.Unlock()
+
 
 	if exists {
 
@@ -28,7 +28,8 @@ func lPushCommand(arguments [][]byte) Response {
 		}
 
 		list := data.Value.(*List)
-
+      list.listMutex.Lock()
+		defer list.listMutex.Unlock()
 		for _, argument := range arguments[1:] {
 			list.PushFront(argument)
 		}

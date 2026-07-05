@@ -40,8 +40,9 @@ func xRangeCommand(arguments [][]byte) Response {
 	var entries []*StreamEntry
 
 	databaseMutex.RLock()
-	defer databaseMutex.RUnlock()
-	if data, exists := database[string(arguments[0])]; exists {
+	data, exists := database[string(arguments[0])];
+	databaseMutex.RUnlock()
+	if  exists {
 
 		if data.Type != STREAM {
 			return Response{
@@ -51,6 +52,8 @@ func xRangeCommand(arguments [][]byte) Response {
 		}
 
 		stream := data.Value.(*Stream)
+		stream.streamMutex.RLock()
+		defer stream.streamMutex.RUnlock()
 
 		/*
 			    This guard will prevent against accessing invalid memory when the use queries with -

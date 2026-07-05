@@ -11,9 +11,10 @@ func llenCommand(arguments [][]byte) Response {
 	  }
 
 	  databaseMutex.RLock()
-	  defer databaseMutex.RUnlock()
-
 	  data,exists:=database[string(arguments[0])]
+	  databaseMutex.RUnlock()
+
+	  
 
 	  if exists{
 		    if data.Type!=LIST{
@@ -25,6 +26,9 @@ func llenCommand(arguments [][]byte) Response {
 
 
 			list:=data.Value.(*List)
+			
+			list.listMutex.RLock()
+			defer list.listMutex.RUnlock()
 
 			if list==nil{
 				   return Response{

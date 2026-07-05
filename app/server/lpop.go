@@ -27,9 +27,9 @@ func lPopCommand(arguments [][]byte) Response {
 	}
 
 	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
-
 	data, exists := database[string(arguments[0])]
+	databaseMutex.Unlock()
+
 
 	if exists {
 
@@ -42,6 +42,9 @@ func lPopCommand(arguments [][]byte) Response {
 		}
 
 		list := data.Value.(*List)
+
+		list.listMutex.Lock()
+		defer list.listMutex.Unlock()
 
 		if len(arguments) == 1 {
 			body := list.LPop()

@@ -73,7 +73,8 @@ func dispatchCommands(args [][]byte) Response {
 			case "XRANGE":
 				return xRangeCommand(args[1:])
 			case "XREAD":
-				return xReadCommand(args[2:])
+				return decideTypeOfRead(args[1:])
+				
 			default:
 				return Response{
 					Body: []byte("Error: Unknown command"),
@@ -82,5 +83,6 @@ func dispatchCommands(args [][]byte) Response {
 
 	}
 }
+
 
 

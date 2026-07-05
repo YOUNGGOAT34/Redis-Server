@@ -55,9 +55,9 @@ func xAddCommand(arguments [][]byte) Response {
 	var stream *Stream
 
 	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
-    
 	key:=string(arguments[0])
+	databaseMutex.Unlock()
+    
 
 	data, exists := database[key]
 
@@ -70,6 +70,8 @@ func xAddCommand(arguments [][]byte) Response {
 		}
 
 		stream = data.Value.(*Stream)
+		stream.streamMutex.Lock()
+		defer stream.streamMutex.Unlock()
 
 	} else {
 
@@ -112,7 +114,7 @@ func xAddCommand(arguments [][]byte) Response {
 			}
 
 		}
-
+      
 		if err != nil {
 
 			return Response{
@@ -173,6 +175,16 @@ func xAddCommand(arguments [][]byte) Response {
 	stream.LastID = Id
 	stream.Entries = append(stream.Entries, entry)
 	stream.Len++
+
+	waitingClientsMutex.Lock()
+	defer waitingClientsMutex.Unlock()
+
+	if q,ok:=waitingClients[key];ok{
+		    
+		     for element:=q.Front();element!=nil;element=element.Next(){
+				      element.Value.(chan bool)<-true
+			  }
+	}
 
 	return Response{
 		Body: []byte(Id.String()),

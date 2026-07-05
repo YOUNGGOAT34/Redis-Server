@@ -77,15 +77,13 @@ func rPushCommand(arguments [][]byte) Response {
 	values:=arguments[1:]
 
 	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
-	
 	data,exists:=database[string(key)]
+	databaseMutex.Unlock()
+	
+	
 
 	if exists{
 
-
-		   
-         
 		   if data.Type!=LIST{
 				  
 				  return Response{
@@ -95,6 +93,8 @@ func rPushCommand(arguments [][]byte) Response {
 			}
 
 			list:=data.Value.(*List)
+			list.listMutex.Lock()
+			defer list.listMutex.Unlock()
 
 			wakeUpWaitingClients(string(arguments[0]),&values)
 
