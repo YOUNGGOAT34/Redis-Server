@@ -1,6 +1,8 @@
 package server
 
-import "strings"
+import (
+	"strings"
+)
 
 func dispatchCommands(args [][]byte) Response {
 
@@ -74,7 +76,8 @@ func dispatchCommands(args [][]byte) Response {
 				return xRangeCommand(args[1:])
 			case "XREAD":
 				return decideTypeOfRead(args[1:])
-				
+			case "INCR":
+				return incrCommand(args[1:])
 			default:
 				return Response{
 					Body: []byte("Error: Unknown command"),
@@ -83,6 +86,8 @@ func dispatchCommands(args [][]byte) Response {
 
 	}
 }
+
+
 
 
 

@@ -58,6 +58,7 @@ func TestMain(t *testing.T) {
 	xadd_test(t)
 	xrange_test(t)
 	xread_test(t)
+	incr_test(t)
 	
 }
 

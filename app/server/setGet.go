@@ -138,13 +138,12 @@ func setCommand(arguments [][]byte) Response {
 		}
 
 
-		var dataObject Data
-  
-		dataObject.Type=STRING
-		dataObject.Value=string(arguments[1])
-       
+
 		databaseMutex.Lock()
-		database[string(arguments[0])]=dataObject
+		database[string(arguments[0])]=Data{
+			   Type: STRING,
+				Value: string(arguments[1]),
+		}
 		databaseMutex.Unlock()
 
 		return Response{
