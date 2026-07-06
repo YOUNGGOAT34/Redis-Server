@@ -4,7 +4,8 @@ import (
 	"strings"
 )
 
-func dispatchCommands(args [][]byte) Response {
+
+func dispatchCommands(client *Client,args [][]byte) Response {
 
 	if len(args) < 1 {
 		return Response{
@@ -17,6 +18,28 @@ func dispatchCommands(args [][]byte) Response {
 
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
+
+	switch cmd{
+
+		 case "MULTI":
+				return multiCommand(args[1:],client)
+			case "EXEC":
+				return execCommand(args[1:],client)
+		  
+	}
+
+  if client.InTransaction{
+	     client.Queue = append(client.Queue, 
+		               Command{
+                          Args: args,
+							})
+
+			return Response{
+				      Body: []byte("QUEUED"),
+						Type: SIMPLE_STRING,
+			}
+  }
+
 
 	switch cmd {
 
@@ -78,10 +101,7 @@ func dispatchCommands(args [][]byte) Response {
 				return decideTypeOfRead(args[1:])
 			case "INCR":
 				return incrCommand(args[1:])
-			case "MULTI":
-				return multiCommand(args[1:])
-			case "EXEC":
-				return execCommand(args[1:])
+			
 			default:
 				return Response{
 					Body: []byte("Error: Unknown command"),

@@ -69,6 +69,3 @@ func incrCommand(arguments [][]byte) Response {
 }
 
 
-func execCommand(arguments [][]byte) Response {
-	panic("unimplemented")
-}

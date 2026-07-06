@@ -3,6 +3,7 @@ package server
 import (
 	"container/list"
 	"errors"
+	"net"
 	"sort"
 	"strconv"
 	"sync"
@@ -12,6 +13,21 @@ import (
 /*
 
  */
+
+
+	type Command struct{
+		
+		Args [][]byte
+	}
+
+	type Client struct{
+			Conn net.Conn
+			InTransaction bool
+			Queue []Command
+
+	}
+
+
 
 type TYPE int
 
@@ -151,6 +167,9 @@ func (list *List) LPop() []byte {
 
 	return tmp.data
 }
+
+
+
 
 /*
     Stream

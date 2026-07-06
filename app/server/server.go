@@ -48,6 +48,10 @@ func handleClient(conn net.Conn){
 
 		  defer conn.Close()
 
+         client:=&Client{
+				   Conn: conn,
+			}
+
 		  for{
 
 			  bytesRead,err:= conn.Read(request)
@@ -64,7 +68,7 @@ func handleClient(conn net.Conn){
 				}
 
 				 
-	         response:=parseRequest(request[:bytesRead])
+	         response:=parseRequest(client,request[:bytesRead])
 
 	
 				_,err=conn.Write(buildResponse(response))
