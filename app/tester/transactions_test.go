@@ -209,7 +209,7 @@ func stage110_DiscardClearsQueue(t *testing.T) {
 	send(conn,
 		"*3\r\n"+
 			"$3\r\nSET\r\n"+
-			"$1\r\nx\r\n"+
+			"$2\r\nxx\r\n"+
 			"$2\r\n42\r\n")
 
 	send(conn,
@@ -219,7 +219,7 @@ func stage110_DiscardClearsQueue(t *testing.T) {
 	resp := send(conn,
 		"*2\r\n"+
 			"$3\r\nGET\r\n"+
-			"$1\r\nx\r\n")
+			"$2\r\nxx\r\n")
 
 	expected := "$-1\r\n"
 

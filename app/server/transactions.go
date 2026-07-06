@@ -72,7 +72,8 @@ func discardCommand(arguments [][]byte, client *Client) Response {
 
 		 client.InTransaction=false
 		 client.Queue=nil
-
+       
+	     
 		 return Response{
 			    Body: []byte("OK"),
 				 Type: SIMPLE_STRING,
