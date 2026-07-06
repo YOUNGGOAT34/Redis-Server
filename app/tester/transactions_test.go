@@ -17,6 +17,9 @@ func transaction_test(t *testing.T) {
 	stage113_TransactionRuntimeError(t)
 	stage114_TransactionMultipleErrors(t)
 	stage115_TransactionContinuesAfterFailure(t) 
+	stage116_MultipleTransactions(t) 
+	stage117_TransactionIsolation(t)
+	stage118_DiscardDoesNotAffectOtherClient(t) 
 }
 
 
@@ -425,4 +428,188 @@ func stage115_TransactionContinuesAfterFailure(t *testing.T) {
 	}
 
 	pass("transaction continues after failures")
+}
+
+
+
+
+func stage116_MultipleTransactions(t *testing.T) {
+	stage("STAGE 116: MULTIPLE TRANSACTIONS")
+
+	conn1 := dial(t)
+	conn2 := dial(t)
+
+	defer conn1.Close()
+	defer conn2.Close()
+
+	send(conn1,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn2,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn1,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$2\r\nk1\r\n"+
+			"$2\r\nv1\r\n")
+
+	send(conn2,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$2\r\nk2\r\n"+
+			"$2\r\nv2\r\n")
+
+	resp1 := send(conn1,
+		"*1\r\n"+
+			"$4\r\nEXEC\r\n")
+
+	resp2 := send(conn2,
+		"*1\r\n"+
+			"$4\r\nEXEC\r\n")
+
+	expected := "*1\r\n+OK\r\n"
+
+	if resp1 != expected {
+		failf(t, "conn1 expected %q got %q", expected, resp1)
+	}
+
+	if resp2 != expected {
+		failf(t, "conn2 expected %q got %q", expected, resp2)
+	}
+
+	pass("multiple clients have independent transactions")
+}
+
+func stage117_TransactionIsolation(t *testing.T) {
+	stage("STAGE 117: TRANSACTION ISOLATION")
+
+	conn1 := dial(t)
+	conn2 := dial(t)
+	conn3 := dial(t)
+
+	defer conn1.Close()
+	defer conn2.Close()
+	defer conn3.Close()
+
+	send(conn1,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn2,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn1,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$6\r\nxxxxxx\r\n"+
+			"$1\r\n1\r\n")
+
+	send(conn2,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$3\r\nyyy\r\n"+
+			"$1\r\n2\r\n")
+
+	resp := send(conn1,
+		"*1\r\n"+
+			"$4\r\nEXEC\r\n")
+
+	expected := "*1\r\n+OK\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	resp = send(conn3,
+		"*2\r\n"+
+			"$3\r\nGET\r\n"+
+			"$3\r\nyyy\r\n")
+
+	expected = "$-1\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	resp = send(conn3,
+		"*2\r\n"+
+			"$3\r\nGET\r\n"+
+			"$6\r\nxxxxxx\r\n")
+
+	expected = "$1\r\n1\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("transactions are isolated between clients")
+}
+func stage118_DiscardDoesNotAffectOtherClient(t *testing.T) {
+	stage("STAGE 118: DISCARD ISOLATION")
+
+	conn1 := dial(t)
+	conn2 := dial(t)
+
+	defer conn1.Close()
+	defer conn2.Close()
+
+	send(conn1,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn2,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn1,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$1\r\na\r\n"+
+			"$1\r\n1\r\n")
+
+	send(conn2,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$1\r\nb\r\n"+
+			"$1\r\n2\r\n")
+
+	send(conn1,
+		"*1\r\n"+
+			"$7\r\nDISCARD\r\n")
+
+	resp := send(conn2,
+		"*1\r\n"+
+			"$4\r\nEXEC\r\n")
+
+	expected := "*1\r\n+OK\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	resp = send(conn1,
+		"*2\r\n"+
+			"$3\r\nGET\r\n"+
+			"$1\r\na\r\n")
+
+	if resp != "$-1\r\n" {
+		failf(t, "expected nil got %q", resp)
+	}
+
+	resp = send(conn2,
+		"*2\r\n"+
+			"$3\r\nGET\r\n"+
+			"$1\r\nb\r\n")
+
+	expected = "$1\r\n2\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("DISCARD affects only its own client")
 }
