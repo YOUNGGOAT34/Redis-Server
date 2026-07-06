@@ -57,3 +57,26 @@ func execCommand(arguments [][]byte,client *Client) Response{
 }
 
 
+
+func discardCommand(arguments [][]byte, client *Client) Response {
+	    if len(arguments)!=0{
+			   return wrongNumberOfArguments("DISCARD")
+		 }
+
+		 if !client.InTransaction{
+			    return Response{
+					  Body: []byte("ERR DISCARD without MULTI"),
+					  Type: ERROR,
+				 }
+		 }
+
+		 client.InTransaction=false
+		 client.Queue=nil
+
+		 return Response{
+			    Body: []byte("OK"),
+				 Type: SIMPLE_STRING,
+		 }
+}
+
+

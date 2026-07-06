@@ -9,6 +9,11 @@ func transaction_test(t *testing.T) {
 	stage102_ExecRunsQueuedCommands(t)
 	stage103_ExecEmptyQueue(t)
 	stage106_ExecWrongArguments(t)
+	stage108_DiscardBasic(t)
+	stage109_DiscardWithoutMulti(t)
+	stage110_DiscardClearsQueue(t)
+	stage111_DiscardWrongArguments(t) 
+	stage112_ExecAfterDiscard(t) 
 }
 
 
@@ -143,4 +148,139 @@ func stage106_ExecWrongArguments(t *testing.T) {
 	}
 
 	pass("EXEC validates argument count")
+}
+
+
+func stage108_DiscardBasic(t *testing.T) {
+	stage("STAGE 108: DISCARD BASIC")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	send(conn,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	resp := send(conn,
+		"*1\r\n"+
+			"$7\r\nDISCARD\r\n")
+
+	expected := "+OK\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("DISCARD exits transaction")
+}
+
+
+
+func stage109_DiscardWithoutMulti(t *testing.T) {
+	stage("STAGE 109: DISCARD WITHOUT MULTI")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	resp := send(conn,
+		"*1\r\n"+
+			"$7\r\nDISCARD\r\n")
+
+	expected := "-ERR DISCARD without MULTI\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("DISCARD without MULTI rejected")
+}
+
+
+func stage110_DiscardClearsQueue(t *testing.T) {
+	stage("STAGE 110: DISCARD CLEARS QUEUE")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	send(conn,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$1\r\nx\r\n"+
+			"$2\r\n42\r\n")
+
+	send(conn,
+		"*1\r\n"+
+			"$7\r\nDISCARD\r\n")
+
+	resp := send(conn,
+		"*2\r\n"+
+			"$3\r\nGET\r\n"+
+			"$1\r\nx\r\n")
+
+	expected := "$-1\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("queued commands discarded")
+}
+
+
+
+func stage111_DiscardWrongArguments(t *testing.T) {
+	stage("STAGE 111: DISCARD WRONG ARGUMENTS")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	resp := send(conn,
+		"*2\r\n"+
+			"$7\r\nDISCARD\r\n"+
+			"$1\r\nx\r\n")
+
+	expected := "-Wrong number of arguments for 'DISCARD' command\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("DISCARD validates argument count")
+}
+
+func stage112_ExecAfterDiscard(t *testing.T) {
+	stage("STAGE 112: EXEC AFTER DISCARD")
+
+	conn := dial(t)
+	defer conn.Close()
+
+	send(conn,
+		"*1\r\n"+
+			"$5\r\nMULTI\r\n")
+
+	send(conn,
+		"*3\r\n"+
+			"$3\r\nSET\r\n"+
+			"$1\r\nx\r\n"+
+			"$1\r\n1\r\n")
+
+	send(conn,
+		"*1\r\n"+
+			"$7\r\nDISCARD\r\n")
+
+	resp := send(conn,
+		"*1\r\n"+
+			"$4\r\nEXEC\r\n")
+
+	expected := "-ERR EXEC without MULTI\r\n"
+
+	if resp != expected {
+		failf(t, "expected %q got %q", expected, resp)
+	}
+
+	pass("EXEC rejected after DISCARD")
 }

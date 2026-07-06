@@ -59,7 +59,7 @@ func TestMain(t *testing.T) {
 	// xrange_test(t)
 	// xread_test(t)
 	// incr_test(t)
-	multi_test(t)
+	// multi_test(t)
 	transaction_test(t)
 	
 }

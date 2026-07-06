@@ -25,6 +25,9 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 				return multiCommand(args[1:],client)
 			case "EXEC":
 				return execCommand(args[1:],client)
+
+			case "DISCARD":
+				return discardCommand(args[1:],client)
 		  
 	}
 
@@ -110,6 +113,7 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 
 	}
 }
+
 
 
 
