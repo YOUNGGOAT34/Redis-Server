@@ -80,6 +80,8 @@ func dispatchCommands(args [][]byte) Response {
 				return incrCommand(args[1:])
 			case "MULTI":
 				return multiCommand(args[1:])
+			case "EXEC":
+				return execCommand(args[1:])
 			default:
 				return Response{
 					Body: []byte("Error: Unknown command"),
@@ -88,6 +90,8 @@ func dispatchCommands(args [][]byte) Response {
 
 	}
 }
+
+
 
 
 

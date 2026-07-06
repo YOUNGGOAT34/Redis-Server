@@ -8,11 +8,7 @@ import (
 func incrCommand(arguments [][]byte) Response {
 	
 	   if len(arguments)!=1{
-			   return Response{
-			    Body:[]byte("Wrong number of arguments for 'INCR' command"),
-				 Type:ERROR,
-
-		  }
+			  return wrongNumberOfArguments("INCR")
 		}
 
 
@@ -27,10 +23,7 @@ func incrCommand(arguments [][]byte) Response {
 		data,exists:=database[key];
 		if exists{
 			   if data.Type!=STRING{
-					  return Response{
-							Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-							Type:ERROR,
-						  }
+					   return wrongType()
 				}
 
 				value:=data.Value.(string)
@@ -73,4 +66,9 @@ func incrCommand(arguments [][]byte) Response {
 			   Body:[]byte(strValue),
 				Type:INTEGER,
 		  }
+}
+
+
+func execCommand(arguments [][]byte) Response {
+	panic("unimplemented")
 }

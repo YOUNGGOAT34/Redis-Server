@@ -4,10 +4,7 @@ import "strconv"
 
 func lPushCommand(arguments [][]byte) Response {
 	if len(arguments) < 2 {
-		return Response{
-			Body: []byte("Wrong number of arguments for 'LPUSH' command"),
-			Type: ERROR,
-		}
+		return wrongNumberOfArguments("LPUSH")
 	}
 
 	key := string(arguments[0])
@@ -21,10 +18,7 @@ func lPushCommand(arguments [][]byte) Response {
 
 		if data.Type != LIST {
 
-			return Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: ERROR,
-			}
+			return wrongType()
 		}
 
 		list := data.Value.(*List)

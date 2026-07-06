@@ -39,10 +39,7 @@ func createStreamID(id []byte) (StreamID, error) {
 func xAddCommand(arguments [][]byte) Response {
 	if len(arguments) < 4 {
 
-		return Response{
-			Body: []byte("Wrong number of arguments for 'XADD' command"),
-			Type: ERROR,
-		}
+		return wrongNumberOfArguments("XADD")
 	}
 
 	if len(arguments[2:])%2 != 0 {
@@ -62,10 +59,7 @@ func xAddCommand(arguments [][]byte) Response {
     
 	if exists {
 		if data.Type != STREAM {
-			return Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: ERROR,
-			}
+			return wrongType()
 		}
 
 		stream = data.Value.(*Stream)

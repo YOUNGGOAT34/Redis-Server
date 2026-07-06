@@ -356,6 +356,9 @@ func (stream *Stream) xRead(startId StreamID) []*StreamEntry{
 	
 }
 
+
+
+
 // //converts a string version of stream id into []bytes
 // func(id StreamID) Bytes() []byte{
 // 	   return []byte(id.String())

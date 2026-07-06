@@ -62,10 +62,7 @@ func getCommand(arguments [][]byte) Response {
 
 func setCommand(arguments [][]byte) Response {
 	   if len(arguments)<2 {
-			   return Response{
-					Body:[]byte("Wrong number of arguments for 'SET' command"),
-					Type:ERROR,
-				}
+			   return wrongNumberOfArguments("SET")
 		}
 
 	

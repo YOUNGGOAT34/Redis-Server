@@ -31,10 +31,7 @@ func encodeEntries(entries []*StreamEntry) []byte {
 func xRangeCommand(arguments [][]byte) Response {
 
 	if len(arguments) != 3 {
-		return Response{
-			Body: []byte("Wrong number of arguments for 'XRANGE' command"),
-			Type: ERROR,
-		}
+		return wrongNumberOfArguments("XRANGE")
 	}
 
 	var entries []*StreamEntry
@@ -45,10 +42,7 @@ func xRangeCommand(arguments [][]byte) Response {
 	if  exists {
 
 		if data.Type != STREAM {
-			return Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: ERROR,
-			}
+			return wrongType()
 		}
 
 		stream := data.Value.(*Stream)

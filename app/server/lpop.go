@@ -20,10 +20,7 @@ func encodeArray(body [][]byte) []byte {
 func lPopCommand(arguments [][]byte) Response {
 
 	if len(arguments) < 1 {
-		return Response{
-			Body: []byte("Error: Wrong number of arguments passed to lpop command"),
-			Type: ERROR,
-		}
+		return wrongNumberOfArguments("LPOP")
 	}
 
 	databaseMutex.Lock()
@@ -35,10 +32,7 @@ func lPopCommand(arguments [][]byte) Response {
 
 		if data.Type != LIST {
 
-			return Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: ERROR,
-			}
+			return  wrongType()
 		}
 
 		list := data.Value.(*List)

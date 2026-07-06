@@ -3,11 +3,7 @@ package server
 func typeCommand(arguments [][]byte) Response {
 	  if len(arguments)!=1{
 
-		    return Response{
-			    Body:[]byte("Wrong number of arguments for 'TYPE' command"),
-				 Type:ERROR,
-
-		  }
+		    return wrongNumberOfArguments("TYPE")
 	  }
 
 	  databaseMutex.Lock()
@@ -44,3 +40,5 @@ func typeToByte(_type TYPE) []byte{
 			   panic("Unkown type")
 		 }
 }
+
+

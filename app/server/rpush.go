@@ -66,11 +66,7 @@ func rPushCommand(arguments [][]byte) Response {
 	
 	//in a case where there was a key but had no values
 	if len(arguments)<2{
-		    return Response{
-			    Body:[]byte("Wrong number of arguments for 'RPUSH' command"),
-				 Type:ERROR,
-
-		  }
+		    return wrongNumberOfArguments("RPUSH")
 	}
 
 
@@ -86,10 +82,7 @@ func rPushCommand(arguments [][]byte) Response {
 
 		   if data.Type!=LIST{
 				  
-				  return Response{
-					      Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-							Type:ERROR,
-				  }
+				  return wrongType()
 			}
 
 			list:=data.Value.(*List)

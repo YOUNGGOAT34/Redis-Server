@@ -61,10 +61,7 @@ func lRangeCommand(arguments [][]byte) Response {
 
 	   
 	   if len(arguments)!=3{
-			      return Response{
-						   Body:[]byte("Error: Wrong number of arguments passed to lrange command"),
-							Type: ERROR,
-					}
+			      return  wrongNumberOfArguments("LRANGE")
 		
 		}
 
@@ -101,10 +98,7 @@ func lRangeCommand(arguments [][]byte) Response {
 		if exists{
            
 			    if data.Type!=LIST{
-								return Response{
-									Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-									Type:ERROR,
-						       }
+								return wrongType()
 				 }
 
 				  
