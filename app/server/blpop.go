@@ -43,7 +43,6 @@ func blockClient(arguments [][]byte) Response {
 
 	select {
 	case value := <-ch:
-
 		return Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
 			Type: ARRAY,

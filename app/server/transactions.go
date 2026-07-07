@@ -109,7 +109,7 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 			  }
 		}
 
-		for argument:=range arguments{
+		for _,argument:=range arguments{
 
 			key:=string(argument)
 	

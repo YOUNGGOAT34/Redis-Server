@@ -90,13 +90,17 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 			defer list.listMutex.Unlock()
 
 			wakeUpWaitingClients(string(arguments[0]),&values)
-
+         
 
 			for _,value:=range values{
 							list.PushBack(value)
 			}
 
-			markDirty(string(arguments[0]),client)
+			if len(values)>1{
+
+				markDirty(string(arguments[0]),client)
+			}
+
 			var buf [32]byte
 			return Response{
 		  
@@ -150,7 +154,7 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 	markDirty(string(arguments[0]),client)
 
 	var buf [32]byte
-
+   
    return Response{
 		  
 		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
