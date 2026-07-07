@@ -10,9 +10,8 @@ import (
 	"time"
 )
 
-/*
 
- */
+
 
 
 	type Command struct{
@@ -27,6 +26,11 @@ import (
 
 	}
 
+
+var (
+	  watchedKeys=make(map[string]map[*Client]struct{})
+	  watchedKeysMutex sync.RWMutex
+)
 
 
 type TYPE int

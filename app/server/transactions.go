@@ -100,6 +100,19 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 			  }
 		}
 
+		key:=string(arguments[0])
+
+		watchedKeysMutex.Lock()
+		set,exists:=watchedKeys[key]
+		if !exists{
+			  set=make(map[*Client]struct{})
+			  watchedKeys[key]=set
+
+		}
+		 set[client]=struct{}{}
+
+		watchedKeysMutex.Unlock()
+
 		return Response{
 			 Body: []byte("OK"),
 			 Type: SIMPLE_STRING,
