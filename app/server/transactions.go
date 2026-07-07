@@ -98,7 +98,7 @@ func discardCommand(arguments [][]byte, client *Client) Response {
 //     |----------------------WATCH COMMAND----------------------|
 
 func watchCommand(arguments [][]byte,client *Client) Response{
-	   if len(arguments)!=1{
+	   if len(arguments)<1{
 			  return wrongNumberOfArguments("WATCH")
 		}
 
@@ -109,21 +109,24 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 			  }
 		}
 
-		key:=string(arguments[0])
+		for argument:=range arguments{
 
-		watchedKeysMutex.Lock()
-		set,exists:=watchedKeys[key]
-		if !exists{
-			  set=make(map[*Client]struct{})
-			  watchedKeys[key]=set
-
+			key:=string(argument)
+	
+			watchedKeysMutex.Lock()
+			set,exists:=watchedKeys[key]
+			if !exists{
+				  set=make(map[*Client]struct{})
+				  watchedKeys[key]=set
+	
+			}
+			 
+			set[client]=struct{}{}
+	
+			watchedKeysMutex.Unlock()
+	
+			client.keysWatched[key]=struct{}{}
 		}
-		 
-		set[client]=struct{}{}
-
-		watchedKeysMutex.Unlock()
-
-		client.keysWatched[key]=struct{}{}
       
 		return Response{
 			 Body: []byte("OK"),
