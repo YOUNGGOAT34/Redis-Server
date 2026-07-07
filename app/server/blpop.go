@@ -63,7 +63,7 @@ func blockClient(arguments [][]byte) Response {
 
 }
 
-func bLPopCommand(arguments [][]byte) Response {
+func bLPopCommand(arguments [][]byte,client *Client) Response {
 	if len(arguments) != 2 {
 		return  wrongNumberOfArguments("BLOP")
 	}
@@ -92,6 +92,7 @@ func bLPopCommand(arguments [][]byte) Response {
 		listData.listMutex.Unlock()
 
 		
+		markDirty(string(arguments[0]),client)
 
 		return Response{
 			Body: encodeArray([][]byte{arguments[0], value}),

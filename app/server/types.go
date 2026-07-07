@@ -23,6 +23,8 @@ import (
 			Conn net.Conn
 			InTransaction bool
 			Queue []Command
+			Dirty bool
+			keysWatched map[string]struct{}
 
 	}
 

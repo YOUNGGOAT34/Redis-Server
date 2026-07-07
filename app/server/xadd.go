@@ -36,7 +36,7 @@ func createStreamID(id []byte) (StreamID, error) {
 	}, err
 }
 
-func xAddCommand(arguments [][]byte) Response {
+func xAddCommand(arguments [][]byte,client *Client) Response {
 	if len(arguments) < 4 {
 
 		return wrongNumberOfArguments("XADD")
@@ -184,6 +184,8 @@ func xAddCommand(arguments [][]byte) Response {
 						}
 			  }
 	}
+
+	markDirty(key,client)
 
 	return Response{
 		Body: []byte(Id.String()),

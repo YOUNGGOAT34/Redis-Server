@@ -74,36 +74,36 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 						Type: NIL,
 					}
 				}
-				return setCommand(args[1:])
+				return setCommand(args[1:],client)
 
 			case "GET":
 				return getCommand(args[1:])
 			case "RPUSH":
-				return rPushCommand(args[1:])
+				return rPushCommand(args[1:],client)
 
 			case "LRANGE":
 				return lRangeCommand(args[1:])
 			case "LPUSH":
-				return lPushCommand(args[1:])
+				return lPushCommand(args[1:],client)
 
 			case "LLEN":
 				return llenCommand(args[1:])
 
 			case "LPOP":
-				return lPopCommand(args[1:])
+				return lPopCommand(args[1:],client)
 
 			case "BLPOP":
-				return bLPopCommand(args[1:])
+				return bLPopCommand(args[1:],client)
 			case "TYPE":
 				return typeCommand(args[1:])
 			case "XADD":
-				return xAddCommand(args[1:])
+				return xAddCommand(args[1:],client)
 			case "XRANGE":
 				return xRangeCommand(args[1:])
 			case "XREAD":
 				return decideTypeOfRead(args[1:])
 			case "INCR":
-				return incrCommand(args[1:])
+				return incrCommand(args[1:],client)
 			case "WATCH":
 				 return watchCommand(args[1:],client)
 			

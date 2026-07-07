@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-func incrCommand(arguments [][]byte) Response {
+func incrCommand(arguments [][]byte,client *Client) Response {
 	
 	   if len(arguments)!=1{
 			  return wrongNumberOfArguments("INCR")
@@ -61,7 +61,9 @@ func incrCommand(arguments [][]byte) Response {
 			   Type: STRING,
 				Value:strValue,
 		}
-	
+
+		markDirty(key,client)
+
 		return Response{
 			   Body:[]byte(strValue),
 				Type:INTEGER,

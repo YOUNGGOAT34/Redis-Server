@@ -17,7 +17,7 @@ func encodeArray(body [][]byte) []byte {
 	return respArray
 }
 
-func lPopCommand(arguments [][]byte) Response {
+func lPopCommand(arguments [][]byte,client *Client) Response {
 
 	if len(arguments) < 1 {
 		return wrongNumberOfArguments("LPOP")
@@ -47,7 +47,10 @@ func lPopCommand(arguments [][]byte) Response {
 
 				if list.len == 0 {
 					delete(database, string(arguments[0]))
+				
 				}
+
+				markDirty(string(arguments[0]),client)
 
 				return Response{
 					Body: body,
@@ -80,13 +83,17 @@ func lPopCommand(arguments [][]byte) Response {
 				if poppedElement == nil {
 					break
 				}
-
+            
 				res = append(res, poppedElement)
 
 			}
 
 			if list.len == 0 {
 				delete(database, string(arguments[0]))
+			}
+
+			if len(res)>0{
+				  	markDirty(string(arguments[0]),client)
 			}
 
 			return Response{

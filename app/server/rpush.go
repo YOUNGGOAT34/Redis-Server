@@ -46,7 +46,7 @@ func wakeUpWaitingClients(key string,values *[][]byte){
 }
 
 
-func rPushCommand(arguments [][]byte) Response {
+func rPushCommand(arguments [][]byte,client *Client) Response {
 	if len(arguments)==0{
 		  return Response{
 			    Body:[]byte("Wrong number of arguments for 'RPUSH' command"),
@@ -96,7 +96,7 @@ func rPushCommand(arguments [][]byte) Response {
 							list.PushBack(value)
 			}
 
-			
+			markDirty(string(arguments[0]),client)
 			var buf [32]byte
 			return Response{
 		  
@@ -141,11 +141,13 @@ func rPushCommand(arguments [][]byte) Response {
 		  list.PushBack(value)
 	}
 
-	var dataObject Data
-	dataObject.Type=LIST
-	dataObject.Value=list
 
-	database[string(key)]=dataObject
+	database[string(key)]=Data{
+		    Type: LIST,
+			 Value: list,
+	}
+
+	markDirty(string(arguments[0]),client)
 
 	var buf [32]byte
 

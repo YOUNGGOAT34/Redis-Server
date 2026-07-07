@@ -43,9 +43,18 @@ func execCommand(arguments [][]byte,client *Client) Response{
 	 }
 
 	 queued:=client.Queue
+
+
 	 client.Queue=nil
 	 client.InTransaction=false
-
+    
+	 if client.Dirty{
+		    clearWatches(client)
+			 return Response{
+				 Body: []byte("*-1\r\n"),
+             Type: ARRAY,
+			 }
+	 }
 
 	 var resp []byte
 	 resp=fmt.Appendf(resp,"*%d\r\n",len(queued))
@@ -109,14 +118,34 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 			  watchedKeys[key]=set
 
 		}
-		 set[client]=struct{}{}
+		 
+		set[client]=struct{}{}
 
 		watchedKeysMutex.Unlock()
 
+		client.keysWatched[key]=struct{}{}
+      
 		return Response{
 			 Body: []byte("OK"),
 			 Type: SIMPLE_STRING,
 		}
 }
 
+
+
+func clearWatches(client *Client){
+	   watchedKeysMutex.Lock()
+		
+	  for key:=range client.keysWatched{
+		     delete (watchedKeys[key],client)
+			  if len(watchedKeys[key])==0{
+				   delete(watchedKeys,key)
+			  }
+	  }
+
+	  watchedKeysMutex.Unlock()
+
+	  client.keysWatched=make(map[string]struct{})
+	  client.Dirty=false
+}
 

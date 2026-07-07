@@ -2,7 +2,7 @@ package server
 
 import "strconv"
 
-func lPushCommand(arguments [][]byte) Response {
+func lPushCommand(arguments [][]byte,client *Client) Response {
 	if len(arguments) < 2 {
 		return wrongNumberOfArguments("LPUSH")
 	}
@@ -28,6 +28,7 @@ func lPushCommand(arguments [][]byte) Response {
 			list.PushFront(argument)
 		}
 
+		markDirty(string(arguments[0]),client)
 		var buf [32]byte
 
 		return Response{
@@ -51,13 +52,15 @@ func lPushCommand(arguments [][]byte) Response {
 		list.PushFront(argument)
 	}
 
-	var dataObject Data
-	dataObject.Type = LIST
-	dataObject.Value = list
-	database[key] = dataObject
+	database[key] = Data{
+		      Type: LIST,
+				Value: list,
+
+	}
+
+	markDirty(string(arguments[0]),client)
 
 	var buf [32]byte
-
 	return Response{
 
 		Body: strconv.AppendInt(buf[:0], int64(list.len), 10),

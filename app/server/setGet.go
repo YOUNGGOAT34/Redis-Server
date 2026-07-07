@@ -60,7 +60,7 @@ func getCommand(arguments [][]byte) Response {
 }
 
 
-func setCommand(arguments [][]byte) Response {
+func setCommand(arguments [][]byte,client *Client) Response {
 	   if len(arguments)<2 {
 			   return wrongNumberOfArguments("SET")
 		}
@@ -142,6 +142,8 @@ func setCommand(arguments [][]byte) Response {
 				Value: string(arguments[1]),
 		}
 		databaseMutex.Unlock()
+
+		markDirty(string(arguments[0]),client)
 
 		return Response{
 			   Body:[]byte("OK"),
