@@ -5,36 +5,36 @@ import "testing"
 
 func watch_test(t *testing.T) {
 
-   //  stage200_WatchBasic(t)
-   //  stage201_WatchWrongArguments(t)
-   //  stage202_WatchMultipleKeys(t)
-   //  stage203_WatchDuplicateKeys(t)
+    stage200_WatchBasic(t)
+    stage201_WatchWrongArguments(t)
+    stage202_WatchMultipleKeys(t)
+    stage203_WatchDuplicateKeys(t)
 
-   //  stage204_WatchExecSuccess(t)
-   //  stage205_WatchAbortOnExternalWrite(t)
-   //  stage206_WatchAbortMultipleKeys(t)
+    stage204_WatchExecSuccess(t)
+    stage205_WatchAbortOnExternalWrite(t)
+    stage206_WatchAbortMultipleKeys(t)
 
-   //  stage207_SameClientWriteAllowed(t)
-   //  stage208_WatchClearedAfterExec(t)
-   //  stage209_WatchClearedAfterDiscard(t)
+    stage207_SameClientWriteAllowed(t)
+    stage208_WatchClearedAfterExec(t)
+    stage209_WatchClearedAfterDiscard(t)
 
-   //  stage210_WatchIsolation(t)
+    stage210_WatchIsolation(t)
 
-   //  stage211_WatchInsideMultiRejected(t)
+    stage211_WatchInsideMultiRejected(t)
 
-   //  stage212_MultipleClientsWatchingSameKey(t)
-   //  stage213_OnlyOneWatcherInvalidated(t)
+    stage212_MultipleClientsWatchingSameKey(t)
+    stage213_OnlyOneWatcherInvalidated(t)
 
    //  stage214_WatchThenDeleteKey(t)
-   //  stage215_WatchNewKeyThenCreateIt(t)
+    stage215_WatchNewKeyThenCreateIt(t)
 
-   //  stage216_ReWatchExistingKey(t)
+    stage216_ReWatchExistingKey(t)
 
-   //  stage217_WatchReadOnlyCommands(t)
+    stage217_WatchReadOnlyCommands(t)
 
-   //  stage218_ExecWithoutModification(t)
+    stage218_ExecWithoutModification(t)
 
-   //  stage219_AnyWatchedKeyInvalidates(t)
+    stage219_AnyWatchedKeyInvalidates(t)
 
     stage220_UnwatchBasic(t)
     stage221_UnwatchWrongArguments(t)
