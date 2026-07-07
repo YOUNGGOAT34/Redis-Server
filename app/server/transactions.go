@@ -138,6 +138,19 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 }
 
 
+func unwatchCommand(arguments [][]byte,client *Client) Response{
+	    if len(arguments)!=0{
+			  return wrongNumberOfArguments("UNWATCH")
+		 }
+
+		 clearWatches(client)
+
+		 return Response{
+			  Body: []byte("OK"),
+			  Type: SIMPLE_STRING,
+		 }
+}
+
 
 func clearWatches(client *Client){
 	   watchedKeysMutex.Lock()

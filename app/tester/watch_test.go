@@ -34,12 +34,12 @@ func watch_test(t *testing.T) {
 
    //  stage218_ExecWithoutModification(t)
 
-    stage219_AnyWatchedKeyInvalidates(t)
+   //  stage219_AnyWatchedKeyInvalidates(t)
 
-   //  stage220_UnwatchBasic(t)
-   //  stage221_UnwatchWrongArguments(t)
-   //  stage222_UnwatchWithoutWatch(t)
-   //  stage223_UnwatchInsideMultiRejected(t)
+    stage220_UnwatchBasic(t)
+    stage221_UnwatchWrongArguments(t)
+    stage222_UnwatchWithoutWatch(t)
+   
 }
 
 

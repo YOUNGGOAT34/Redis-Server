@@ -61,9 +61,9 @@ func TestMain(t *testing.T) {
 	// incr_test(t)
 	// multi_test(t)
 	// transaction_test(t)
-	// watch_test(t)
+	watch_test(t)
 	// list_watch_test(t)
-	stream_xadd_watch_test(t)
+	// stream_xadd_watch_test(t)
 	
 }
 
