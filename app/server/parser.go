@@ -75,7 +75,7 @@ func parseRequest(client *Client,request []byte) Response{
         Supports multi-digit array sizes such as *12.
 
 		  */
-
+        
 
 		  index:=1
 
@@ -101,12 +101,14 @@ func parseRequest(client *Client,request []byte) Response{
 
 
 		  // Extract each RESP bulk string from the request body.
-		  
+		
 		  
 		  for i:=0;i<size;i++{
-			  
-
+			   
+			
+           
 				if len(body)<5{
+					    
 					   fmt.Fprint(os.Stderr,"Malformed body\n");
 						return Response{
 							  Body:nil,
@@ -177,17 +179,20 @@ func parseRequest(client *Client,request []byte) Response{
                arg:=body[offset:elementSize+offset]
 					argCopy:=make([]byte,len(arg))
 					copy(argCopy,arg)
+					
 					args=append(args,argCopy)
 					body=body[offset+elementSize:]
-					
+				
 				}else{
 
-					  fmt.Fprintf(os.Stderr,"Malformed erro\n")
+					  fmt.Fprintf(os.Stderr,"Malformed body\n")
 					  return Response{
 						          Body:nil,
 									 Type:NIL,
 					  }
 				}
+
+				 
 
 		  }
         

@@ -44,12 +44,12 @@ func execCommand(arguments [][]byte,client *Client) Response{
 
 	 queued:=client.Queue
 
-
 	 client.Queue=nil
 	 client.InTransaction=false
+	 defer clearWatches(client)
     
 	 if client.Dirty{
-		    clearWatches(client)
+		  
 			 return Response{
 				 Body: []byte("*-1\r\n"),
              Type: ARRAY,
@@ -64,6 +64,7 @@ func execCommand(arguments [][]byte,client *Client) Response{
 			  resp = append(resp, buildResponse(r)...)
 	 }
 
+	
 	return  Response{
 		   Body: resp,
 			Type: ARRAY,
@@ -88,7 +89,7 @@ func discardCommand(arguments [][]byte, client *Client) Response {
 		 client.InTransaction=false
 		 client.Queue=nil
        
-	     
+	   clearWatches(client)
 		 return Response{
 			    Body: []byte("OK"),
 				 Type: SIMPLE_STRING,
@@ -115,9 +116,11 @@ func watchCommand(arguments [][]byte,client *Client) Response{
 	
 			watchedKeysMutex.Lock()
 			set,exists:=watchedKeys[key]
+			
 			if !exists{
 				  set=make(map[*Client]struct{})
 				  watchedKeys[key]=set
+				 
 	
 			}
 			 

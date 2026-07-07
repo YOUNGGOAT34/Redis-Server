@@ -50,6 +50,7 @@ func handleClient(conn net.Conn){
 
          client:=&Client{
 				   Conn: conn,
+					keysWatched: make(map[string]struct{}),
 			}
 
 		  for{
