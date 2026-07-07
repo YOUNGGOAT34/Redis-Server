@@ -28,6 +28,8 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 
 			case "DISCARD":
 				return discardCommand(args[1:],client)
+			case "WATCH":
+				 return watchCommand(args[1:],client)
 		  
 	}
 
@@ -104,8 +106,7 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 				return decideTypeOfRead(args[1:])
 			case "INCR":
 				return incrCommand(args[1:],client)
-			case "WATCH":
-				 return watchCommand(args[1:],client)
+			
 			
 			default:
 				return Response{

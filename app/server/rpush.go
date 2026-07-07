@@ -1,7 +1,7 @@
 package server
 
 import (
-	
+
 	"strconv"
 )
 
@@ -96,8 +96,10 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 							list.PushBack(value)
 			}
 
-			if len(values)>1{
+			
 
+			if len(values)>=1{
+            
 				markDirty(string(arguments[0]),client)
 			}
 
@@ -114,9 +116,7 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 
 
 	wakeUpWaitingClients(string(arguments[0]),&values)
-
-
-
+    
 	if len(values)==0{
 		  var buf [32]byte
 
@@ -151,6 +151,7 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 			 Value: list,
 	}
 
+    
 	markDirty(string(arguments[0]),client)
 
 	var buf [32]byte
