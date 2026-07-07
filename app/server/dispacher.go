@@ -104,6 +104,8 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 				return decideTypeOfRead(args[1:])
 			case "INCR":
 				return incrCommand(args[1:])
+			case "WATCH":
+				 return watchCommand(args[1:])
 			
 			default:
 				return Response{

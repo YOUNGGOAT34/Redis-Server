@@ -3,6 +3,8 @@ package server
 import "fmt"
 
 
+//     |----------------------MULTI COMMAND----------------------|
+
 func multiCommand(arguments [][]byte,client *Client) Response {
 	 if len(arguments)!=0{
 		   return wrongNumberOfArguments("MULTI")
@@ -22,6 +24,9 @@ func multiCommand(arguments [][]byte,client *Client) Response {
 			Type: SIMPLE_STRING,
 	 }
 }
+
+
+//     |----------------------EXEC COMMAND----------------------|
 
 func execCommand(arguments [][]byte,client *Client) Response{
       
@@ -57,6 +62,7 @@ func execCommand(arguments [][]byte,client *Client) Response{
 }
 
 
+//     |----------------------DISCARD COMMAND----------------------|
 
 func discardCommand(arguments [][]byte, client *Client) Response {
 	    if len(arguments)!=0{
@@ -78,6 +84,19 @@ func discardCommand(arguments [][]byte, client *Client) Response {
 			    Body: []byte("OK"),
 				 Type: SIMPLE_STRING,
 		 }
+}
+
+//     |----------------------WATCH COMMAND----------------------|
+
+func watchCommand(arguments [][]byte) Response{
+	   if len(arguments)!=1{
+			  return wrongNumberOfArguments("WATCH")
+		}
+
+		return Response{
+			 Body: []byte("OK"),
+			 Type: SIMPLE_STRING,
+		}
 }
 
 
