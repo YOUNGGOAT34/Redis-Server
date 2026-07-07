@@ -105,7 +105,7 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 			case "INCR":
 				return incrCommand(args[1:])
 			case "WATCH":
-				 return watchCommand(args[1:])
+				 return watchCommand(args[1:],client)
 			
 			default:
 				return Response{

@@ -88,9 +88,16 @@ func discardCommand(arguments [][]byte, client *Client) Response {
 
 //     |----------------------WATCH COMMAND----------------------|
 
-func watchCommand(arguments [][]byte) Response{
+func watchCommand(arguments [][]byte,client *Client) Response{
 	   if len(arguments)!=1{
 			  return wrongNumberOfArguments("WATCH")
+		}
+
+		if client.InTransaction{
+			  return Response{ 
+				    Body: []byte("ERR WATCH inside MULTI is not allowed"),
+					 Type: ERROR,
+			  }
 		}
 
 		return Response{
