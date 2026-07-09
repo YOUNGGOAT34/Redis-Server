@@ -8,6 +8,9 @@ type SERVER struct{
 		MasterHost string
 		MasterPort int
 		PORT int
+		MASTERREPLID string
+		MASTERREPLOFFSET int
+
 }
 
 

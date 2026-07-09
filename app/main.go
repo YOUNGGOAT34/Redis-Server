@@ -48,6 +48,9 @@ func main() {
 		 }else{
 			   config.Role="master"
 		 }
+
+		 config.MASTERREPLID="8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+		 config.MASTERREPLOFFSET=0
 	    
 
 	    server.StartServer(config)
