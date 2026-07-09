@@ -1,6 +1,9 @@
 package server
 
-import "fmt"
+import (
+	"CacheDB/app/helpers"
+	"fmt"
+)
 
 func encodeEntries(entries []*StreamEntry) []byte {
 	if len(entries) == 0 {
@@ -28,7 +31,7 @@ func encodeEntries(entries []*StreamEntry) []byte {
 	return respArray
 }
 
-func xRangeCommand(arguments [][]byte) Response {
+func xRangeCommand(arguments [][]byte) helpers.Response {
 
 	if len(arguments) != 3 {
 		return wrongNumberOfArguments("XRANGE")
@@ -55,9 +58,9 @@ func xRangeCommand(arguments [][]byte) Response {
 				 Inside the stream.Entities entities[0] can be safely accessed ,with a guarantee that there is data inside the stream
 		*/
 		if stream.Len == 0 {
-			return Response{
+			return helpers.Response{
 				Body: encodeEntries(stream.Entries),
-				Type: ARRAY,
+				Type: helpers.ARRAY,
 			}
 		}
 
@@ -65,18 +68,18 @@ func xRangeCommand(arguments [][]byte) Response {
 
 		if err != nil {
 
-			return Response{
+			return helpers.Response{
 				Body: []byte(err.Error()),
-				Type: ERROR,
+				Type: helpers.ERROR,
 			}
 		}
 
 		endId, err := stream.createStreamID(arguments[2])
 
 		if err != nil {
-			return Response{
+			return helpers.Response{
 				Body: []byte(err.Error()),
-				Type: ERROR,
+				Type: helpers.ERROR,
 			}
 		}
 
@@ -84,9 +87,9 @@ func xRangeCommand(arguments [][]byte) Response {
 
 	}
 
-	return Response{
+	return helpers.Response{
 		Body: encodeEntries(entries),
-		Type: ARRAY,
+		Type: helpers.ARRAY,
 	}
 
 }

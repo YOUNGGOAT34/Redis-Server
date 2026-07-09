@@ -1,8 +1,11 @@
 package server
 
-import "strconv"
+import (
+	"CacheDB/app/helpers"
+	"strconv"
+)
 
-func llenCommand(arguments [][]byte) Response {
+func llenCommand(arguments [][]byte) helpers.Response {
 	  if len(arguments)!=1{
 		    return wrongNumberOfArguments("LLEN")
 	  }
@@ -25,24 +28,24 @@ func llenCommand(arguments [][]byte) Response {
 			defer list.listMutex.RUnlock()
 
 			if list==nil{
-				   return Response{
+				   return helpers.Response{
 									Body:[]byte("0"),
-									Type:INTEGER,
+									Type:helpers.INTEGER,
 						   }
 			}
 
 			var buf [32]byte
           
-			return Response{
+			return helpers.Response{
 				  Body:strconv.AppendInt(buf[:0],int64(list.len),10),
-				  Type: INTEGER,
+				  Type: helpers.INTEGER,
 
 			 }
 	  }
 
-	  return Response{
+	  return helpers.Response{
 		    Body:[]byte("0"),
-			 Type: INTEGER,
+			 Type: helpers.INTEGER,
 	  }
 
 }

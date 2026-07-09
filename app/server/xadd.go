@@ -1,6 +1,7 @@
 package server
 
 import (
+	"CacheDB/app/helpers"
 	"errors"
 	"strconv"
 )
@@ -36,27 +37,27 @@ func createStreamID(id []byte) (StreamID, error) {
 	}, err
 }
 
-func xAddCommand(arguments [][]byte,client *Client) Response {
+func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
 	if len(arguments) < 4 {
 
 		return wrongNumberOfArguments("XADD")
 	}
 
 	if len(arguments[2:])%2 != 0 {
-		return Response{
+		return helpers.Response{
 			Body: []byte("Error wrong number of field-value arguments"),
-			Type: ERROR,
+			Type: helpers.ERROR,
 		}
 	}
 
 	var stream *Stream
 
-	key:=string(arguments[0])
+	key := string(arguments[0])
 
 	databaseMutex.Lock()
 	data, exists := database[key]
 	databaseMutex.Unlock()
-    
+
 	if exists {
 		if data.Type != STREAM {
 			return wrongType()
@@ -102,17 +103,17 @@ func xAddCommand(arguments [][]byte,client *Client) Response {
 
 			Id, err = createStreamID(arguments[1])
 
-			if err != nil && compareBytes(arguments[1], []byte("-")) {
+			if err != nil && helpers.CompareBytes(arguments[1], []byte("-")) {
 
 			}
 
 		}
-      
+
 		if err != nil {
 
-			return Response{
+			return helpers.Response{
 				Body: []byte("Invalid stream Id"),
-				Type: ERROR,
+				Type: helpers.ERROR,
 			}
 		}
 
@@ -126,26 +127,26 @@ func xAddCommand(arguments [][]byte,client *Client) Response {
 		*/
 
 		if Id.Milliseconds == 0 && Id.Sequence == 0 {
-			return Response{
+			return helpers.Response{
 				Body: []byte("ERR The ID specified in XADD must be greater than 0-0"),
-				Type: ERROR,
+				Type: helpers.ERROR,
 			}
 		}
 
 		if Id.Milliseconds < stream.LastID.Milliseconds {
 
-			return Response{
+			return helpers.Response{
 				Body: []byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
-				Type: ERROR,
+				Type: helpers.ERROR,
 			}
 		}
 
 		if Id.Milliseconds == stream.LastID.Milliseconds {
 
 			if Id.Sequence <= stream.LastID.Sequence {
-				return Response{
+				return helpers.Response{
 					Body: []byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
-					Type: ERROR,
+					Type: helpers.ERROR,
 				}
 			}
 		}
@@ -163,7 +164,7 @@ func xAddCommand(arguments [][]byte,client *Client) Response {
 		Fields: fields,
 	}
 
-	entry.stream=key
+	entry.stream = key
 
 	stream.LastID = Id
 	stream.Entries = append(stream.Entries, entry)
@@ -172,24 +173,24 @@ func xAddCommand(arguments [][]byte,client *Client) Response {
 	waitingClientsMutex.Lock()
 	defer waitingClientsMutex.Unlock()
 
-	if q,ok:=waitingClients[key];ok{
-		    
-		     for element:=q.Front();element!=nil;element=element.Next(){
-				      ch:=element.Value.(chan bool)
+	if q, ok := waitingClients[key]; ok {
 
-						select{
-							case  ch<-true:
-							default:
+		for element := q.Front(); element != nil; element = element.Next() {
+			ch := element.Value.(chan bool)
 
-						}
-			  }
+			select {
+			case ch <- true:
+			default:
+
+			}
+		}
 	}
 
-	markDirty(key,client)
+	markDirty(key, client)
 
-	return Response{
+	return helpers.Response{
 		Body: []byte(Id.String()),
-		Type: BULK_STRING,
+		Type: helpers.BULK_STRING,
 	}
 
 }

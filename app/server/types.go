@@ -8,32 +8,26 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"CacheDB/app/helpers"
 )
 
+type Command struct {
+	Args [][]byte
+}
 
-
-
-
-	type Command struct{
-		
-		Args [][]byte
-	}
-
-	type Client struct{
-			Conn net.Conn
-			InTransaction bool
-			Queue []Command
-			Dirty bool
-			keysWatched map[string]struct{}
-
-	}
-
+type Client struct {
+	Conn          net.Conn
+	InTransaction bool
+	Queue         []Command
+	Dirty         bool
+	keysWatched   map[string]struct{}
+}
 
 var (
-	  watchedKeys=make(map[string]map[*Client]struct{})
-	  watchedKeysMutex sync.RWMutex
+	watchedKeys      = make(map[string]map[*Client]struct{})
+	watchedKeysMutex sync.RWMutex
 )
-
 
 type TYPE int
 
@@ -43,20 +37,19 @@ const (
 	STREAM
 )
 
+// for debugging
+func typeToString(t TYPE) string {
+	switch t {
+	case STRING:
+		return "STRING"
+	case LIST:
+		return "LIST"
+	case STREAM:
+		return "STREAM"
 
-//for debugging
-func typeToString(t TYPE) string{
-	    switch t{
-		 case STRING:
-			 return "STRING"
-		 case LIST:
-			return "LIST"
-		 case STREAM:
-			return "STREAM"
-
-		 default:
-			 return "UNKNOWN"
-		 }
+	default:
+		return "UNKNOWN"
+	}
 }
 
 type Data struct {
@@ -64,21 +57,10 @@ type Data struct {
 	Value any
 }
 
-type ResponseType int
 
-const (
-	ERROR ResponseType = iota
-	SIMPLE_STRING
-	BULK_STRING
-	NIL
-	INTEGER
-	ARRAY
-)
 
-type Response struct {
-	Body []byte
-	Type ResponseType
-}
+
+
 
 type Node struct {
 	data []byte
@@ -87,20 +69,19 @@ type Node struct {
 }
 
 type List struct {
-	Head *Node
-	Tail *Node
-	len  int
+	Head      *Node
+	Tail      *Node
+	len       int
 	listMutex sync.RWMutex
 }
 
-//for blocking pops
+// for blocking pops
 var (
 	blockedClients      = make(map[string]*list.List)
 	blockedClientsMutex sync.RWMutex
 )
 
-
-//for blocking reads(of streams)
+// for blocking reads(of streams)
 var (
 	waitingClients      = make(map[string]*list.List)
 	waitingClientsMutex sync.RWMutex
@@ -174,9 +155,6 @@ func (list *List) LPop() []byte {
 	return tmp.data
 }
 
-
-
-
 /*
     Stream
 	 fields:
@@ -196,35 +174,31 @@ type StreamID struct {
 
 type StreamEntry struct {
 	ID     StreamID
-	stream string//name of the associated stream
+	stream string //name of the associated stream
 	Fields map[string][]byte
 }
 
 type Stream struct {
 	Entries []*StreamEntry
 	// Tree *Radix
-	LastID StreamID
+	LastID      StreamID
 	streamMutex sync.RWMutex
-	Len    int
+	Len         int
 }
 
-
-
 func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
-   
-	if compareBytes(id, []byte("-")) {
+
+	if helpers.CompareBytes(id, []byte("-")) {
 		return stream.Entries[0].ID, nil
 	}
 
-	if compareBytes(id, []byte("+")) {
+	if helpers.CompareBytes(id, []byte("+")) {
 		return stream.LastID, nil
 	}
 
-	if compareBytes(id,[]byte("$")){
-		   return stream.LastID, nil
+	if helpers.CompareBytes(id, []byte("$")) {
+		return stream.LastID, nil
 	}
-
-	
 
 	hyphenIndex := -1
 	for index, char := range id {
@@ -234,17 +208,13 @@ func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 		}
 	}
 
-	
-
 	if hyphenIndex == -1 {
-      
+
 		return StreamID{}, errors.New("invalid stream Id")
 	}
 
-	
-
 	milliseconds, err := strconv.ParseUint(string(id[0:hyphenIndex]), 10, 64)
-	
+
 	if err != nil {
 		return StreamID{}, err
 	}
@@ -253,8 +223,6 @@ func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 	if err != nil {
 		return StreamID{}, err
 	}
-
-	
 
 	return StreamID{
 		Milliseconds: milliseconds,
@@ -311,9 +279,8 @@ func (id StreamID) String() string {
 	return strconv.FormatUint(id.Milliseconds, 10) + "-" + strconv.FormatUint(id.Sequence, 10)
 }
 
-
-func (stream *Stream) binarySearch(startId StreamID,inclusive bool) int{
-	    startIndex := sort.Search(stream.Len, func(i int) bool {
+func (stream *Stream) binarySearch(startId StreamID, inclusive bool) int {
+	startIndex := sort.Search(stream.Len, func(i int) bool {
 		current := stream.Entries[i].ID
 
 		if current.Milliseconds > startId.Milliseconds {
@@ -324,15 +291,15 @@ func (stream *Stream) binarySearch(startId StreamID,inclusive bool) int{
 			return false
 		}
 
-		if inclusive{
+		if inclusive {
 
 			return current.Sequence >= startId.Sequence
-		}else{
-			  return current.Sequence > startId.Sequence
+		} else {
+			return current.Sequence > startId.Sequence
 		}
 	})
 
-	 return startIndex
+	return startIndex
 }
 
 // find all entries in a given range
@@ -341,7 +308,7 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 		return nil
 	}
 
-	startIndex := stream.binarySearch(startId,true)
+	startIndex := stream.binarySearch(startId, true)
 
 	var entries []*StreamEntry
 
@@ -360,29 +327,24 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 	return entries
 }
 
-
-
-func (stream *Stream) xRead(startId StreamID) []*StreamEntry{
-	if stream.Len==0{
-		  return nil
+func (stream *Stream) xRead(startId StreamID) []*StreamEntry {
+	if stream.Len == 0 {
+		return nil
 	}
 
-	startIndex := stream.binarySearch(startId,false)
-  
+	startIndex := stream.binarySearch(startId, false)
+
 	var entries []*StreamEntry
 
 	for i := startIndex; i < stream.Len; i++ {
-		
+
 		entries = append(entries, stream.Entries[i])
 
 	}
-   
+
 	return entries
-	
+
 }
-
-
-
 
 // //converts a string version of stream id into []bytes
 // func(id StreamID) Bytes() []byte{

@@ -1,8 +1,11 @@
 package server
 
-import "strconv"
+import (
+	"CacheDB/app/helpers"
+	"strconv"
+)
 
-func lPushCommand(arguments [][]byte,client *Client) Response {
+func lPushCommand(arguments [][]byte,client *Client) helpers.Response {
 	if len(arguments) < 2 {
 		return wrongNumberOfArguments("LPUSH")
 	}
@@ -31,9 +34,9 @@ func lPushCommand(arguments [][]byte,client *Client) Response {
 		markDirty(string(arguments[0]),client)
 		var buf [32]byte
 
-		return Response{
+		return helpers.Response{
 			Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
-			Type: INTEGER,
+			Type: helpers.INTEGER,
 		}
 
 	}
@@ -61,10 +64,10 @@ func lPushCommand(arguments [][]byte,client *Client) Response {
 	markDirty(string(arguments[0]),client)
 
 	var buf [32]byte
-	return Response{
+	return helpers.Response{
 
 		Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
-		Type: INTEGER,
+		Type: helpers.INTEGER,
 	}
 
 }

@@ -1,7 +1,7 @@
 package server
 
 import (
-
+	"CacheDB/app/helpers"
 	"strconv"
 )
 
@@ -46,11 +46,11 @@ func wakeUpWaitingClients(key string,values *[][]byte){
 }
 
 
-func rPushCommand(arguments [][]byte,client *Client) Response {
+func rPushCommand(arguments [][]byte,client *Client) helpers.Response {
 	if len(arguments)==0{
-		  return Response{
+		  return helpers.Response{
 			    Body:[]byte("Wrong number of arguments for 'RPUSH' command"),
-				 Type:ERROR,
+				 Type:helpers.ERROR,
 
 		  }
 	}
@@ -104,10 +104,10 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 			}
 
 			var buf [32]byte
-			return Response{
+			return helpers.Response{
 		  
 		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
-			Type:INTEGER,
+			Type:helpers.INTEGER,
 			
 	}
 			 
@@ -120,10 +120,10 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 	if len(values)==0{
 		  var buf [32]byte
 
-		  return Response{
+		  return helpers.Response{
 				
 					Body:strconv.AppendInt(buf[:0],0,10),
-					Type:INTEGER,
+					Type:helpers.INTEGER,
 					
 			}
 	}
@@ -156,10 +156,10 @@ func rPushCommand(arguments [][]byte,client *Client) Response {
 
 	var buf [32]byte
    
-   return Response{
+   return helpers.Response{
 		  
 		   Body:strconv.AppendInt(buf[:0],int64(list.len),10),
-			Type:INTEGER,
+			Type:helpers.INTEGER,
 			
 	}
    

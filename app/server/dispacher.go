@@ -2,15 +2,18 @@ package server
 
 import (
 	"strings"
+
+	"CacheDB/app/helpers"
+	"CacheDB/app/replication"
 )
 
 
-func dispatchCommands(client *Client,args [][]byte) Response {
+func dispatchCommands(client *Client,args [][]byte) helpers.Response {
 
 	if len(args) < 1 {
-		return Response{
+		return helpers.Response{
 			Body: nil,
-			Type: NIL,
+			Type: helpers.NIL,
 		}
 	}
 
@@ -40,9 +43,9 @@ func dispatchCommands(client *Client,args [][]byte) Response {
                           Args: args,
 							})
 
-			return Response{
+			return helpers.Response{
 				      Body: []byte("QUEUED"),
-						Type: SIMPLE_STRING,
+						Type: helpers.SIMPLE_STRING,
 			}
   }
 
@@ -51,30 +54,30 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 
 			case "ECHO":
 				if len(args) < 2 {
-					return Response{
+					return helpers.Response{
 						Body: nil,
-						Type: NIL,
+						Type: helpers.NIL,
 					}
 				}
 
-				return Response{
+				return helpers.Response{
 					Body: args[1],
-					Type: BULK_STRING,
+					Type: helpers.BULK_STRING,
 				}
 
 			case "PING":
 
-				return Response{
+				return helpers.Response{
 					Body: []byte("PONG"),
-					Type: SIMPLE_STRING,
+					Type: helpers.SIMPLE_STRING,
 				}
 
 			case "SET":
 
 				if len(args) < 2 {
-					return Response{
+					return helpers.Response{
 						Body: nil,
-						Type: NIL,
+						Type: helpers.NIL,
 					}
 				}
 				return setCommand(args[1:],client)
@@ -110,11 +113,13 @@ func dispatchCommands(client *Client,args [][]byte) Response {
 			
 			case "UNWATCH":
 				 return unwatchCommand(args[1:],client)
+			case "INFO":
+				 return replication.InfoCommand(args[1:])
 			
 			default:
-				return Response{
+				return helpers.Response{
 					Body: []byte("Error: Unknown command"),
-					Type: ERROR,
+					Type: helpers.ERROR,
 				}
 
 	}

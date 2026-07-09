@@ -6,30 +6,32 @@ import (
 	"net"
 	"os"
 	"strings"
+
+	"CacheDB/app/helpers"
 )
 
 //responsible for resp encoding
-func buildResponse(res Response) []byte{
+func buildResponse(res helpers.Response) []byte{
 
    body:=res.Body
     
 	switch res.Type{
 		   
-				case  ERROR:
+				case  helpers.ERROR:
 						return fmt.Appendf(nil, "-%s\r\n",body)
-				case SIMPLE_STRING:
+				case helpers.SIMPLE_STRING:
 					   return fmt.Appendf(nil, "+%s\r\n",body)
 
-				case NIL:
+				case helpers.NIL:
 					   
 						return fmt.Appendf(nil, "$-1\r\n")
 
-				case BULK_STRING:
+				case helpers.BULK_STRING:
 					   
 						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
-				case INTEGER:
+				case helpers.INTEGER:
 						return fmt.Appendf(nil, ":%s\r\n",body)
-				case ARRAY:
+				case helpers.ARRAY:
 					   //a resp array is already encoded from the parser
 						return res.Body
 					   
@@ -94,11 +96,11 @@ func accept(listener net.Listener) net.Conn{
 
 }
 
-func StartServer(){
-
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+func StartServer(PORT int){
+   address:=fmt.Sprintf("0.0.0.0:%d",PORT)
+	l, err := net.Listen("tcp",address)
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
+		fmt.Printf("Failed to bind to port %d\n",PORT)
 		os.Exit(1)
 	}
 

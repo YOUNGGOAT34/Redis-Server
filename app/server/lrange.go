@@ -1,7 +1,7 @@
 package server
 
 import (
-
+	"CacheDB/app/helpers"
 	"fmt"
 	"os"
 	"strconv"
@@ -57,7 +57,7 @@ func encodeRespArray(list *List,startIndex int,endIndex int) []byte{
 }
 
 
-func lRangeCommand(arguments [][]byte) Response {
+func lRangeCommand(arguments [][]byte) helpers.Response {
 
 	   
 	   if len(arguments)!=3{
@@ -72,9 +72,9 @@ func lRangeCommand(arguments [][]byte) Response {
 		if err!=nil{
 			  
 			   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
-				return Response{
+				return helpers.Response{
 					  Body:[]byte("Invalid start index"),
-					  Type: ERROR,
+					  Type: helpers.ERROR,
 				}
 		}
 
@@ -84,9 +84,9 @@ func lRangeCommand(arguments [][]byte) Response {
 			   
 			   fmt.Fprintf(os.Stderr,"Error converting string to integer %s\n",err.Error())
 			
-				return Response{
+				return helpers.Response{
 					  Body:[]byte("Invalid end index"),
-					  Type: ERROR,
+					  Type: helpers.ERROR,
 				}
 		}
 
@@ -108,9 +108,9 @@ func lRangeCommand(arguments [][]byte) Response {
 				 defer list.listMutex.RUnlock()
              
 				 if list==nil || list.len==0{
-					    return Response{
+					    return helpers.Response{
 										Body:[]byte("*0\r\n"),
-										Type:ARRAY,
+										Type:helpers.ARRAY,
 							}
 				 }
 
@@ -122,9 +122,9 @@ func lRangeCommand(arguments [][]byte) Response {
 				
 				 if startIndex>=list.len {
 					            
-									return Response{
+									return helpers.Response{
 										Body:[]byte("*0\r\n"),
-										Type:ARRAY,
+										Type:helpers.ARRAY,
 							}
 
 							
@@ -151,24 +151,24 @@ func lRangeCommand(arguments [][]byte) Response {
 
 
 				 if startIndex>endIndex{
-					     return Response{
+					     return helpers.Response{
 										Body:[]byte("*0\r\n"),
-										Type:ARRAY,
+										Type:helpers.ARRAY,
 							}
 				 }
 
 				 
-				 return Response{
+				 return helpers.Response{
 					     
 					      Body:encodeRespArray(list,startIndex,endIndex),
-							Type:ARRAY,
+							Type:helpers.ARRAY,
 				  }
 		 
 		}
 
 
-	return Response{
+	return helpers.Response{
 					Body:[]byte("*0\r\n"),
-					Type:ARRAY,
+					Type:helpers.ARRAY,
 							}
 }

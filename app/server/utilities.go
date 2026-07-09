@@ -1,20 +1,23 @@
 package server
 
-import "fmt"
+import (
+	"CacheDB/app/helpers"
+	"fmt"
+)
 
-func wrongType()Response{
-	   return Response{
+func wrongType()helpers.Response{
+	   return helpers.Response{
 							Body:[]byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-							Type:ERROR,
+							Type:helpers.ERROR,
 						  }
 }
 
 
-func wrongNumberOfArguments(command string) Response{
+func wrongNumberOfArguments(command string) helpers.Response{
 	  errMessage:=fmt.Sprintf("Wrong number of arguments for '%s' command",command)
-	   return Response{
+	   return helpers.Response{
 			    Body:[]byte(errMessage),
-				 Type:ERROR,
+				 Type:helpers.ERROR,
 
 		  }
 }

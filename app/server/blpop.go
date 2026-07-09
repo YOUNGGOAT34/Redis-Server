@@ -1,12 +1,13 @@
 package server
 
 import (
+	"CacheDB/app/helpers"
 	"container/list"
 	"strconv"
 	"time"
 )
 
-func blockClient(arguments [][]byte) Response {
+func blockClient(arguments [][]byte) helpers.Response {
 
 	ch := make(chan []byte, 1)
 	blockedClientsMutex.Lock()
@@ -24,28 +25,28 @@ func blockClient(arguments [][]byte) Response {
 	timeout, err := strconv.Atoi(string(arguments[1]))
 
 	if err != nil {
-		return Response{
+		return helpers.Response{
 
 			Body: []byte("Error timeout should be an integer"),
-			Type: ERROR,
+			Type: helpers.ERROR,
 		}
 	}
 
 	if timeout == 0 {
 		value := <-ch
 
-		return Response{
+		return helpers.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: ARRAY,
+			Type: helpers.ARRAY,
 		}
 
 	}
 
 	select {
 	case value := <-ch:
-		return Response{
+		return helpers.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: ARRAY,
+			Type: helpers.ARRAY,
 		}
 
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -53,16 +54,16 @@ func blockClient(arguments [][]byte) Response {
 		blockedClientsMutex.Lock()
 		q.Remove(element)
 		blockedClientsMutex.Unlock()
-		return Response{
+		return helpers.Response{
 			Body: nil,
-			Type: NIL,
+			Type: helpers.NIL,
 		}
 
 	}
 
 }
 
-func bLPopCommand(arguments [][]byte,client *Client) Response {
+func bLPopCommand(arguments [][]byte,client *Client) helpers.Response {
 	if len(arguments) != 2 {
 		return  wrongNumberOfArguments("BLOP")
 	}
@@ -93,9 +94,9 @@ func bLPopCommand(arguments [][]byte,client *Client) Response {
 		
 		markDirty(string(arguments[0]),client)
 
-		return Response{
+		return helpers.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: ARRAY,
+			Type: helpers.ARRAY,
 		}
 	}
 

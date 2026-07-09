@@ -1,6 +1,7 @@
 package server
 
 import (
+	"CacheDB/app/helpers"
 	"fmt"
 	"os"
 	"strconv"
@@ -17,7 +18,7 @@ func encodeArray(body [][]byte) []byte {
 	return respArray
 }
 
-func lPopCommand(arguments [][]byte,client *Client) Response {
+func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 
 	if len(arguments) < 1 {
 		return wrongNumberOfArguments("LPOP")
@@ -52,9 +53,9 @@ func lPopCommand(arguments [][]byte,client *Client) Response {
 
 				markDirty(string(arguments[0]),client)
 
-				return Response{
+				return helpers.Response{
 					Body: body,
-					Type: BULK_STRING,
+					Type: helpers.BULK_STRING,
 				}
 			}
 		} else {
@@ -63,17 +64,17 @@ func lPopCommand(arguments [][]byte,client *Client) Response {
 
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error converting string to integer %s\n", err.Error())
-				return Response{
+				return helpers.Response{
 					Body: []byte("ERR value is not an integer, or out of range"),
-					Type: ERROR,
+					Type: helpers.ERROR,
 				}
 			}
 
 			if numberOfElements < 0 {
 
-				return Response{
+				return helpers.Response{
 					Body: []byte("ERR value is out of range, must be positive"),
-					Type: ERROR,
+					Type: helpers.ERROR,
 				}
 			}
 
@@ -96,18 +97,18 @@ func lPopCommand(arguments [][]byte,client *Client) Response {
 				  	markDirty(string(arguments[0]),client)
 			}
 
-			return Response{
+			return helpers.Response{
 				Body: encodeArray(res),
-				Type: ARRAY,
+				Type: helpers.ARRAY,
 			}
 
 		}
 
 	}
 
-	return Response{
+	return helpers.Response{
 		Body: nil,
-		Type: NIL,
+		Type: helpers.NIL,
 	}
 
 }

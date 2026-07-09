@@ -1,11 +1,12 @@
 package server
 
 import (
+	"CacheDB/app/helpers"
 	"math"
 	"strconv"
 )
 
-func incrCommand(arguments [][]byte,client *Client) Response {
+func incrCommand(arguments [][]byte,client *Client) helpers.Response {
 	
 	   if len(arguments)!=1{
 			  return wrongNumberOfArguments("INCR")
@@ -31,16 +32,16 @@ func incrCommand(arguments [][]byte,client *Client) Response {
 				intValue,err=strconv.ParseInt(value,10,64)
 
 				if err!=nil{
-					  return Response{
+					  return helpers.Response{
 						   Body: []byte("ERR value is not an integer or out of range"),
-							Type: ERROR,
+							Type: helpers.ERROR,
 					  }
 				}else{
 
 					  if intValue==math.MaxInt64{
-						   return Response{
+						   return helpers.Response{
 						   Body: []byte("ERR increment or decrement would overflow"),
-							Type: ERROR,
+							Type: helpers.ERROR,
 					  }
 					  }
 					  
@@ -64,9 +65,9 @@ func incrCommand(arguments [][]byte,client *Client) Response {
 
 		markDirty(key,client)
 
-		return Response{
+		return helpers.Response{
 			   Body:[]byte(strValue),
-				Type:INTEGER,
+				Type:helpers.INTEGER,
 		  }
 }
 

@@ -1,6 +1,8 @@
 package server
 
-func typeCommand(arguments [][]byte) Response {
+import "CacheDB/app/helpers"
+
+func typeCommand(arguments [][]byte) helpers.Response {
 	  if len(arguments)!=1{
 
 		    return wrongNumberOfArguments("TYPE")
@@ -14,16 +16,16 @@ func typeCommand(arguments [][]byte) Response {
 
 	  if exists{
 		    _type:=typeToByte(data.Type)
-			 return Response{
+			 return helpers.Response{
 				     Body: _type,
-					  Type: SIMPLE_STRING,
+					  Type: helpers.SIMPLE_STRING,
 			 }
 	  }
 
 
-	  return Response{
+	  return helpers.Response{
 		     Body: []byte("none"),
-			  Type: SIMPLE_STRING,
+			  Type: helpers.SIMPLE_STRING,
 	  }
 
 }

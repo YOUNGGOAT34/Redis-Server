@@ -1,9 +1,9 @@
 package main
 
 import (
-	
+	"flag"
 
-	"github.com/codecrafters-io/redis-starter-go/app/server"
+	"CacheDB/app/server"
 )
 
 
@@ -11,6 +11,10 @@ import (
 
 func main() {
 
-	    server.StartServer()
+	    PORT:=flag.Int("port",6379,"server port")
+
+	    flag.Parse()
+
+	    server.StartServer(*PORT)
 
 }

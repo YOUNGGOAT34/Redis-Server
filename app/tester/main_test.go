@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/codecrafters-io/redis-starter-go/app/server"
+	"CacheDB/app/server"
 )
 
 var (
@@ -39,7 +39,7 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-	go server.StartServer()
+	go server.StartServer(6379)
 
 	waitForServer()
     
