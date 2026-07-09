@@ -2,19 +2,54 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
+	"CacheDB/app/helpers"
 	"CacheDB/app/server"
 )
 
 
 
 
+
 func main() {
 
+	   config:=&helpers.SERVER{}
+
 	    PORT:=flag.Int("port",6379,"server port")
+       replicaof:=flag.String("replicaof","","master and host port")
+		 
+		 flag.Parse()
 
-	    flag.Parse()
+		 config.PORT=*PORT
 
-	    server.StartServer(*PORT)
+		 if len(*replicaof)>0{
+			    parts:=strings.Fields(*replicaof)
+				 if len(parts)<2{
+					  fmt.Fprintf(os.Stderr,"replicaof expected master and host port\n")
+					  return
+				 }
+        
+				 masterPort,err:=strconv.Atoi(parts[1])
+
+				 if err!=nil{
+					  fmt.Fprintf(os.Stderr,"%s\n",err.Error())
+					  return
+				 }
+
+				 config.Role="slave"
+				 config.MasterPort=masterPort
+				 config.MasterHost= parts[0]
+
+
+		 }else{
+			   config.Role="master"
+		 }
+	    
+
+	    server.StartServer(config)
 
 }

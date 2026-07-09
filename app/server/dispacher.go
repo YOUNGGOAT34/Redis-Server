@@ -8,7 +8,7 @@ import (
 )
 
 
-func dispatchCommands(client *Client,args [][]byte) helpers.Response {
+func dispatchCommands(client *Client,args [][]byte,config *helpers.SERVER) helpers.Response {
 
 	if len(args) < 1 {
 		return helpers.Response{
@@ -27,7 +27,7 @@ func dispatchCommands(client *Client,args [][]byte) helpers.Response {
 		 case "MULTI":
 				return multiCommand(args[1:],client)
 			case "EXEC":
-				return execCommand(args[1:],client)
+				return execCommand(args[1:],client,config)
 
 			case "DISCARD":
 				return discardCommand(args[1:],client)
@@ -114,7 +114,7 @@ func dispatchCommands(client *Client,args [][]byte) helpers.Response {
 			case "UNWATCH":
 				 return unwatchCommand(args[1:],client)
 			case "INFO":
-				 return replication.InfoCommand(args[1:])
+				 return replication.InfoCommand(args[1:],config)
 			
 			default:
 				return helpers.Response{

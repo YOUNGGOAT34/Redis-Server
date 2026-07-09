@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+
 )
 
 /*
@@ -41,7 +42,7 @@ func getHeaderAndBody(request []byte) (header, body []byte) {
 	Each bulk string is extracted and stored in args for dispatch.
 */
 
-func parseRequest(client *Client, request []byte) helpers.Response {
+func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers.Response {
 	if len(request) < 1 {
 		return helpers.Response{
 			Body: nil,
@@ -168,7 +169,7 @@ func parseRequest(client *Client, request []byte) helpers.Response {
 
 	}
 
-	return dispatchCommands(client, args)
+	return dispatchCommands(client, args,config)
 }
 
 

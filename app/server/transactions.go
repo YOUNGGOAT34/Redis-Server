@@ -30,7 +30,7 @@ func multiCommand(arguments [][]byte,client *Client) helpers.Response {
 
 //     |----------------------EXEC COMMAND----------------------|
 
-func execCommand(arguments [][]byte,client *Client) helpers.Response{
+func execCommand(arguments [][]byte,client *Client,config *helpers.SERVER) helpers.Response{
       
 	if len(arguments)!=0{
 		  return wrongNumberOfArguments("EXEC")
@@ -62,7 +62,7 @@ func execCommand(arguments [][]byte,client *Client) helpers.Response{
 	 resp=fmt.Appendf(resp,"*%d\r\n",len(queued))
 
 	 for _,cmd:=range queued{
-		     r:=dispatchCommands(client,cmd.Args)
+		     r:=dispatchCommands(client,cmd.Args,config)
 			  resp = append(resp, buildResponse(r)...)
 	 }
 

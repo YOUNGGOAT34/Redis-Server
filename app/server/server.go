@@ -45,7 +45,7 @@ func buildResponse(res helpers.Response) []byte{
 
 
 
-func handleClient(conn net.Conn){
+func handleClient(conn net.Conn,config *helpers.SERVER){
 	     var request=make([]byte,1024)
 
 		  defer conn.Close()
@@ -71,7 +71,7 @@ func handleClient(conn net.Conn){
 				}
 
 				 
-	         response:=parseRequest(client,request[:bytesRead])
+	         response:=parseRequest(client,request[:bytesRead],config)
              
 				
 	
@@ -99,11 +99,11 @@ func accept(listener net.Listener) net.Conn{
 
 }
 
-func StartServer(PORT int){
-   address:=fmt.Sprintf("0.0.0.0:%d",PORT)
+func StartServer(config *helpers.SERVER){
+   address:=fmt.Sprintf("0.0.0.0:%d",config.PORT)
 	l, err := net.Listen("tcp",address)
 	if err != nil {
-		fmt.Printf("Failed to bind to port %d\n",PORT)
+		fmt.Printf("Failed to bind to port %d\n",config.PORT)
 		os.Exit(1)
 	}
 
@@ -111,7 +111,7 @@ func StartServer(PORT int){
 	for{
          conn:=accept(l)
 			if conn!=nil{
-				go handleClient(conn)
+				go handleClient(conn,config)
 			}
 	}
 	

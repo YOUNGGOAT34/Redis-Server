@@ -1,12 +1,12 @@
 package tester
 
 import (
-
 	"net"
 	"os"
 	"testing"
 	"time"
 
+	"CacheDB/app/helpers"
 	"CacheDB/app/server"
 )
 
@@ -39,7 +39,9 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-	go server.StartServer(6379)
+	go server.StartServer(&helpers.SERVER{
+		  PORT:6370,
+	})
 
 	waitForServer()
     
