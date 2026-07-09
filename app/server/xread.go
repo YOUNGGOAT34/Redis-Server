@@ -126,7 +126,7 @@ func decideTypeOfRead(arguments [][]byte) helpers.Response {
 }
 
 func blockingXread(arguments [][]byte) helpers.Response {
-
+ 
 	timeout, err := strconv.Atoi(string(arguments[0]))
 	if err != nil {
 		return helpers.Response{

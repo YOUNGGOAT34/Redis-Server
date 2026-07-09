@@ -27,7 +27,7 @@ func buildResponse(res helpers.Response) []byte{
 						return fmt.Appendf(nil, "$-1\r\n")
 
 				case helpers.BULK_STRING:
-					   
+					  
 						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
 				case helpers.INTEGER:
 						return fmt.Appendf(nil, ":%s\r\n",body)
@@ -35,7 +35,7 @@ func buildResponse(res helpers.Response) []byte{
 					   //a resp array is already encoded from the parser
 						return res.Body
 					   
-
+      
 				default :
 				      
 						panic("Unknown Response type")
@@ -72,9 +72,12 @@ func handleClient(conn net.Conn){
 
 				 
 	         response:=parseRequest(client,request[:bytesRead])
-
+             
+				
 	
 				_,err=conn.Write(buildResponse(response))
+
+				
 
 				if err!=nil{
 					  return
