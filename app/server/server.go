@@ -70,6 +70,9 @@ func handleClient(conn net.Conn,config *helpers.SERVER){
 					  return
 				}
 
+
+				fmt.Printf("%q",request[:bytesRead])
+
 				 
 	         response:=parseRequest(client,request[:bytesRead],config)
              
@@ -107,6 +110,20 @@ func StartServer(config *helpers.SERVER){
 		os.Exit(1)
 	}
 
+
+	if config.Role=="slave"{
+		    address:=fmt.Sprintf("%s:%d",config.MasterHost,config.MasterPort)
+		    conn,err:=net.Dial("tcp",address)
+
+			 if err!=nil{
+				 panic(err)
+			 }
+
+         //  message:=fmt.Sprintf("*1\r\n$4\r\nPING\r\n")
+			 conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+
+	}
+  
 
 	for{
          conn:=accept(l)
