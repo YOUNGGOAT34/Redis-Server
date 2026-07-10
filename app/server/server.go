@@ -136,6 +136,25 @@ func StartServer(config *RESP.SERVER) {
 			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
 				  return
 		}
+
+
+		_,err=conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
+
+      if err!=nil{
+			    panic(err)
+		}
+
+		n,err=conn.Read(response)
+
+		if err!=nil{
+			    panic(err)
+		}
+
+		if string(response[:n])!="+OK\r\n"{
+			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
+				  return
+		}
+
 	}
 
 	for {
