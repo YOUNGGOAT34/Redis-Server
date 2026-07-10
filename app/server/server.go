@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -94,67 +95,18 @@ func StartServer(config *RESP.SERVER) {
 		if err != nil {
 			panic(err)
 		}
-     
 
-		response:=make([]byte,128)
 
 		//  message:=fmt.Sprintf("*1\r\n$4\r\nPING\r\n")
 		_,err=conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+		messages:=[]string{"*1\r\n$4\r\nPING\r\n","*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n","*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n",
+	                 "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"}
+		err=handShake(messages,conn)
+
+		if err!=nil{
+			  panic(err)
+		}
       
-		if err!=nil{
-			   panic(err)
-				
-		}
-
-
-		n,err:=conn.Read(response)
-
-		if err!=nil{
-			    panic(err)
-		}
-
-
-		if string(response[:n])!="+PONG\r\n"{
-			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
-				  return
-		}
-
-   
-		_,err=conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n"))
-
-      if err!=nil{
-			    panic(err)
-		}
-
-		n,err=conn.Read(response)
-
-		if err!=nil{
-			    panic(err)
-		}
-
-		if string(response[:n])!="+OK\r\n"{
-			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
-				  return
-		}
-
-
-		_,err=conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"))
-
-      if err!=nil{
-			    panic(err)
-		}
-
-		n,err=conn.Read(response)
-
-		if err!=nil{
-			    panic(err)
-		}
-
-		if string(response[:n])!="+OK\r\n"{
-			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
-				  return
-		}
-
 	}
 
 	for {
@@ -164,4 +116,39 @@ func StartServer(config *RESP.SERVER) {
 		}
 	}
 
+}
+
+
+
+
+func handShake(messages []string,conn net.Conn) error{
+	  response:=make([]byte,128)
+
+	  for i :=range 4{
+		    
+		  _,err:=conn.Write([]byte(messages[i]))
+	
+		  if err!=nil{
+					return err
+		  }
+	
+		  n,err:=conn.Read(response)
+	
+		  if err!=nil{
+					return err
+		  }
+
+
+
+		  if string(response[:n])!="+OK\r\n" || (messages[i]=="*1\r\n$4\r\nPING\r\n" && string(response[:n])!="+PONG\r\n"){
+				  return errors.New("Unexpected Response from the master\n")
+			
+		  }
+	
+	  }
+
+	  
+
+
+		return nil
 }
