@@ -112,6 +112,8 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 		return unwatchCommand(args[1:], client)
 	case "INFO":
 		return replication.InfoCommand(args[1:], config)
+	case "REPLCONF":
+		return replication.ReplConfig(args[1:])
 
 	default:
 		return RESP.Response{

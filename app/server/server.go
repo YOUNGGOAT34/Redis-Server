@@ -84,17 +84,58 @@ func StartServer(config *RESP.SERVER) {
 		os.Exit(1)
 	}
 
+
+	//sync with the master if this server is a replica
+
 	if config.Role == "slave" {
-		address := fmt.Sprintf("%s:%d", config.MasterHost, config.MasterPort)
+		address := net.JoinHostPort(config.MasterHost, fmt.Sprintf("%d", config.MasterPort))
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {
 			panic(err)
 		}
+     
+
+		response:=make([]byte,128)
 
 		//  message:=fmt.Sprintf("*1\r\n$4\r\nPING\r\n")
-		conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+		_,err=conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+      
+		if err!=nil{
+			   panic(err)
+				
+		}
 
+
+		n,err:=conn.Read(response)
+
+		if err!=nil{
+			    panic(err)
+		}
+
+
+		if string(response[:n])!="+PONG\r\n"{
+			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
+				  return
+		}
+
+   
+		_,err=conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n"))
+
+      if err!=nil{
+			    panic(err)
+		}
+
+		n,err=conn.Read(response)
+
+		if err!=nil{
+			    panic(err)
+		}
+
+		if string(response[:n])!="+OK\r\n"{
+			     fmt.Fprintf(os.Stderr,"Unexpected Response from the master\n")
+				  return
+		}
 	}
 
 	for {
