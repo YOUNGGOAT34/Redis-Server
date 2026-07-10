@@ -1,7 +1,7 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"fmt"
 	"os"
 	"strconv"
@@ -18,7 +18,7 @@ func encodeArray(body [][]byte) []byte {
 	return respArray
 }
 
-func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
+func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	if len(arguments) < 1 {
 		return wrongNumberOfArguments("LPOP")
@@ -28,12 +28,11 @@ func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 	data, exists := database[string(arguments[0])]
 	databaseMutex.Unlock()
 
-
 	if exists {
 
 		if data.Type != LIST {
 
-			return  wrongType()
+			return wrongType()
 		}
 
 		list := data.Value.(*List)
@@ -48,14 +47,14 @@ func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 
 				if list.len == 0 {
 					delete(database, string(arguments[0]))
-				
+
 				}
 
-				markDirty(string(arguments[0]),client)
+				markDirty(string(arguments[0]), client)
 
-				return helpers.Response{
+				return RESP.Response{
 					Body: body,
-					Type: helpers.BULK_STRING,
+					Type: RESP.BULK_STRING,
 				}
 			}
 		} else {
@@ -64,17 +63,17 @@ func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error converting string to integer %s\n", err.Error())
-				return helpers.Response{
+				return RESP.Response{
 					Body: []byte("ERR value is not an integer, or out of range"),
-					Type: helpers.ERROR,
+					Type: RESP.ERROR,
 				}
 			}
 
 			if numberOfElements < 0 {
 
-				return helpers.Response{
+				return RESP.Response{
 					Body: []byte("ERR value is out of range, must be positive"),
-					Type: helpers.ERROR,
+					Type: RESP.ERROR,
 				}
 			}
 
@@ -84,7 +83,7 @@ func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 				if poppedElement == nil {
 					break
 				}
-            
+
 				res = append(res, poppedElement)
 
 			}
@@ -93,22 +92,22 @@ func lPopCommand(arguments [][]byte,client *Client) helpers.Response {
 				delete(database, string(arguments[0]))
 			}
 
-			if len(res)>0{
-				  	markDirty(string(arguments[0]),client)
+			if len(res) > 0 {
+				markDirty(string(arguments[0]), client)
 			}
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: encodeArray(res),
-				Type: helpers.ARRAY,
+				Type: RESP.ARRAY,
 			}
 
 		}
 
 	}
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: nil,
-		Type: helpers.NIL,
+		Type: RESP.NIL,
 	}
 
 }

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"errors"
 	"strconv"
 )
@@ -37,16 +37,16 @@ func createStreamID(id []byte) (StreamID, error) {
 	}, err
 }
 
-func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
+func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 4 {
 
 		return wrongNumberOfArguments("XADD")
 	}
 
 	if len(arguments[2:])%2 != 0 {
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte("Error wrong number of field-value arguments"),
-			Type: helpers.ERROR,
+			Type: RESP.ERROR,
 		}
 	}
 
@@ -103,7 +103,7 @@ func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
 
 			Id, err = createStreamID(arguments[1])
 
-			if err != nil && helpers.CompareBytes(arguments[1], []byte("-")) {
+			if err != nil && RESP.CompareBytes(arguments[1], []byte("-")) {
 
 			}
 
@@ -111,9 +111,9 @@ func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
 
 		if err != nil {
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte("Invalid stream Id"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
@@ -127,26 +127,26 @@ func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
 		*/
 
 		if Id.Milliseconds == 0 && Id.Sequence == 0 {
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte("ERR The ID specified in XADD must be greater than 0-0"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
 		if Id.Milliseconds < stream.LastID.Milliseconds {
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
 		if Id.Milliseconds == stream.LastID.Milliseconds {
 
 			if Id.Sequence <= stream.LastID.Sequence {
-				return helpers.Response{
+				return RESP.Response{
 					Body: []byte("ERR The ID specified in XADD is equal or smaller than the target stream top item"),
-					Type: helpers.ERROR,
+					Type: RESP.ERROR,
 				}
 			}
 		}
@@ -188,9 +188,9 @@ func xAddCommand(arguments [][]byte, client *Client) helpers.Response {
 
 	markDirty(key, client)
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: []byte(Id.String()),
-		Type: helpers.BULK_STRING,
+		Type: RESP.BULK_STRING,
 	}
 
 }

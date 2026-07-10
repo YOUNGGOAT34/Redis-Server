@@ -1,11 +1,11 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"strconv"
 )
 
-func lPushCommand(arguments [][]byte,client *Client) helpers.Response {
+func lPushCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 2 {
 		return wrongNumberOfArguments("LPUSH")
 	}
@@ -16,7 +16,6 @@ func lPushCommand(arguments [][]byte,client *Client) helpers.Response {
 	data, exists := database[key]
 	databaseMutex.Unlock()
 
-
 	if exists {
 
 		if data.Type != LIST {
@@ -25,18 +24,18 @@ func lPushCommand(arguments [][]byte,client *Client) helpers.Response {
 		}
 
 		list := data.Value.(*List)
-      list.listMutex.Lock()
+		list.listMutex.Lock()
 		defer list.listMutex.Unlock()
 		for _, argument := range arguments[1:] {
 			list.PushFront(argument)
 		}
 
-		markDirty(string(arguments[0]),client)
+		markDirty(string(arguments[0]), client)
 		var buf [32]byte
 
-		return helpers.Response{
+		return RESP.Response{
 			Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
-			Type: helpers.INTEGER,
+			Type: RESP.INTEGER,
 		}
 
 	}
@@ -56,18 +55,17 @@ func lPushCommand(arguments [][]byte,client *Client) helpers.Response {
 	}
 
 	database[key] = Data{
-		      Type: LIST,
-				Value: list,
-
+		Type:  LIST,
+		Value: list,
 	}
 
-	markDirty(string(arguments[0]),client)
+	markDirty(string(arguments[0]), client)
 
 	var buf [32]byte
-	return helpers.Response{
+	return RESP.Response{
 
 		Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
-		Type: helpers.INTEGER,
+		Type: RESP.INTEGER,
 	}
 
 }

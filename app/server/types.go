@@ -9,12 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 )
-
-
-
-
 
 type Command struct {
 	Args [][]byte
@@ -60,11 +56,6 @@ type Data struct {
 	Type  TYPE
 	Value any
 }
-
-
-
-
-
 
 type Node struct {
 	data []byte
@@ -192,15 +183,15 @@ type Stream struct {
 
 func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
 
-	if helpers.CompareBytes(id, []byte("-")) {
+	if RESP.CompareBytes(id, []byte("-")) {
 		return stream.Entries[0].ID, nil
 	}
 
-	if helpers.CompareBytes(id, []byte("+")) {
+	if RESP.CompareBytes(id, []byte("+")) {
 		return stream.LastID, nil
 	}
 
-	if helpers.CompareBytes(id, []byte("$")) {
+	if RESP.CompareBytes(id, []byte("$")) {
 		return stream.LastID, nil
 	}
 

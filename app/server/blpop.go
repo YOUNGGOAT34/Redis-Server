@@ -1,13 +1,13 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"container/list"
 	"strconv"
 	"time"
 )
 
-func blockClient(arguments [][]byte) helpers.Response {
+func blockClient(arguments [][]byte) RESP.Response {
 
 	ch := make(chan []byte, 1)
 	blockedClientsMutex.Lock()
@@ -25,28 +25,28 @@ func blockClient(arguments [][]byte) helpers.Response {
 	timeout, err := strconv.Atoi(string(arguments[1]))
 
 	if err != nil {
-		return helpers.Response{
+		return RESP.Response{
 
 			Body: []byte("Error timeout should be an integer"),
-			Type: helpers.ERROR,
+			Type: RESP.ERROR,
 		}
 	}
 
 	if timeout == 0 {
 		value := <-ch
 
-		return helpers.Response{
+		return RESP.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: helpers.ARRAY,
+			Type: RESP.ARRAY,
 		}
 
 	}
 
 	select {
 	case value := <-ch:
-		return helpers.Response{
+		return RESP.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: helpers.ARRAY,
+			Type: RESP.ARRAY,
 		}
 
 	case <-time.After(time.Duration(timeout) * time.Second):
@@ -54,18 +54,18 @@ func blockClient(arguments [][]byte) helpers.Response {
 		blockedClientsMutex.Lock()
 		q.Remove(element)
 		blockedClientsMutex.Unlock()
-		return helpers.Response{
+		return RESP.Response{
 			Body: nil,
-			Type: helpers.NIL,
+			Type: RESP.NIL,
 		}
 
 	}
 
 }
 
-func bLPopCommand(arguments [][]byte,client *Client) helpers.Response {
+func bLPopCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) != 2 {
-		return  wrongNumberOfArguments("BLOP")
+		return wrongNumberOfArguments("BLOP")
 	}
 
 	databaseMutex.RLock()
@@ -75,9 +75,8 @@ func bLPopCommand(arguments [][]byte,client *Client) helpers.Response {
 	if exists {
 
 		if data.Type != LIST {
-			return  wrongType()
-			}
-		
+			return wrongType()
+		}
 
 		listData := data.Value.(*List)
 
@@ -86,21 +85,17 @@ func bLPopCommand(arguments [][]byte,client *Client) helpers.Response {
 
 		}
 
-		
-      listData.listMutex.Lock()
+		listData.listMutex.Lock()
 		value := listData.LPop()
 		listData.listMutex.Unlock()
 
-		
-		markDirty(string(arguments[0]),client)
+		markDirty(string(arguments[0]), client)
 
-		return helpers.Response{
+		return RESP.Response{
 			Body: encodeArray([][]byte{arguments[0], value}),
-			Type: helpers.ARRAY,
+			Type: RESP.ARRAY,
 		}
 	}
-
-	
 
 	return blockClient(arguments)
 }

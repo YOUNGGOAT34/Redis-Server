@@ -1,11 +1,10 @@
-package server
+package RESP
 
 import (
-	"CacheDB/app/helpers"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
-
 )
 
 /*
@@ -42,12 +41,9 @@ func getHeaderAndBody(request []byte) (header, body []byte) {
 	Each bulk string is extracted and stored in args for dispatch.
 */
 
-func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers.Response {
+func ParseRequest(request []byte) ([][]byte,error) {
 	if len(request) < 1 {
-		return helpers.Response{
-			Body: nil,
-			Type: helpers.NIL,
-		}
+		return  nil,errors.New("Empty request")
 	}
 
 	header, body := getHeaderAndBody(request)
@@ -55,10 +51,7 @@ func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers
 	var args [][]byte
 
 	if header == nil {
-		return helpers.Response{
-			Body: nil,
-			Type: helpers.NIL,
-		}
+		return nil,errors.New("No header")
 	}
 
 	/*Read the array length after '*'.
@@ -80,10 +73,7 @@ func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers
 	size, err := strconv.Atoi(string(header[1:index]))
 
 	if err != nil {
-		return helpers.Response{
-			Body: nil,
-			Type: helpers.NIL,
-		}
+		return nil,err
 	}
 
 	// Extract each RESP bulk string from the request body.
@@ -93,10 +83,7 @@ func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers
 		if len(body) < 5 {
 
 			fmt.Fprint(os.Stderr, "Malformed body\n")
-			return helpers.Response{
-				Body: nil,
-				Type: helpers.NIL,
-			}
+			return nil,errors.New("Malformed body")
 		}
 
 		/*
@@ -127,10 +114,7 @@ func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers
 		if err != nil {
 
 			fmt.Fprintf(os.Stderr, "Error converting string to integer %s\n", err.Error())
-			return helpers.Response{
-				Body: nil,
-				Type: helpers.NIL,
-			}
+			return nil,err
 		}
 
 		/*
@@ -161,15 +145,10 @@ func parseRequest(client *Client, request []byte,config *helpers.SERVER) helpers
 		} else {
 
 			fmt.Fprintf(os.Stderr, "Malformed body\n")
-			return helpers.Response{
-				Body: nil,
-				Type: helpers.NIL,
-			}
+			return  nil,errors.New("Malformed body")
 		}
 
 	}
 
-	return dispatchCommands(client, args,config)
+	return args,nil
 }
-
-

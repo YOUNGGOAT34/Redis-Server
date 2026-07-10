@@ -6,13 +6,13 @@ import (
 	"testing"
 	"time"
 
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"CacheDB/app/server"
 )
 
 var (
-	reset  = "\033[0m"
-	bold   = "\033[1m"
+	reset = "\033[0m"
+	bold  = "\033[1m"
 
 	green  = "\033[1;32m"
 	red    = "\033[1;31m"
@@ -39,19 +39,19 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-	go server.StartServer(&helpers.SERVER{
-		  PORT:6370,
+	go server.StartServer(&RESP.SERVER{
+		PORT: 6379,
 	})
 
 	waitForServer()
-    
-	 pingtest(t)
-    echo_test(t)
-	 set_test(t)
-	 get_test(t)
-	 expiry_test(t)
-	 rpush_test(t)
-	 lrange_test(t)
+
+	pingtest(t)
+	echo_test(t)
+	set_test(t)
+	get_test(t)
+	expiry_test(t)
+	rpush_test(t)
+	lrange_test(t)
 	lpush_test(t)
 	llen_test(t)
 	lpop_test(t)
@@ -66,15 +66,13 @@ func TestMain(t *testing.T) {
 	watch_test(t)
 	list_watch_test(t)
 	stream_xadd_watch_test(t)
-	
-}
 
+}
 
 func failf(t *testing.T, format string, args ...any) {
 	t.Fatalf(red+"✘ "+format+reset, args...)
 	os.Exit(1)
 }
-
 
 func waitForServer() {
 	for i := 0; i < 50; i++ {
@@ -89,7 +87,7 @@ func waitForServer() {
 	panic(red + "server did not start" + reset)
 }
 
-// ---------------- HELPERS ----------------
+// ---------------- RESP ----------------
 
 func dial(t *testing.T) net.Conn {
 	conn, err := net.Dial("tcp", "localhost:6379")
@@ -113,5 +111,3 @@ func send(conn net.Conn, req string) string {
 
 	return string(buf[:n])
 }
-
-

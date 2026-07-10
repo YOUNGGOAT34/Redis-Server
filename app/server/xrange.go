@@ -1,7 +1,7 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"fmt"
 )
 
@@ -31,7 +31,7 @@ func encodeEntries(entries []*StreamEntry) []byte {
 	return respArray
 }
 
-func xRangeCommand(arguments [][]byte) helpers.Response {
+func xRangeCommand(arguments [][]byte) RESP.Response {
 
 	if len(arguments) != 3 {
 		return wrongNumberOfArguments("XRANGE")
@@ -40,9 +40,9 @@ func xRangeCommand(arguments [][]byte) helpers.Response {
 	var entries []*StreamEntry
 
 	databaseMutex.RLock()
-	data, exists := database[string(arguments[0])];
+	data, exists := database[string(arguments[0])]
 	databaseMutex.RUnlock()
-	if  exists {
+	if exists {
 
 		if data.Type != STREAM {
 			return wrongType()
@@ -58,9 +58,9 @@ func xRangeCommand(arguments [][]byte) helpers.Response {
 				 Inside the stream.Entities entities[0] can be safely accessed ,with a guarantee that there is data inside the stream
 		*/
 		if stream.Len == 0 {
-			return helpers.Response{
+			return RESP.Response{
 				Body: encodeEntries(stream.Entries),
-				Type: helpers.ARRAY,
+				Type: RESP.ARRAY,
 			}
 		}
 
@@ -68,18 +68,18 @@ func xRangeCommand(arguments [][]byte) helpers.Response {
 
 		if err != nil {
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte(err.Error()),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
 		endId, err := stream.createStreamID(arguments[2])
 
 		if err != nil {
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte(err.Error()),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
@@ -87,9 +87,9 @@ func xRangeCommand(arguments [][]byte) helpers.Response {
 
 	}
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: encodeEntries(entries),
-		Type: helpers.ARRAY,
+		Type: RESP.ARRAY,
 	}
 
 }

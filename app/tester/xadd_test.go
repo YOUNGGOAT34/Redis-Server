@@ -21,12 +21,12 @@ func xadd_test(t *testing.T) {
 }
 
 // ------------------------------------------------------------
-// RESP parsing helpers
+// RESP parsing RESP
 // ------------------------------------------------------------
 
-/* 
-   parseBulkString parses a RESP bulk string reply ("$<len>\r\n<data>\r\n")
-   and returns its payload.
+/*
+parseBulkString parses a RESP bulk string reply ("$<len>\r\n<data>\r\n")
+and returns its payload.
 */
 func parseBulkString(resp string) (string, bool) {
 	if len(resp) == 0 || resp[0] != '$' {
@@ -105,11 +105,10 @@ func mustBulkID(t *testing.T, resp string, context string) streamID {
 	return id
 }
 
-/* 
-   mustError parses an error reply and returns its message, failing the test
-   if the reply isn't an error, and optionally checking it contains a substring.
-
-	*/
+/*
+mustError parses an error reply and returns its message, failing the test
+if the reply isn't an error, and optionally checking it contains a substring.
+*/
 func mustError(t *testing.T, resp string, context string, wantSubstr string) string {
 	t.Helper()
 

@@ -1,16 +1,16 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"strconv"
 	"time"
 )
 
-func getCommand(arguments [][]byte) helpers.Response {
+func getCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) < 1 {
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'GET' command"),
-			Type: helpers.ERROR,
+			Type: RESP.ERROR,
 		}
 	}
 
@@ -36,26 +36,26 @@ func getCommand(arguments [][]byte) helpers.Response {
 	if exists {
 
 		if dataObject.Type != STRING {
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
 		value := dataObject.Value.(string)
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte(value),
-			Type: helpers.BULK_STRING,
+			Type: RESP.BULK_STRING,
 		}
 	}
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: nil,
-		Type: helpers.NIL,
+		Type: RESP.NIL,
 	}
 }
 
-func setCommand(arguments [][]byte, client *Client) helpers.Response {
+func setCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 2 {
 		return wrongNumberOfArguments("SET")
 	}
@@ -72,21 +72,21 @@ func setCommand(arguments [][]byte, client *Client) helpers.Response {
 	expiryMutex.Unlock()
 
 	if len(arguments) > 2 {
-		if helpers.CompareBytes(arguments[2], []byte("EX")) || helpers.CompareBytes(arguments[2], []byte("PX")) {
+		if RESP.CompareBytes(arguments[2], []byte("EX")) || RESP.CompareBytes(arguments[2], []byte("PX")) {
 			if len(arguments) < 4 {
-				return helpers.Response{
+				return RESP.Response{
 					Body: []byte(""),
-					Type: helpers.BULK_STRING,
+					Type: RESP.BULK_STRING,
 				}
 			}
 
-			if helpers.CompareBytes(arguments[2], []byte("EX")) {
+			if RESP.CompareBytes(arguments[2], []byte("EX")) {
 
 				timeInSeconds, err := strconv.Atoi(string(arguments[3]))
 				if err != nil {
-					return helpers.Response{
+					return RESP.Response{
 						Body: []byte("Error invalid expiry time"),
-						Type: helpers.ERROR,
+						Type: RESP.ERROR,
 					}
 				}
 
@@ -98,12 +98,12 @@ func setCommand(arguments [][]byte, client *Client) helpers.Response {
 
 				expiryMutex.Unlock()
 
-			} else if helpers.CompareBytes(arguments[2], []byte("PX")) {
+			} else if RESP.CompareBytes(arguments[2], []byte("PX")) {
 				timeInMilliSeconds, err := strconv.Atoi(string(arguments[3]))
 				if err != nil {
-					return helpers.Response{
+					return RESP.Response{
 						Body: []byte("Error invalid expiry time"),
-						Type: helpers.ERROR,
+						Type: RESP.ERROR,
 					}
 				}
 
@@ -115,10 +115,10 @@ func setCommand(arguments [][]byte, client *Client) helpers.Response {
 			}
 		} else {
 
-			return helpers.Response{
+			return RESP.Response{
 
 				Body: []byte("Syntax error:Unknown option"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 
 		}
@@ -133,9 +133,9 @@ func setCommand(arguments [][]byte, client *Client) helpers.Response {
 
 	markDirty(string(arguments[0]), client)
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: []byte("OK"),
-		Type: helpers.SIMPLE_STRING,
+		Type: RESP.SIMPLE_STRING,
 	}
 
 }

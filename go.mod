@@ -1,4 +1,3 @@
-module github.com/codecrafters-io/redis-starter-go
-
+module CacheDB
 
 go 1.26.0

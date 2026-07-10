@@ -7,129 +7,101 @@ import (
 	"os"
 	"strings"
 
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 )
 
-//responsible for resp encoding
-func buildResponse(res helpers.Response) []byte{
+// responsible for resp encoding
 
-   body:=res.Body
-    
-	switch res.Type{
-		   
-				case  helpers.ERROR:
-						return fmt.Appendf(nil, "-%s\r\n",body)
-				case helpers.SIMPLE_STRING:
-					   return fmt.Appendf(nil, "+%s\r\n",body)
 
-				case helpers.NIL:
-					   
-						return fmt.Appendf(nil, "$-1\r\n")
+func handleClient(conn net.Conn, config *RESP.SERVER) {
+	var request = make([]byte, 1024)
 
-				case helpers.BULK_STRING:
-					  
-						return fmt.Appendf(nil, "$%d\r\n%s\r\n",len(body),body)
-				case helpers.INTEGER:
-						return fmt.Appendf(nil, ":%s\r\n",body)
-				case helpers.ARRAY:
-					   //a resp array is already encoded from the parser
-						return res.Body
-					   
-      
-				default :
-				      
-						panic("Unknown Response type")
+	defer conn.Close()
+
+	client := &Client{
+		Conn:        conn,
+		keysWatched: make(map[string]struct{}),
 	}
-	 
-}
 
+	for {
 
+		bytesRead, err := conn.Read(request)
 
-func handleClient(conn net.Conn,config *helpers.SERVER){
-	     var request=make([]byte,1024)
+		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
-		  defer conn.Close()
+			return
 
-         client:=&Client{
-				   Conn: conn,
-					keysWatched: make(map[string]struct{}),
-			}
-
-		  for{
-
-			  bytesRead,err:= conn.Read(request)
-				
-				  if err==io.EOF || (err!=nil && strings.Contains(err.Error(),"connection reset")){
-	 
-					 return
-					
-				}
-	 
-				if err!=nil{
-					  fmt.Fprintf(os.Stderr,"Error reading client request: %s\n",err.Error())
-					  return
-				}
-
-
-				fmt.Printf("%q",request[:bytesRead])
-
-				 
-	         response:=parseRequest(client,request[:bytesRead],config)
-             
-				
-	
-				_,err=conn.Write(buildResponse(response))
-
-				
-
-				if err!=nil{
-					  return
-				}
-		  }
-	   
-}
-
-
-func accept(listener net.Listener) net.Conn{
-	   conn,err := listener.Accept()
+		}
 
 		if err != nil {
-				fmt.Fprintf(os.Stderr,"Error accepting connection: %s\r\n", err.Error())
-				return nil
-			}
+			fmt.Fprintf(os.Stderr, "Error reading client request: %s\n", err.Error())
+			return
+		}
 
-			return conn
+		// fmt.Printf("%q", request[:bytesRead])
+     
+		parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
+
+		var response RESP.Response
+
+		if err!=nil{
+			   response=RESP.Response{
+					   Body: []byte(err.Error()),
+                  Type: RESP.ERROR,
+				}
+
+		}else{
+			  
+			response= dispatchCommands(client,parsedRequest,config)
+		}
+
+		_, err = conn.Write(RESP.EncodeResponse(response))
+      
+		if err != nil {
+			return
+		}
+	}
 
 }
 
-func StartServer(config *helpers.SERVER){
-   address:=fmt.Sprintf("0.0.0.0:%d",config.PORT)
-	l, err := net.Listen("tcp",address)
+func accept(listener net.Listener) net.Conn {
+	conn, err := listener.Accept()
+
 	if err != nil {
-		fmt.Printf("Failed to bind to port %d\n",config.PORT)
+		fmt.Fprintf(os.Stderr, "Error accepting connection: %s\r\n", err.Error())
+		return nil
+	}
+
+	return conn
+
+}
+
+func StartServer(config *RESP.SERVER) {
+	address := fmt.Sprintf("0.0.0.0:%d", config.PORT)
+	l, err := net.Listen("tcp", address)
+	if err != nil {
+		fmt.Printf("Failed to bind to port %d\n", config.PORT)
 		os.Exit(1)
 	}
 
+	if config.Role == "slave" {
+		address := fmt.Sprintf("%s:%d", config.MasterHost, config.MasterPort)
+		conn, err := net.Dial("tcp", address)
 
-	if config.Role=="slave"{
-		    address:=fmt.Sprintf("%s:%d",config.MasterHost,config.MasterPort)
-		    conn,err:=net.Dial("tcp",address)
+		if err != nil {
+			panic(err)
+		}
 
-			 if err!=nil{
-				 panic(err)
-			 }
-
-         //  message:=fmt.Sprintf("*1\r\n$4\r\nPING\r\n")
-			 conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
+		//  message:=fmt.Sprintf("*1\r\n$4\r\nPING\r\n")
+		conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
 
 	}
-  
 
-	for{
-         conn:=accept(l)
-			if conn!=nil{
-				go handleClient(conn,config)
-			}
+	for {
+		conn := accept(l)
+		if conn != nil {
+			go handleClient(conn, config)
+		}
 	}
-	
+
 }

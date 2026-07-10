@@ -1,7 +1,7 @@
 package server
 
 import (
-	"CacheDB/app/helpers"
+	"CacheDB/app/RESP"
 	"container/list"
 	"fmt"
 	"strconv"
@@ -45,7 +45,7 @@ func encodeStreams(streams [][]*StreamEntry) []byte {
 
 }
 
-func xReadCommand(arguments [][]byte) helpers.Response {
+func xReadCommand(arguments [][]byte) RESP.Response {
 
 	//map to store key-starting id, incase it is a query of a multiple streams
 
@@ -80,9 +80,9 @@ func xReadCommand(arguments [][]byte) helpers.Response {
 			startId, err := stream.createStreamID(startingId)
 
 			if err != nil {
-				return helpers.Response{
+				return RESP.Response{
 					Body: []byte(err.Error()),
-					Type: helpers.ERROR,
+					Type: RESP.ERROR,
 				}
 			}
 
@@ -98,26 +98,26 @@ func xReadCommand(arguments [][]byte) helpers.Response {
 
 	if len(streams) == 0 {
 
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte("-1\r\n"),
-			Type: helpers.NIL,
+			Type: RESP.NIL,
 		}
 	}
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: encodeStreams(streams),
-		Type: helpers.ARRAY,
+		Type: RESP.ARRAY,
 	}
 
 }
 
-func decideTypeOfRead(arguments [][]byte) helpers.Response {
+func decideTypeOfRead(arguments [][]byte) RESP.Response {
 
 	if len(arguments) < 2 || (len(arguments)-1)%2 != 0 {
 		return wrongNumberOfArguments("XREAD")
 	}
 
-	if helpers.CompareBytes(arguments[0], []byte("BLOCK")) {
+	if RESP.CompareBytes(arguments[0], []byte("BLOCK")) {
 		return blockingXread(arguments[1:])
 	} else {
 		return xReadCommand(arguments[1:])
@@ -125,22 +125,22 @@ func decideTypeOfRead(arguments [][]byte) helpers.Response {
 
 }
 
-func blockingXread(arguments [][]byte) helpers.Response {
- 
+func blockingXread(arguments [][]byte) RESP.Response {
+
 	timeout, err := strconv.Atoi(string(arguments[0]))
 	if err != nil {
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte(err.Error()),
-			Type: helpers.ERROR,
+			Type: RESP.ERROR,
 		}
 	}
 
 	arguments = arguments[2:]
 
 	if len(arguments) < 2 {
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte("Error: Wrong number of arguments passed to blpop command"),
-			Type: helpers.ERROR,
+			Type: RESP.ERROR,
 		}
 	}
 
@@ -152,9 +152,9 @@ func blockingXread(arguments [][]byte) helpers.Response {
 	if exists {
 		if data.Type != STREAM {
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
@@ -164,9 +164,9 @@ func blockingXread(arguments [][]byte) helpers.Response {
 
 		if err != nil {
 
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte(err.Error()),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
@@ -192,9 +192,9 @@ func blockingXread(arguments [][]byte) helpers.Response {
 		startId, err := stream.createStreamID(arguments[1])
 
 		if err != nil {
-			return helpers.Response{
+			return RESP.Response{
 				Body: []byte(err.Error()),
-				Type: helpers.ERROR,
+				Type: RESP.ERROR,
 			}
 		}
 
@@ -203,15 +203,15 @@ func blockingXread(arguments [][]byte) helpers.Response {
 
 	if len(streams) == 0 {
 
-		return helpers.Response{
+		return RESP.Response{
 			Body: []byte("-1"),
-			Type: helpers.NIL,
+			Type: RESP.NIL,
 		}
 	}
 
-	return helpers.Response{
+	return RESP.Response{
 		Body: encodeStreams(streams),
-		Type: helpers.ARRAY,
+		Type: RESP.ARRAY,
 	}
 }
 
