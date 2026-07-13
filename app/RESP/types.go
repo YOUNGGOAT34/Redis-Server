@@ -1,5 +1,7 @@
 package RESP
 
+import "net"
+
 type ResponseType int
 
 type SERVER struct {
@@ -9,6 +11,9 @@ type SERVER struct {
 	PORT             int
 	MASTERREPLID     string
 	MASTERREPLOFFSET int
+	MASTERCONN net.Conn
+
+	REPLICAS []net.Conn
 }
 
 const (

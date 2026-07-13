@@ -22,6 +22,30 @@ const (
 	ExpectFullResync
 )
 
+
+//identify write commands
+
+func isWrite(command []byte) bool{
+	  cmd := strings.ToUpper(string(command))
+
+	  switch cmd{
+			case "SET":
+				return true
+			case "INCR":
+				return true
+			case "LPUSH":
+				return true
+			case "LPOP":
+				return true
+			case "RPUSH":
+				return true
+			case "XADD":
+				return true
+	  }
+
+	  return false
+}
+
 func handleClient(conn net.Conn, config *RESP.SERVER) {
 	var request = make([]byte, 1024)
 
@@ -67,16 +91,40 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		_, err = conn.Write(RESP.EncodeResponse(response))
 
 		if len(parsedRequest)>0  && RESP.CompareBytes(parsedRequest[0],[]byte("PSYNC")){
+
+             if err != nil {
+						return
+					}
+
 			    _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
 					Body: replication.EmptyRDB,
 					Type: RESP.RDBFILE,
 				
 				}))
+
+				if err != nil {
+						return
+					}
+
+				config.REPLICAS = append(config.REPLICAS, conn)
+				continue
 		}
       
 		if err != nil {
 			return
 		}
+
+
+     if config.Role=="master"{
+		//only propagate successful write commands
+		   if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
+   
+					replication.PropagateCommands(request[:bytesRead],config)
+				
+			}
+	  }
+
+
 	}
 
 }
@@ -113,9 +161,10 @@ func StartServer(config *RESP.SERVER) {
 		}
 
       
+		config.MASTERCONN=conn
 		
 		message:="*1\r\n$4\r\nPING\r\n"
-		err=handShake(message,conn)
+		err=handShake(message,conn,ExpectPong)
 
 		if err!=nil{
 			  panic(err)
@@ -124,7 +173,7 @@ func StartServer(config *RESP.SERVER) {
 
 		port:=fmt.Sprintf("%d",config.PORT)
 		message=fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n",len(port),port)
-		err=handShake(message,conn)
+		err=handShake(message,conn,ExpectOK)
 
 		if err!=nil{
 			  panic(err)
@@ -132,7 +181,7 @@ func StartServer(config *RESP.SERVER) {
 
 		message="*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
 	                
-		err=handShake(message,conn)
+		err=handShake(message,conn,ExpectOK)
 
 		if err!=nil{
 			  panic(err)
@@ -140,7 +189,7 @@ func StartServer(config *RESP.SERVER) {
 
 
 		message="*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
-		err=handShake(message,conn)
+		err=handShake(message,conn,ExpectFullResync)
 
 		if err!=nil{
 			  panic(err)
