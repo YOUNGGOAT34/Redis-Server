@@ -106,7 +106,9 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 						return
 					}
 
+				config.ReplicasMutex.Lock()
 				config.REPLICAS = append(config.REPLICAS, conn)
+				config.ReplicasMutex.Unlock()
 				continue
 		}
       

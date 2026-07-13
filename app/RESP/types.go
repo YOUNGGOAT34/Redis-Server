@@ -1,6 +1,9 @@
 package RESP
 
-import "net"
+import (
+	"net"
+	"sync"
+)
 
 type ResponseType int
 
@@ -14,6 +17,7 @@ type SERVER struct {
 	MASTERCONN net.Conn
 
 	REPLICAS []net.Conn
+	ReplicasMutex sync.Mutex
 }
 
 const (
