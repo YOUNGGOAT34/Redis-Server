@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"CacheDB/app/RESP"
+	"CacheDB/app/replication"
 )
 
 // responsible for resp encoding
@@ -57,6 +58,14 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		}
 
 		_, err = conn.Write(RESP.EncodeResponse(response))
+
+		if len(parsedRequest)>0  && RESP.CompareBytes(parsedRequest[0],[]byte("PSYNC")){
+			    _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
+					Body: replication.EmptyRDB,
+					Type: RESP.RDBFILE,
+				
+				}))
+		}
       
 		if err != nil {
 			return
@@ -96,17 +105,40 @@ func StartServer(config *RESP.SERVER) {
 			panic(err)
 		}
 
-
-		_,err=conn.Write([]byte("*1\r\n$4\r\nPING\r\n"))
-		messages:=[]string{"*1\r\n$4\r\nPING\r\n","*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n","*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n",
-	                 "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"}
-		err=handShake(messages,conn)
+      
+		
+		message:="*1\r\n$4\r\nPING\r\n"
+		err=handShake(message,conn)
 
 		if err!=nil{
 			  panic(err)
 		}
-      
 
+
+		port:=fmt.Sprintf("%d",config.PORT)
+		message=fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n",len(port),port)
+		err=handShake(message,conn)
+
+		if err!=nil{
+			  panic(err)
+		}
+
+		message="*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
+	                
+		err=handShake(message,conn)
+
+		if err!=nil{
+			  panic(err)
+		}
+
+
+		message="*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
+		err=handShake(message,conn)
+
+		if err!=nil{
+			  panic(err)
+		}
+   
 	}
 
 	for {
@@ -121,12 +153,12 @@ func StartServer(config *RESP.SERVER) {
 
 
 
-func handShake(messages []string,conn net.Conn) error{
+func handShake(message string,conn net.Conn) error{
 	  response:=make([]byte,128)
 
-	  for i :=range 4{
+
 		    
-		  _,err:=conn.Write([]byte(messages[i]))
+		  _,err:=conn.Write([]byte(message))
 	
 		  if err!=nil{
 					return err
@@ -139,16 +171,27 @@ func handShake(messages []string,conn net.Conn) error{
 		  }
 
 
-
-		  if string(response[:n])!="+OK\r\n" || (messages[i]=="*1\r\n$4\r\nPING\r\n" && string(response[:n])!="+PONG\r\n"){
-				  return errors.New("Unexpected Response from the master\n")
-			
+		  if message=="*1\r\n$4\r\nPING\r\n"{
+			     if string(response[:n])!="+PONG\r\n"{
+					   return errors.New("Unexpected Response from the master\n")
+				  }
 		  }
-	
-	  }
+
+
+		  if message=="*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n" || message=="*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n"{
+			      if string(response[:n])!="+OK\r\n"{
+					   return errors.New("Unexpected Response from the master\n")
+				  }
+		  }
+
+
+		  if message=="*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"{
+			    if !strings.HasPrefix(string(response[:n]), "+FULLRESYNC"){
+					  return errors.New("Unexpected Response from the master\n")
+				 }
+		  }
 
 	  
-
 
 		return nil
 }

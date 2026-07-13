@@ -18,6 +18,7 @@ const (
 	NIL
 	INTEGER
 	ARRAY
+	RDBFILE
 )
 
 type Response struct {

@@ -25,6 +25,8 @@ func EncodeResponse(res Response) []byte {
 	case ARRAY:
 		//a resp array is already encoded from the parser
 		return res.Body
+	case RDBFILE:
+		return fmt.Appendf(nil,"$%d\r\n%s",len(body),body)
 
 	default:
 
