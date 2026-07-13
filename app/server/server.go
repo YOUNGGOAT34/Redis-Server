@@ -12,8 +12,15 @@ import (
 	"CacheDB/app/replication"
 )
 
-// responsible for resp encoding
 
+//for the handshake between the master and the replica
+type ExpectedResponse int
+
+const (
+	ExpectPong ExpectedResponse = iota
+	ExpectOK
+	ExpectFullResync
+)
 
 func handleClient(conn net.Conn, config *RESP.SERVER) {
 	var request = make([]byte, 1024)
@@ -153,7 +160,7 @@ func StartServer(config *RESP.SERVER) {
 
 
 
-func handShake(message string,conn net.Conn) error{
+func handShake(message string,conn net.Conn,RES ExpectedResponse) error{
 	  response:=make([]byte,128)
 
 
@@ -171,27 +178,27 @@ func handShake(message string,conn net.Conn) error{
 		  }
 
 
-		  if message=="*1\r\n$4\r\nPING\r\n"{
-			     if string(response[:n])!="+PONG\r\n"{
-					   return errors.New("Unexpected Response from the master\n")
-				  }
+
+		  switch RES{
+					case ExpectPong:
+							
+								if string(response[:n])!="+PONG\r\n"{
+										return errors.New("Unexpected Response from the master\n")
+								}
+					     
+					case ExpectOK:
+							if string(response[:n])!="+OK\r\n"{
+							return errors.New("Unexpected Response from the master\n")
+					  }
+
+					case ExpectFullResync:
+
+						if !strings.HasPrefix(string(response[:n]), "+FULLRESYNC"){
+								return errors.New("Unexpected Response from the master\n")
+							}
+
 		  }
 
-
-		  if message=="*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n" || message=="*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$4\r\n6380\r\n"{
-			      if string(response[:n])!="+OK\r\n"{
-					   return errors.New("Unexpected Response from the master\n")
-				  }
-		  }
-
-
-		  if message=="*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"{
-			    if !strings.HasPrefix(string(response[:n]), "+FULLRESYNC"){
-					  return errors.New("Unexpected Response from the master\n")
-				 }
-		  }
-
-	  
 
 		return nil
 }
