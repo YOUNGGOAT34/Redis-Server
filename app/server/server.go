@@ -198,7 +198,7 @@ func StartServer(config *RESP.SERVER) {
 			  panic(err)
 		}
 
-		go handleMaster(conn)
+		go handleMaster(conn,config)
    
 	}
 
@@ -212,17 +212,16 @@ func StartServer(config *RESP.SERVER) {
 
 }
 
-func handleMaster(conn net.Conn) {
+func handleMaster(conn net.Conn,config *RESP.SERVER) {
 
 	var request = make([]byte, 1024)
    
 	defer conn.Close()
 	     
 	for {
-				fmt.Printf("Before\n")
+			
 				bytesRead, err := conn.Read(request)
-				fmt.Printf("After\n")
-
+			
 				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
 					return
@@ -234,24 +233,13 @@ func handleMaster(conn net.Conn) {
 					return
 				}
 
-			
-			   
-				fmt.Printf("........%q\n",request[:bytesRead])
-
-				// parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
+				parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
 			
 				// var response RESP.Response
 
-				// if err!=nil{
-				// 		response=RESP.Response{
-				// 				Body: []byte(err.Error()),
-				// 				Type: RESP.ERROR,
-				// 		}
-
-				// }else{
-					
-				// 	// response= dispatchCommands(client,parsedRequest,config)
-				// }
+			
+					dispatchCommands(&Client{},parsedRequest,config)
+				
 
 	}
 
