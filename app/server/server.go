@@ -48,7 +48,7 @@ func isWrite(command []byte) bool{
 
 func handleClient(conn net.Conn, config *RESP.SERVER) {
 	var request = make([]byte, 1024)
-
+   
 	defer conn.Close()
 
 	client := &Client{
@@ -56,8 +56,9 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		keysWatched: make(map[string]struct{}),
 	}
 
-	for {
 
+	for {
+     
 		bytesRead, err := conn.Read(request)
 
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
@@ -74,7 +75,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 	
      
 		parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
-
+     
 		var response RESP.Response
 
 		if err!=nil{
@@ -196,14 +197,62 @@ func StartServer(config *RESP.SERVER) {
 		if err!=nil{
 			  panic(err)
 		}
+
+		go handleMaster(conn)
    
 	}
 
 	for {
+		
 		conn := accept(l)
 		if conn != nil {
 			go handleClient(conn, config)
 		}
+	}
+
+}
+
+func handleMaster(conn net.Conn) {
+
+	var request = make([]byte, 1024)
+   
+	defer conn.Close()
+	     
+	for {
+				fmt.Printf("Before\n")
+				bytesRead, err := conn.Read(request)
+				fmt.Printf("After\n")
+
+				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
+
+					return
+
+				}
+
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error reading client request: %s\n", err.Error())
+					return
+				}
+
+			
+			   
+				fmt.Printf("........%q\n",request[:bytesRead])
+
+				// parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
+			
+				// var response RESP.Response
+
+				// if err!=nil{
+				// 		response=RESP.Response{
+				// 				Body: []byte(err.Error()),
+				// 				Type: RESP.ERROR,
+				// 		}
+
+				// }else{
+					
+				// 	// response= dispatchCommands(client,parsedRequest,config)
+				// }
+
 	}
 
 }
