@@ -176,9 +176,17 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 						  return
 					  }
 
-					
 				      request=request[bytesConsumed:]
-						dispatchCommands(&Client{},parsedRequest,config)
+						
+						response:=dispatchCommands(&Client{},parsedRequest,config)
+
+						if len(parsedRequest)>0 && RESP.CompareBytes(parsedRequest[0],[]byte("REPLCONF")){
+							   _,err=conn.Write(RESP.EncodeResponse(response))
+
+								if err!=nil{
+									 return
+								}
+						}
 				}	
 
 	}

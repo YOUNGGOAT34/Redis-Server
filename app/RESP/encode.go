@@ -2,6 +2,8 @@ package RESP
 
 import "fmt"
 
+
+
 func EncodeResponse(res Response) []byte {
 
 	body := res.Body
