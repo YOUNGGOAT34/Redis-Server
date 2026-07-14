@@ -33,6 +33,8 @@ func getHeaderAndBody(request []byte) (header, body []byte) {
 		return nil, nil
 	}
 
+	
+
 	return request[:headerEndsAt], request[headerEndsAt:]
 }
 
@@ -41,18 +43,24 @@ func getHeaderAndBody(request []byte) (header, body []byte) {
 	Each bulk string is extracted and stored in args for dispatch.
 */
 
-func ParseRequest(request []byte) ([][]byte,error) {
+func ParseRequest(request []byte) ([][]byte,int,error) {
+	bytesConsumed:=0
+
 	if len(request) < 1 {
-		return  nil,errors.New("Empty request")
+		return  nil,bytesConsumed,errors.New("Empty request")
 	}
 
-	header, body := getHeaderAndBody(request)
+	
 
+	header, body := getHeaderAndBody(request)
+  
 	var args [][]byte
 
 	if header == nil {
-		return nil,errors.New("No header")
+		return nil,bytesConsumed,errors.New("No header")
 	}
+
+	bytesConsumed+=len(header)+2
 
 	/*Read the array length after '*'.
 	  Supports multi-digit array sizes such as *12.
@@ -73,7 +81,7 @@ func ParseRequest(request []byte) ([][]byte,error) {
 	size, err := strconv.Atoi(string(header[1:index]))
 
 	if err != nil {
-		return nil,err
+		return nil,bytesConsumed,err
 	}
 
 	// Extract each RESP bulk string from the request body.
@@ -83,7 +91,7 @@ func ParseRequest(request []byte) ([][]byte,error) {
 		if len(body) < 5 {
 
 			fmt.Fprint(os.Stderr, "Malformed body\n")
-			return nil,errors.New("Malformed body")
+			return nil,bytesConsumed,errors.New("Malformed body")
 		}
 
 		/*
@@ -113,7 +121,7 @@ func ParseRequest(request []byte) ([][]byte,error) {
 		elementSize, err := strconv.Atoi(string(digits))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error converting string to integer %s\n", err.Error())
-			return nil,err
+			return nil,bytesConsumed,err
 		}
 		/*
 
@@ -138,15 +146,16 @@ func ParseRequest(request []byte) ([][]byte,error) {
 			copy(argCopy, arg)
 
 			args = append(args, argCopy)
+			bytesConsumed+=offset+elementSize
 			body = body[offset+elementSize:]
 
 		} else {
 
 			fmt.Fprintf(os.Stderr, "Malformed body\n")
-			return  nil,errors.New("Malformed body")
+			return  nil,bytesConsumed,errors.New("Malformed body")
 		}
 
 	}
 
-	return args,nil
+	return args,bytesConsumed,nil
 }

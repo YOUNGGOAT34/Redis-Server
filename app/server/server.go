@@ -60,7 +60,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 	for {
      
 		bytesRead, err := conn.Read(request)
-
+       
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
 			return
@@ -72,10 +72,12 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 			return
 		}
 
-	
+	   
+		
+
      
-		parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
-     
+		parsedRequest,_,err:=RESP.ParseRequest(request[:bytesRead])
+      
 		var response RESP.Response
 
 		if err!=nil{
@@ -131,6 +133,48 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 	}
 
 }
+
+
+//for replicas
+func handleMaster(conn net.Conn,config *RESP.SERVER) {
+
+	var request = make([]byte, 1024)
+   
+	defer conn.Close()
+	     
+	for {
+		      temp:=make([]byte,1024)
+			   
+				bytesRead, err := conn.Read(temp)
+
+				request = append(request, temp[:bytesRead]...)
+			   
+				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
+
+					return
+
+				}
+
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error reading client request: %s\n", err.Error())
+					return
+				}
+
+				parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
+				request=request[bytesConsumed:]
+			
+				// var response RESP.Response
+
+			       
+
+					dispatchCommands(&Client{},parsedRequest,config)
+				
+
+	}
+
+}
+
+
 
 func accept(listener net.Listener) net.Conn {
 	conn, err := listener.Accept()
@@ -212,38 +256,7 @@ func StartServer(config *RESP.SERVER) {
 
 }
 
-func handleMaster(conn net.Conn,config *RESP.SERVER) {
 
-	var request = make([]byte, 1024)
-   
-	defer conn.Close()
-	     
-	for {
-			
-				bytesRead, err := conn.Read(request)
-			
-				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
-
-					return
-
-				}
-
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error reading client request: %s\n", err.Error())
-					return
-				}
-
-				parsedRequest,err:=RESP.ParseRequest(request[:bytesRead])
-			
-				// var response RESP.Response
-
-			
-					dispatchCommands(&Client{},parsedRequest,config)
-				
-
-	}
-
-}
 
 
 
