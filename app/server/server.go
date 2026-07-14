@@ -138,7 +138,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 //for replicas
 func handleMaster(conn net.Conn,config *RESP.SERVER) {
 
-	var request = make([]byte, 1024)
+	var request []byte
    
 	defer conn.Close()
 	     
@@ -147,7 +147,7 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 			   
 				bytesRead, err := conn.Read(temp)
 
-				request = append(request, temp[:bytesRead]...)
+				
 			   
 				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
@@ -160,15 +160,26 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 					return
 				}
 
-				parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
-				request=request[bytesConsumed:]
-			
-				// var response RESP.Response
+				request = append(request, temp[:bytesRead]...)
 
-			       
+				for{
 
-					dispatchCommands(&Client{},parsedRequest,config)
-				
+					  parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
+
+					  if err!=nil{
+
+						  if errors.Is(err,RESP.ErrIncomplete){
+								 break
+						  }
+
+						  fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
+						  return
+					  }
+
+					
+				      request=request[bytesConsumed:]
+						dispatchCommands(&Client{},parsedRequest,config)
+				}	
 
 	}
 

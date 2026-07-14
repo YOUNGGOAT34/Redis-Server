@@ -7,6 +7,9 @@ import (
 	"strconv"
 )
 
+
+var ErrIncomplete=errors.New("Incomplete request")
+
 /*
 findCRLF returns the index of the first '\r' in the first CRLF sequence.
 If no CRLF exists, the request is considered malformed.
@@ -46,8 +49,10 @@ func getHeaderAndBody(request []byte) (header, body []byte) {
 func ParseRequest(request []byte) ([][]byte,int,error) {
 	bytesConsumed:=0
 
+	
+
 	if len(request) < 1 {
-		return  nil,bytesConsumed,errors.New("Empty request")
+		return  nil,bytesConsumed,ErrIncomplete
 	}
 
 	
@@ -57,7 +62,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 	var args [][]byte
 
 	if header == nil {
-		return nil,bytesConsumed,errors.New("No header")
+		return nil,bytesConsumed,ErrIncomplete
 	}
 
 	bytesConsumed+=len(header)+2
@@ -78,6 +83,8 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 		}
 	}
 
+	
+
 	size, err := strconv.Atoi(string(header[1:index]))
 
 	if err != nil {
@@ -90,8 +97,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 
 		if len(body) < 5 {
 
-			fmt.Fprint(os.Stderr, "Malformed body\n")
-			return nil,bytesConsumed,errors.New("Malformed body")
+			return nil,bytesConsumed,ErrIncomplete
 		}
 
 		/*
@@ -113,6 +119,15 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 			} else {
 				break
 			}
+		}
+
+
+		if index==len(body){
+			return nil,bytesConsumed,ErrIncomplete
+		}
+
+		if body[index]!='\r' || index+1>=len(body) || body[index+1]!='\n'{
+			return nil,bytesConsumed,errors.New("Malformed header")
 		}
 
 		digits := body[3:index]
@@ -151,8 +166,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 
 		} else {
 
-			fmt.Fprintf(os.Stderr, "Malformed body\n")
-			return  nil,bytesConsumed,errors.New("Malformed body")
+     			return  nil,bytesConsumed,ErrIncomplete
 		}
 
 	}
