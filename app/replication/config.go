@@ -27,6 +27,15 @@ func ReplConfig(args [][]byte,config *RESP.SERVER) RESP.Response{
 				}
 		 }
 
+
+		 if RESP.CompareBytes(args[0],[]byte("ACK")){
+			  
+			   fmt.Printf("%q\r\n",args)
+			   return RESP.Response{
+					   Type: RESP.NIL,
+				}
+		 }
+
 	     return RESP.Response{
 			      Body: []byte("OK"),
 					Type: RESP.SIMPLE_STRING,

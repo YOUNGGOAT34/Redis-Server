@@ -126,16 +126,17 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
    
 					replication.PropagateCommands(request[:bytesRead],config)
 
-					// ack := RESP.EncodeResponse(RESP.Response{
-					// 	Body: replication.EncodeArray([][]byte{
-					// 		[]byte("REPLCONF"),
-					// 		[]byte("GETACK"),
-					// 		[]byte("*"),
-					// 	}),
-					// 	Type: RESP.ARRAY,
-					// })
+					ack := RESP.EncodeResponse(RESP.Response{
+						Body: replication.EncodeArray([][]byte{
+							[]byte("REPLCONF"),
+							[]byte("GETACK"),
+							[]byte("*"),
+						}),
+						Type: RESP.ARRAY,
+					})
 
-					// replication.PropagateCommands(ack, config)
+					replication.PropagateCommands(ack, config)
+					break
 			}
 	  }
 
@@ -184,9 +185,15 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 						  if errors.Is(err,RESP.ErrIncomplete){
 								 break
 						  }
+
+						  if !RESP.CompareBytes([]byte("$-1\r\n"),request){
+
+							  fmt.Printf("%q\n",request)
+							  fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
+	
+							  return
+						  }
                   
-						  fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
-						  return
 					  }
 
 				      request=request[bytesConsumed:]
