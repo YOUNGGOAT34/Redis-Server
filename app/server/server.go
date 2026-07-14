@@ -99,15 +99,15 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 						return
 					}
 
-			    _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
-					Body: replication.EmptyRDB,
-					Type: RESP.RDBFILE,
+			   //  _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
+				// 	Body: replication.EmptyRDB,
+				// 	Type: RESP.RDBFILE,
 				
-				}))
+				// }))
 
-				if err != nil {
-						return
-					}
+				// if err != nil {
+				// 		return
+				// 	}
 
 				config.ReplicasMutex.Lock()
 				config.REPLICAS = append(config.REPLICAS, conn)
@@ -125,10 +125,19 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		   if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
    
 					replication.PropagateCommands(request[:bytesRead],config)
-				
+
+					// ack := RESP.EncodeResponse(RESP.Response{
+					// 	Body: replication.EncodeArray([][]byte{
+					// 		[]byte("REPLCONF"),
+					// 		[]byte("GETACK"),
+					// 		[]byte("*"),
+					// 	}),
+					// 	Type: RESP.ARRAY,
+					// })
+
+					// replication.PropagateCommands(ack, config)
 			}
 	  }
-
 
 	}
 
@@ -145,9 +154,12 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 	for {
 		      temp:=make([]byte,1024)
 			   
-				bytesRead, err := conn.Read(temp)
+				fmt.Printf("Hello before\n")
 
-				
+				bytesRead, err := conn.Read(temp)
+            
+				fmt.Printf("Hello after %q\n",temp[:bytesRead])
+
 			   
 				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
@@ -165,13 +177,14 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 				for{
 
 					  parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
+                 
 
 					  if err!=nil{
 
 						  if errors.Is(err,RESP.ErrIncomplete){
 								 break
 						  }
-
+                  
 						  fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
 						  return
 					  }
@@ -179,14 +192,19 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 				      request=request[bytesConsumed:]
 						
 						response:=dispatchCommands(&Client{},parsedRequest,config)
-
+                   
 						if len(parsedRequest)>0 && RESP.CompareBytes(parsedRequest[0],[]byte("REPLCONF")){
+							
 							   _,err=conn.Write(RESP.EncodeResponse(response))
 
 								if err!=nil{
 									 return
 								}
 						}
+
+						fmt.Printf("%d\r\n",bytesConsumed)
+
+						config.MASTERREPLOFFSET+=bytesConsumed
 				}	
 
 	}

@@ -3,10 +3,11 @@ package replication
 import (
 	"CacheDB/app/RESP"
 	"fmt"
+	"strconv"
 )
 
 
-func encodeArray(body [][]byte) []byte{
+func EncodeArray(body [][]byte) []byte{
 	   var res []byte
 		res=fmt.Appendf(res,"*%d\r\n",len(body))
 
@@ -17,11 +18,11 @@ func encodeArray(body [][]byte) []byte{
 		return res
 }
 
-func ReplConfig(args [][]byte) RESP.Response{
+func ReplConfig(args [][]byte,config *RESP.SERVER) RESP.Response{
 	    
 	    if RESP.CompareBytes(args[0],[]byte("GETACK")){
 			   return RESP.Response{
-					     Body: encodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte("0")}),
+					     Body: EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(config.MASTERREPLOFFSET))}),
 						  Type: RESP.ARRAY,
 				}
 		 }

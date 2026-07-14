@@ -50,7 +50,6 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 	bytesConsumed:=0
 
 	
-
 	if len(request) < 1 {
 		return  nil,bytesConsumed,ErrIncomplete
 	}
@@ -88,6 +87,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 	size, err := strconv.Atoi(string(header[1:index]))
 
 	if err != nil {
+		
 		return nil,bytesConsumed,err
 	}
 
@@ -135,6 +135,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 		// Convert the ASCII digits ("34") into an integer.
 		elementSize, err := strconv.Atoi(string(digits))
 		if err != nil {
+		
 			fmt.Fprintf(os.Stderr, "Error converting string to integer %s\n", err.Error())
 			return nil,bytesConsumed,err
 		}

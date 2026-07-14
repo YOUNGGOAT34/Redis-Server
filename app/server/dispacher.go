@@ -113,7 +113,7 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 	case "INFO":
 		return replication.InfoCommand(args[1:], config)
 	case "REPLCONF":
-		return replication.ReplConfig(args[1:])
+		return replication.ReplConfig(args[1:],config)
 	case "PSYNC":
 		return replication.Psync(args[:],config)
 
