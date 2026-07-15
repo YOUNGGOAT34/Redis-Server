@@ -116,6 +116,8 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 		return replication.ReplConfig(args[1:],config)
 	case "PSYNC":
 		return replication.Psync(args[:],config)
+	case "WAIT":
+		return replication.WaitCommand(args[1:])
 
 	default:
 		return RESP.Response{
