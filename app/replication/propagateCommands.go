@@ -7,22 +7,31 @@ import (
 
 func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
 	
-	  config.ReplicasMutex.Lock()
-	  defer config.ReplicasMutex.Unlock()
+	  config.ReplicasMutex.RLock()
+	  replicas:=append([]*RESP.REPLICA(nil),config.REPLICAS...)
+	  config.ReplicasMutex.RUnlock()
 
-	  
-	  for i:=0;i<len(config.REPLICAS);{
+
+	  for _,replica:=range replicas{
 		     
-		      _,err:=config.REPLICAS[i].Conn.Write(parsedRequest)
+		      _,err:=replica.Conn.Write(parsedRequest)
 
 				if err!=nil{
 					  //if the write fails remove the replica
-					  config.REPLICAS[i].Conn.Close()
-					  config.REPLICAS = append(config.REPLICAS[:i],config.REPLICAS[i+1:]...)
-					  continue
+					  config.ReplicasMutex.Lock()
+					  for i,r:=range config.REPLICAS{
+						    if r==replica{
+
+								 config.ReplicasMutex.Unlock()
+								 config.REPLICAS[i].Conn.Close()
+								 config.REPLICAS = append(config.REPLICAS[:i],config.REPLICAS[i+1:]...)
+								 break
+							 }
+					  }
+					 
 				}
 
-				i++
+		
 	  }
 
 }
