@@ -2,7 +2,7 @@ package replication
 
 import (
 	"CacheDB/app/RESP"
-	"fmt"
+	
 )
 
 func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
@@ -11,7 +11,7 @@ func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
 	  defer config.ReplicasMutex.Unlock()
 
 	  for i:=0;i<len(config.REPLICAS);{
-		     fmt.Printf("%q\n",parsedRequest)
+		     
 		      _,err:=config.REPLICAS[i].Write(parsedRequest)
 
 				if err!=nil{

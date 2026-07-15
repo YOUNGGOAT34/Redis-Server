@@ -73,9 +73,6 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		}
 
 	   
-		
-
-     
 		parsedRequest,_,err:=RESP.ParseRequest(request[:bytesRead])
       
 		var response RESP.Response
@@ -136,7 +133,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 					})
 
 					replication.PropagateCommands(ack, config)
-					break
+					
 			}
 	  }
 
@@ -155,13 +152,10 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 	for {
 		      temp:=make([]byte,1024)
 			   
-				fmt.Printf("Hello before\n")
+				
 
 				bytesRead, err := conn.Read(temp)
             
-				fmt.Printf("Hello after %q\n",temp[:bytesRead])
-
-			   
 				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
 					return
@@ -186,13 +180,14 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 								 break
 						  }
 
-						  if !RESP.CompareBytes([]byte("$-1\r\n"),request){
-
-							  fmt.Printf("%q\n",request)
-							  fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
-	
-							  return
+						  if RESP.CompareBytes([]byte("+OK\r\n"),request){
+                            request=request[5:]
+									 continue
 						  }
+
+						    
+						   fmt.Fprintf(os.Stderr,"Parse error %v\n",err)
+							return
                   
 					  }
 
@@ -208,8 +203,6 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 									 return
 								}
 						}
-
-						fmt.Printf("%d\r\n",bytesConsumed)
 
 						config.MASTERREPLOFFSET+=bytesConsumed
 				}	
