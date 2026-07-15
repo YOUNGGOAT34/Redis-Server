@@ -108,6 +108,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
             replica:=&RESP.REPLICA{
 					  Conn:conn,
 				}
+				replica.Offset.Store(-1)
 				config.ReplicasMutex.Lock()
 				config.REPLICAS = append(config.REPLICAS,replica)
 				config.ReplicasMutex.Unlock()
