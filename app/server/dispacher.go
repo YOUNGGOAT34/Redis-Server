@@ -18,6 +18,8 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 
 	command := args[0]
 
+	
+
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
@@ -117,7 +119,7 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 	case "PSYNC":
 		return replication.Psync(args[:],config)
 	case "WAIT":
-		return replication.WaitCommand(args[1:])
+		return replication.WaitCommand(args[1:],config)
 
 	default:
 		return RESP.Response{
