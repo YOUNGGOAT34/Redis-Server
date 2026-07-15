@@ -10,13 +10,14 @@ func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
 	  config.ReplicasMutex.Lock()
 	  defer config.ReplicasMutex.Unlock()
 
+	  
 	  for i:=0;i<len(config.REPLICAS);{
 		     
-		      _,err:=config.REPLICAS[i].Write(parsedRequest)
+		      _,err:=config.REPLICAS[i].Conn.Write(parsedRequest)
 
 				if err!=nil{
 					  //if the write fails remove the replica
-					  config.REPLICAS[i].Close()
+					  config.REPLICAS[i].Conn.Close()
 					  config.REPLICAS = append(config.REPLICAS[:i],config.REPLICAS[i+1:]...)
 					  continue
 				}

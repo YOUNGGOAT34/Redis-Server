@@ -73,7 +73,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		}
 
 	   
-		parsedRequest,_,err:=RESP.ParseRequest(request[:bytesRead])
+		parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request[:bytesRead])
       
 		var response RESP.Response
 
@@ -105,9 +105,11 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 				// if err != nil {
 				// 		return
 				// 	}
-
+            replica:=&RESP.REPLICA{
+					  Conn:conn,
+				}
 				config.ReplicasMutex.Lock()
-				config.REPLICAS = append(config.REPLICAS, conn)
+				config.REPLICAS = append(config.REPLICAS,replica)
 				config.ReplicasMutex.Unlock()
 				continue
 		}
@@ -122,18 +124,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 		   if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
    
 					replication.PropagateCommands(request[:bytesRead],config)
-
-					ack := RESP.EncodeResponse(RESP.Response{
-						Body: replication.EncodeArray([][]byte{
-							[]byte("REPLCONF"),
-							[]byte("GETACK"),
-							[]byte("*"),
-						}),
-						Type: RESP.ARRAY,
-					})
-
-					replication.PropagateCommands(ack, config)
-					
+					config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 			}
 	  }
 
@@ -204,7 +195,7 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 								}
 						}
 
-						config.MASTERREPLOFFSET+=bytesConsumed
+						config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}	
 
 	}

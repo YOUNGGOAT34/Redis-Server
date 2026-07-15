@@ -3,6 +3,7 @@ package replication
 import (
 	"CacheDB/app/RESP"
 	"fmt"
+	"net"
 	"strconv"
 )
 
@@ -18,19 +19,32 @@ func EncodeArray(body [][]byte) []byte{
 		return res
 }
 
-func ReplConfig(args [][]byte,config *RESP.SERVER) RESP.Response{
+func ReplConfig(args [][]byte,config *RESP.SERVER,conn net.Conn) RESP.Response{
 	    
 	    if RESP.CompareBytes(args[0],[]byte("GETACK")){
 			   return RESP.Response{
-					     Body: EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(config.MASTERREPLOFFSET))}),
+					     Body: EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(int(config.MASTERREPLOFFSET.Load())))}),
 						  Type: RESP.ARRAY,
 				}
 		 }
 
 
 		 if RESP.CompareBytes(args[0],[]byte("ACK")){
+			   
+			   offset,err:=strconv.Atoi(string(args[1]))
+
+				if err==nil{
+					   config.ReplicasMutex.RLock()
+					   for _,replica:=range config.REPLICAS{
+							    if replica.Conn==conn{
+									   replica.Offset.Store(int64(offset))
+										break
+								 }
+						}
+
+						config.ReplicasMutex.RUnlock()
+				}
 			  
-			   fmt.Printf("%q\r\n",args)
 		 }
 
 	     return RESP.Response{

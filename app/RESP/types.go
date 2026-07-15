@@ -3,21 +3,27 @@ package RESP
 import (
 	"net"
 	"sync"
+	"sync/atomic"
 )
 
-type ResponseType int
 
+type REPLICA struct{
+	  Conn net.Conn
+	  Offset atomic.Int64
+}
+
+type ResponseType int
 type SERVER struct {
 	Role             string
 	MasterHost       string
 	MasterPort       int
 	PORT             int
 	MASTERREPLID     string
-	MASTERREPLOFFSET int
+	MASTERREPLOFFSET atomic.Int32
 	MASTERCONN net.Conn
 
-	REPLICAS []net.Conn
-	ReplicasMutex sync.Mutex
+	REPLICAS []*REPLICA
+	ReplicasMutex sync.RWMutex
 }
 
 const (
