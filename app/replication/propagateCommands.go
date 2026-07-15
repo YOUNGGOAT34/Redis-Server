@@ -22,12 +22,14 @@ func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
 					  for i,r:=range config.REPLICAS{
 						    if r==replica{
 
-								 config.ReplicasMutex.Unlock()
+								 
 								 config.REPLICAS[i].Conn.Close()
 								 config.REPLICAS = append(config.REPLICAS[:i],config.REPLICAS[i+1:]...)
 								 break
 							 }
 					  }
+
+					  config.ReplicasMutex.Unlock()
 					 
 				}
 
