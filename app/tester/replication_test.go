@@ -30,6 +30,8 @@ func replication_test(t *testing.T) {
 	stageXX_PipelineReplication(t)
 	stageXX_ReadCommandsAreNotPropagated(t) 
 	stageXX_PartialPacketParsing(t)
+	stageXX_WaitAfterPipeline(t) 
+	stageXX_ReplicaDisconnectDuringPropagation(t) 
 }
 
 func stageXX_ReplicaHandshake(t *testing.T) {
@@ -522,6 +524,140 @@ func stageXX_PartialAndPipelineParsing(t *testing.T) {
 	}
 
 	pass("parser beautifully handled merged partial stream segments with pipelined commands")
+}
+
+
+func stageXX_WaitAfterPipeline(t *testing.T) {
+	stage("REPLICATION: WAIT AFTER PIPELINE")
+
+	master, masterPort := startMaster(t)
+	_, replicaPort := startReplica(t, masterPort)
+
+	// Wait for the replica to perform its handshake and register
+	if !waitForReplicaCount(master, 1, 2*time.Second) {
+		failf(t, "replica never registered with master")
+	}
+
+	// Open a single TCP connection to the master
+	conn := dialPort(t, masterPort)
+	defer conn.Close()
+
+	// Pipeline three SET commands followed immediately by a WAIT 1 500
+	pipeline := encodeCommand("SET", "a", "1") +
+		encodeCommand("SET", "b", "2") +
+		encodeCommand("SET", "c", "3") +
+		encodeCommand("WAIT", "1", "500")
+
+	if _, err := conn.Write([]byte(pipeline)); err != nil {
+		failf(t, "failed to write pipelined writes and WAIT: %v", err)
+	}
+
+	reader := bufio.NewReader(conn)
+
+	// expecting three "+OK\r\n" responses first, in order
+	for _, key := range []string{"a", "b", "c"} {
+		resp, err := readRESP(reader)
+		if err != nil {
+			failf(t, "failed to read response for SET %s: %v", key, err)
+		}
+		if resp != "+OK\r\n" {
+			failf(t, "expected +OK\r\n for SET %s, got %q", key, resp)
+		}
+	}
+
+	// Now we read the response for the pipelined WAIT 1 500
+	waitResp, err := readRESP(reader)
+	if err != nil {
+		failf(t, "failed to read response for pipelined WAIT: %v", err)
+	}
+
+	/*
+			It should return ":1\r\n" because our replica should successfully catch up
+			to all three writes well within the 500ms window.
+	*/
+	if waitResp != ":1\r\n" {
+		failf(t, "expected ':1\\r\\n' from WAIT after pipeline, got %q", waitResp)
+	}
+
+	// Sanity check: Ensure replica actually got and saved the final pipelined value
+	if !waitForValue(t, replicaPort, "c", "3", 2*time.Second) {
+		failf(t, "replica never synchronized the last pipelined command (SET c 3)")
+	}
+
+	pass("pipelined writes followed by WAIT executed and acknowledged sequentially")
+}
+func stageXX_ReplicaDisconnectDuringPropagation(t *testing.T) {
+	stage("REPLICATION: REPLICA DISCONNECTS DURING PROPAGATION")
+
+	master, masterPort := startMaster(t)
+
+	// 1. Connect a mock replica
+	replicaConn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", masterPort))
+	if err != nil {
+		failf(t, "failed to connect replica: %v", err)
+	}
+
+	// Handshake sequence to register as a replica
+	reader := bufio.NewReader(replicaConn)
+
+	// Step A: Send PING
+	if _, err := replicaConn.Write([]byte(encodeCommand("PING"))); err != nil {
+		failf(t, "failed to send PING: %v", err)
+	}
+	if _, err := readRESP(reader); err != nil {
+		failf(t, "failed to read PING response: %v", err)
+	}
+
+	// Step B: Send REPLCONF listening-port
+	if _, err := replicaConn.Write([]byte(encodeCommand("REPLCONF", "listening-port", "6380"))); err != nil {
+		failf(t, "failed to send REPLCONF listening-port: %v", err)
+	}
+	if _, err := readRESP(reader); err != nil {
+		failf(t, "failed to read REPLCONF listening-port response: %v", err)
+	}
+
+	// Step C: Send REPLCONF capa psync2
+	if _, err := replicaConn.Write([]byte(encodeCommand("REPLCONF", "capa", "psync2"))); err != nil {
+		failf(t, "failed to send REPLCONF capa: %v", err)
+	}
+	if _, err := readRESP(reader); err != nil {
+		failf(t, "failed to read REPLCONF capa response: %v", err)
+	}
+
+	// Step D: Send PSYNC ? -1
+	if _, err := replicaConn.Write([]byte(encodeCommand("PSYNC", "?", "-1"))); err != nil {
+		failf(t, "failed to send PSYNC: %v", err)
+	}
+	// Master will respond with +FULLRESYNC ... and an RDB file
+	if _, err := readRESP(reader); err != nil {
+		failf(t, "failed to read PSYNC response: %v", err)
+	}
+
+	// Wait for the master to recognize and register the replica
+	if !waitForReplicaCount(master, 1, 2*time.Second) {
+		failf(t, "master never registered the replica")
+	}
+
+	// 2. Disconnect the replica abruptly
+	replicaConn.Close()
+
+	// Give the master server loop a brief moment to detect the closed connection
+	time.Sleep(200 * time.Millisecond)
+
+	// 3. Execute a write command on the master.
+	// This forces the master to propagate the write. If the master hasn't cleanly
+	// handled write errors to dead replica connections, it will panic here.
+	resp := sendRawCommand(t, masterPort, encodeCommand("SET", "a", "1"))
+	if resp != "+OK\r\n" {
+		failf(t, "SET a failed after replica disconnected: got %q", resp)
+	}
+
+	// 4. Verify the replica count on the master has decreased to 0
+	if !waitForReplicaCount(master, 0, 2*time.Second) {
+		failf(t, "master replica count did not decrease to 0 after replica disconnected")
+	}
+
+	pass("master survived replica disconnection and cleanly removed it from replication pool")
 }
 
 
