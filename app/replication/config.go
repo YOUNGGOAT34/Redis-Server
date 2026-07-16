@@ -8,22 +8,21 @@ import (
 )
 
 
-func EncodeArray(body [][]byte) []byte{
-	   var res []byte
-		res=fmt.Appendf(res,"*%d\r\n",len(body))
+// func EncodeArray(body [][]byte) []byte{
+// 	   var res []byte
+// 		res=fmt.Appendf(res,"*%d\r\n",len(body))
 
-		for _,element:=range body{
-           res=fmt.Appendf(res,"$%d\r\n%s\r\n",len(element),element)
-		}
-
-		return res
-}
+// 		for _,element:=range body{
+//            res=fmt.Appendf(res,"$%d\r\n%s\r\n",len(element),element)
+// 		}
+// 		return res
+// }
 
 func ReplConfig(args [][]byte,config *RESP.SERVER,conn net.Conn) RESP.Response{
 	    
 	    if RESP.CompareBytes(args[0],[]byte("GETACK")){
 			   return RESP.Response{
-					     Body: EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(int(config.MASTERREPLOFFSET.Load())))}),
+					     Body: RESP.EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(int(config.MASTERREPLOFFSET.Load())))}),
 						  Type: RESP.ARRAY,
 				}
 		 }

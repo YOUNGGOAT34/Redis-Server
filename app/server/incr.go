@@ -9,7 +9,7 @@ import (
 func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	if len(arguments) != 1 {
-		return wrongNumberOfArguments("INCR")
+		return RESP.WrongNumberOfArguments("INCR")
 	}
 
 	key := string(arguments[0])
@@ -23,7 +23,7 @@ func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 	data, exists := database[key]
 	if exists {
 		if data.Type != STRING {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		value := data.Value.(string)

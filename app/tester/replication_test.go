@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/server"
 )
-
 
 // Runner & Stages
 
@@ -798,7 +798,7 @@ func startMaster(t *testing.T) (*RESP.SERVER, int) {
 		MASTERREPLID: "8371b4fb115b71c4a0413b1db346e45071511224",
 		REPLICAS:     make([]*RESP.REPLICA, 0),
 	}
-	go server.StartServer(cfg)
+	go server.StartServer(cfg,&rdb.RDB{})
 	time.Sleep(100 * time.Millisecond)
 	return cfg, port
 }
@@ -812,7 +812,7 @@ func startReplica(t *testing.T, masterPort int) (*RESP.SERVER, int) {
 		MasterHost: "127.0.0.1",
 		MasterPort: masterPort,
 	}
-	go server.StartServer(cfg)
+	go server.StartServer(cfg,&rdb.RDB{})
 	return cfg, port
 }
 

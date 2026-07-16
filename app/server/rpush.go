@@ -59,7 +59,7 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	//in a case where there was a key but had no values
 	if len(arguments) < 2 {
-		return wrongNumberOfArguments("RPUSH")
+		return RESP.WrongNumberOfArguments("RPUSH")
 	}
 
 	values := arguments[1:]
@@ -72,7 +72,7 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 
 		if data.Type != LIST {
 
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		list := data.Value.(*List)

@@ -1,6 +1,7 @@
 package server
 
 import (
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"fmt"
 )
@@ -9,7 +10,7 @@ import (
 
 func multiCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) != 0 {
-		return wrongNumberOfArguments("MULTI")
+		return RESP.WrongNumberOfArguments("MULTI")
 	}
 
 	if client.InTransaction {
@@ -29,10 +30,10 @@ func multiCommand(arguments [][]byte, client *Client) RESP.Response {
 
 //     |----------------------EXEC COMMAND----------------------|
 
-func execCommand(arguments [][]byte, client *Client, config *RESP.SERVER) RESP.Response {
+func execCommand(arguments [][]byte, client *Client, replConfig *RESP.SERVER) RESP.Response {
 
 	if len(arguments) != 0 {
-		return wrongNumberOfArguments("EXEC")
+		return RESP.WrongNumberOfArguments("EXEC")
 	}
 
 	//exec executed without multi
@@ -61,7 +62,7 @@ func execCommand(arguments [][]byte, client *Client, config *RESP.SERVER) RESP.R
 	resp = fmt.Appendf(resp, "*%d\r\n", len(queued))
 
 	for _, cmd := range queued {
-		r := dispatchCommands(client, cmd.Args, config)
+		r := dispatchCommands(client, cmd.Args, replConfig, &rdb.RDB{})
 		resp = append(resp, RESP.EncodeResponse(r)...)
 	}
 
@@ -75,7 +76,7 @@ func execCommand(arguments [][]byte, client *Client, config *RESP.SERVER) RESP.R
 
 func discardCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) != 0 {
-		return wrongNumberOfArguments("DISCARD")
+		return RESP.WrongNumberOfArguments("DISCARD")
 	}
 
 	if !client.InTransaction {
@@ -99,7 +100,7 @@ func discardCommand(arguments [][]byte, client *Client) RESP.Response {
 
 func watchCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 1 {
-		return wrongNumberOfArguments("WATCH")
+		return RESP.WrongNumberOfArguments("WATCH")
 	}
 
 	if client.InTransaction {
@@ -137,7 +138,7 @@ func watchCommand(arguments [][]byte, client *Client) RESP.Response {
 
 func unwatchCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) != 0 {
-		return wrongNumberOfArguments("UNWATCH")
+		return RESP.WrongNumberOfArguments("UNWATCH")
 	}
 
 	clearWatches(client)

@@ -3,11 +3,12 @@ package server
 import (
 	"strings"
 
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/replication"
 )
 
-func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.Response {
+func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdbConfig *rdb.RDB) RESP.Response {
 
 	if len(args) < 1 {
 		return RESP.Response{
@@ -27,7 +28,7 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 	case "MULTI":
 		return multiCommand(args[1:], client)
 	case "EXEC":
-		return execCommand(args[1:], client, config)
+		return execCommand(args[1:], client, replConfig)
 
 	case "DISCARD":
 		return discardCommand(args[1:], client)
@@ -112,13 +113,16 @@ func dispatchCommands(client *Client, args [][]byte, config *RESP.SERVER) RESP.R
 	case "UNWATCH":
 		return unwatchCommand(args[1:], client)
 	case "INFO":
-		return replication.InfoCommand(args[1:], config)
+		return replication.InfoCommand(args[1:], replConfig)
 	case "REPLCONF":
-		return replication.ReplConfig(args[1:],config,client.Conn)
+		return replication.ReplConfig(args[1:],replConfig,client.Conn)
 	case "PSYNC":
-		return replication.Psync(args[:],config)
+		return replication.Psync(args[:],replConfig)
 	case "WAIT":
-		return replication.WaitCommand(args[1:],config)
+		return replication.WaitCommand(args[1:],replConfig)
+
+	case "CONFIG":
+		  return rdbConfig.RdbConfig(args[1:])
 
 	default:
 		return RESP.Response{

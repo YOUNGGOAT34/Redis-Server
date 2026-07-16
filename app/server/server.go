@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/replication"
 )
-
 
 //for the handshake between the master and the replica
 type ExpectedResponse int
@@ -46,7 +46,7 @@ func isWrite(command []byte) bool{
 	  return false
 }
 
-func handleClient(conn net.Conn, config *RESP.SERVER) {
+func handleClient(conn net.Conn, replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 	var request []byte
 	var temp=make([]byte,1024)
    
@@ -97,7 +97,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 			}else{
 				  
 
-				response= dispatchCommands(client,parsedRequest,config)
+				response= dispatchCommands(client,parsedRequest,replConfig,rdbConfig)
 			}
 
 			commandBytes:=request[:bytesConsumed]
@@ -124,9 +124,9 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 						  Conn:conn,
 					}
 					replica.Offset.Store(-1)
-					config.ReplicasMutex.Lock()
-					config.REPLICAS = append(config.REPLICAS,replica)
-					config.ReplicasMutex.Unlock()
+					replConfig.ReplicasMutex.Lock()
+					replConfig.REPLICAS = append(replConfig.REPLICAS,replica)
+					replConfig.ReplicasMutex.Unlock()
 					continue
 			}
 			
@@ -135,12 +135,12 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 			}
 	
 	
-		  if config.Role=="master"{
+		  if replConfig.Role=="master"{
 			//only propagate successful write commands
 				if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
 		
-						replication.PropagateCommands(commandBytes,config)
-						config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
+						replication.PropagateCommands(commandBytes,replConfig)
+						replConfig.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}
 		  }
 		}
@@ -153,7 +153,7 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 
 
 //for replicas
-func handleMaster(conn net.Conn,config *RESP.SERVER) {
+func handleMaster(conn net.Conn,replConfig *RESP.SERVER) {
 
 	var request []byte
 	temp:=make([]byte,1024)
@@ -203,7 +203,7 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 
 				      request=request[bytesConsumed:]
 						
-						response:=dispatchCommands(&Client{},parsedRequest,config)
+						response:=dispatchCommands(&Client{},parsedRequest,replConfig,&rdb.RDB{})
                    
 						if len(parsedRequest)>0 && RESP.CompareBytes(parsedRequest[0],[]byte("REPLCONF")){
 							
@@ -214,7 +214,7 @@ func handleMaster(conn net.Conn,config *RESP.SERVER) {
 								}
 						}
 
-						config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
+						replConfig.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}	
 
 	}
@@ -235,19 +235,19 @@ func accept(listener net.Listener) net.Conn {
 
 }
 
-func StartServer(config *RESP.SERVER) {
-	address := fmt.Sprintf("0.0.0.0:%d", config.PORT)
+func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
+	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		fmt.Printf("Failed to bind to port %d\n", config.PORT)
+		fmt.Printf("Failed to bind to port %d\n", replConfig.PORT)
 		os.Exit(1)
 	}
 
 
 	//sync with the master if this server is a replica
 
-	if config.Role == "slave" {
-		address := net.JoinHostPort(config.MasterHost, fmt.Sprintf("%d", config.MasterPort))
+	if replConfig.Role == "slave" {
+		address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
 		conn, err := net.Dial("tcp", address)
 
 		if err != nil {
@@ -255,7 +255,7 @@ func StartServer(config *RESP.SERVER) {
 		}
 
       
-		config.MASTERCONN=conn
+		replConfig.MASTERCONN=conn
 		
 		message:="*1\r\n$4\r\nPING\r\n"
 		err=handShake(message,conn,ExpectPong)
@@ -265,7 +265,7 @@ func StartServer(config *RESP.SERVER) {
 		}
 
 
-		port:=fmt.Sprintf("%d",config.PORT)
+		port:=fmt.Sprintf("%d",replConfig.PORT)
 		message=fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n",len(port),port)
 		err=handShake(message,conn,ExpectOK)
 
@@ -289,7 +289,7 @@ func StartServer(config *RESP.SERVER) {
 			  panic(err)
 		}
 
-		go handleMaster(conn,config)
+		go handleMaster(conn,replConfig)
    
 	}
 
@@ -297,7 +297,7 @@ func StartServer(config *RESP.SERVER) {
 		
 		conn := accept(l)
 		if conn != nil {
-			go handleClient(conn, config)
+			go handleClient(conn, replConfig,rdbConfig)
 		}
 	}
 

@@ -40,7 +40,7 @@ func createStreamID(id []byte) (StreamID, error) {
 func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 4 {
 
-		return wrongNumberOfArguments("XADD")
+		return RESP.WrongNumberOfArguments("XADD")
 	}
 
 	if len(arguments[2:])%2 != 0 {
@@ -60,7 +60,7 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	if exists {
 		if data.Type != STREAM {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		stream = data.Value.(*Stream)

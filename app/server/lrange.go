@@ -57,7 +57,7 @@ func encodeRespArray(list *List, startIndex int, endIndex int) []byte {
 func lRangeCommand(arguments [][]byte) RESP.Response {
 
 	if len(arguments) != 3 {
-		return wrongNumberOfArguments("LRANGE")
+		return RESP.WrongNumberOfArguments("LRANGE")
 
 	}
 
@@ -92,7 +92,7 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 	if exists {
 
 		if data.Type != LIST {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		list := data.Value.(*List)

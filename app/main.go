@@ -7,20 +7,25 @@ import (
 	"strconv"
 	"strings"
 
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/server"
 )
 
 func main() {
     
-	config := &RESP.SERVER{}
+	replConfig := &RESP.SERVER{}
+	rdbFileConfig:=&rdb.RDB{}
 
 	PORT := flag.Int("port", 6379, "server port")
 	replicaof := flag.String("replicaof", "", "master and host port")
 
+	dir:=flag.String("dir",".","rdb file directory")
+	dbfilename:=flag.String("dbfilename","rdbfile.db","rdb filename")
+
 	flag.Parse()
     
-	config.PORT = *PORT
+	replConfig.PORT = *PORT
 
 	if len(*replicaof) > 0 {
 		parts := strings.Fields(*replicaof)
@@ -36,17 +41,21 @@ func main() {
 			return
 		}
 
-		config.Role = "slave"
-		config.MasterPort = masterPort
-		config.MasterHost = parts[0]
+		replConfig.Role = "slave"
+		replConfig.MasterPort = masterPort
+		replConfig.MasterHost = parts[0]
 
 	} else {
-		config.Role = "master"
+		replConfig.Role = "master"
 	}
 
-	config.MASTERREPLID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
-	config.MASTERREPLOFFSET.Store(0)
+	replConfig.MASTERREPLID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
+	replConfig.MASTERREPLOFFSET.Store(0)
 
-	server.StartServer(config)
+
+	rdbFileConfig.Dir=*dir
+	rdbFileConfig.DbFileName=*dbfilename
+
+	server.StartServer(replConfig,rdbFileConfig)
 
 }

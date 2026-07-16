@@ -69,7 +69,7 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 
 			if data.Type != STREAM {
 
-				return wrongType()
+				return RESP.WrongType()
 			}
 
 			stream := data.Value.(*Stream)
@@ -114,7 +114,7 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 func decideTypeOfRead(arguments [][]byte) RESP.Response {
 
 	if len(arguments) < 2 || (len(arguments)-1)%2 != 0 {
-		return wrongNumberOfArguments("XREAD")
+		return RESP.WrongNumberOfArguments("XREAD")
 	}
 
 	if RESP.CompareBytes(arguments[0], []byte("BLOCK")) {
@@ -153,7 +153,7 @@ func blockingXread(arguments [][]byte) RESP.Response {
 		if data.Type != STREAM {
 
 			return RESP.Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
+				Body: []byte("RESP.WrongType Operation against a key holding the wrong kind of value"),
 				Type: RESP.ERROR,
 			}
 		}

@@ -5,7 +5,7 @@ import "CacheDB/app/RESP"
 func typeCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) != 1 {
 
-		return wrongNumberOfArguments("TYPE")
+		return RESP.WrongNumberOfArguments("TYPE")
 	}
 
 	databaseMutex.Lock()

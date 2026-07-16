@@ -37,7 +37,7 @@ func getCommand(arguments [][]byte) RESP.Response {
 
 		if dataObject.Type != STRING {
 			return RESP.Response{
-				Body: []byte("WRONGTYPE Operation against a key holding the wrong kind of value"),
+				Body: []byte("RESP.WrongType Operation against a key holding the wrong kind of value"),
 				Type: RESP.ERROR,
 			}
 		}
@@ -57,7 +57,7 @@ func getCommand(arguments [][]byte) RESP.Response {
 
 func setCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 2 {
-		return wrongNumberOfArguments("SET")
+		return RESP.WrongNumberOfArguments("SET")
 	}
 
 	/*

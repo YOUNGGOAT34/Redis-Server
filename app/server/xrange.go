@@ -34,7 +34,7 @@ func encodeEntries(entries []*StreamEntry) []byte {
 func xRangeCommand(arguments [][]byte) RESP.Response {
 
 	if len(arguments) != 3 {
-		return wrongNumberOfArguments("XRANGE")
+		return RESP.WrongNumberOfArguments("XRANGE")
 	}
 
 	var entries []*StreamEntry
@@ -45,7 +45,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 	if exists {
 
 		if data.Type != STREAM {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		stream := data.Value.(*Stream)

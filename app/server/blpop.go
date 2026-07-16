@@ -36,7 +36,7 @@ func blockClient(arguments [][]byte) RESP.Response {
 		value := <-ch
 
 		return RESP.Response{
-			Body: encodeArray([][]byte{arguments[0], value}),
+			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
 			Type: RESP.ARRAY,
 		}
 
@@ -45,7 +45,7 @@ func blockClient(arguments [][]byte) RESP.Response {
 	select {
 	case value := <-ch:
 		return RESP.Response{
-			Body: encodeArray([][]byte{arguments[0], value}),
+			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
 			Type: RESP.ARRAY,
 		}
 
@@ -65,7 +65,7 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 func bLPopCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) != 2 {
-		return wrongNumberOfArguments("BLOP")
+		return RESP.WrongNumberOfArguments("BLOP")
 	}
 
 	databaseMutex.RLock()
@@ -75,7 +75,7 @@ func bLPopCommand(arguments [][]byte, client *Client) RESP.Response {
 	if exists {
 
 		if data.Type != LIST {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		listData := data.Value.(*List)
@@ -92,7 +92,7 @@ func bLPopCommand(arguments [][]byte, client *Client) RESP.Response {
 		markDirty(string(arguments[0]), client)
 
 		return RESP.Response{
-			Body: encodeArray([][]byte{arguments[0], value}),
+			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
 			Type: RESP.ARRAY,
 		}
 	}

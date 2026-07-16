@@ -7,7 +7,7 @@ import (
 
 func lPushCommand(arguments [][]byte, client *Client) RESP.Response {
 	if len(arguments) < 2 {
-		return wrongNumberOfArguments("LPUSH")
+		return RESP.WrongNumberOfArguments("LPUSH")
 	}
 
 	key := string(arguments[0])
@@ -20,7 +20,7 @@ func lPushCommand(arguments [][]byte, client *Client) RESP.Response {
 
 		if data.Type != LIST {
 
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		list := data.Value.(*List)

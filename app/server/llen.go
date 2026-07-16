@@ -7,7 +7,7 @@ import (
 
 func llenCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) != 1 {
-		return wrongNumberOfArguments("LLEN")
+		return RESP.WrongNumberOfArguments("LLEN")
 	}
 
 	databaseMutex.RLock()
@@ -16,7 +16,7 @@ func llenCommand(arguments [][]byte) RESP.Response {
 
 	if exists {
 		if data.Type != LIST {
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		list := data.Value.(*List)

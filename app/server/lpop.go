@@ -7,21 +7,10 @@ import (
 	"strconv"
 )
 
-func encodeArray(body [][]byte) []byte {
-	var respArray []byte
-	respArray = fmt.Appendf(respArray, "*%d\r\n", len(body))
-
-	for _, value := range body {
-		respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(value), value)
-	}
-
-	return respArray
-}
-
 func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	if len(arguments) < 1 {
-		return wrongNumberOfArguments("LPOP")
+		return RESP.WrongNumberOfArguments("LPOP")
 	}
 
 	databaseMutex.Lock()
@@ -32,7 +21,7 @@ func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
 
 		if data.Type != LIST {
 
-			return wrongType()
+			return RESP.WrongType()
 		}
 
 		list := data.Value.(*List)
@@ -97,7 +86,7 @@ func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
 			}
 
 			return RESP.Response{
-				Body: encodeArray(res),
+				Body: RESP.EncodeArray(res),
 				Type: RESP.ARRAY,
 			}
 
