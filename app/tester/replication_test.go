@@ -29,6 +29,7 @@ func replication_test(t *testing.T) {
 	stageXX_PipelinedCommandsKnownBug(t)
 	stageXX_PipelineReplication(t)
 	stageXX_ReadCommandsAreNotPropagated(t) 
+	stageXX_PartialPacketParsing(t)
 }
 
 func stageXX_ReplicaHandshake(t *testing.T) {
@@ -355,6 +356,70 @@ func stageXX_ReadCommandsAreNotPropagated(t *testing.T) {
 	}
 
 	pass("read commands do not advance replication offset or get propagated")
+}
+
+
+
+
+func stageXX_PartialPacketParsing(t *testing.T) {
+	stage("REPLICATION: PARTIAL PACKET PARSING")
+
+	_, masterPort := startMaster(t)
+
+	// Open a raw TCP connection directly to control exact write timing
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", masterPort))
+	if err != nil {
+		failf(t, "failed to connect to master: %v", err)
+	}
+	defer conn.Close()
+
+	// Stage 1: Write the first half of the command
+	// We want to send: *3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n
+	// We split "SET" in half -> send "*3\r\n$3\r\nS" first
+	firstHalf := "*3\r\n$3\r\nS"
+	if _, err := conn.Write([]byte(firstHalf)); err != nil {
+		failf(t, "failed to write first half of the packet: %v", err)
+	}
+
+	// Set a small read deadline to verify the server does not respond prematurely
+	err = conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+	if err != nil {
+		failf(t, "failed to set read deadline: %v", err)
+	}
+
+	// Try reading. The server should NOT send anything yet because the command is incomplete.
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
+	if err == nil {
+		failf(t, "server responded prematurely to a partial packet with %q", string(buf[:n]))
+	}
+
+	// Verify that the error was indeed a timeout (which is correct behavior)
+	if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+		failf(t, "expected timeout waiting for incomplete packet response, got error: %v", err)
+	}
+
+	// Reset read deadline back to normal
+	_ = conn.SetReadDeadline(time.Time{})
+
+	// Stage 2: Write the remaining half of the command after the delay
+	secondHalf := "ET\r\n$1\r\na\r\n$1\r\n1\r\n"
+	if _, err := conn.Write([]byte(secondHalf)); err != nil {
+		failf(t, "failed to write second half of the packet: %v", err)
+	}
+
+	// Now wait for the complete command's response
+	reader := bufio.NewReader(conn)
+	resp, err := readRESP(reader)
+	if err != nil {
+		failf(t, "failed to read response after sending complete packet: %v", err)
+	}
+
+	if resp != "+OK\r\n" {
+		failf(t, "expected +OK\r\n after completing command, got %q", resp)
+	}
+
+	pass("parser correctly buffered and reconstructed the partial packet")
 }
 
 
