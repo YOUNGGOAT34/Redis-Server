@@ -359,8 +359,6 @@ func stageXX_ReadCommandsAreNotPropagated(t *testing.T) {
 }
 
 
-
-
 func stageXX_PartialPacketParsing(t *testing.T) {
 	stage("REPLICATION: PARTIAL PACKET PARSING")
 
@@ -423,9 +421,111 @@ func stageXX_PartialPacketParsing(t *testing.T) {
 }
 
 
-// ===========================================================================
+
+func stageXX_PartialAndPipelineParsing(t *testing.T) {
+	stage("STAGE 46: PARTIAL AND PIPELINE PARSING")
+
+	_, masterPort := startMaster(t)
+
+	// Open raw TCP connection
+	conn, err := net.Dial("tcp", fmt.Sprintf("127.0.0.1:%d", masterPort))
+	if err != nil {
+		failf(t, "failed to connect to master: %v", err)
+	}
+	defer conn.Close()
+
+	reader := bufio.NewReader(conn)
+
+	/*
+	    PACKET 1: Complete "SET a 1" + Incomplete "SET b"
+		The master will send to send:
+		*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n  <- Complete
+		*3\r\n$3\r\nSET\r\n$1\r\nb\r\n           <- Incomplete
+	*/
+	packet1 := "*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n*3\r\n$3\r\nSET\r\n$1\r\nb\r\n"
+	if _, err := conn.Write([]byte(packet1)); err != nil {
+		failf(t, "failed to write first packet: %v", err)
+	}
+
+	// The server should respond to the first complete SET a 1 command immediately.
+	resp1, err := readRESP(reader)
+	if err != nil {
+		failf(t, "failed to read response for first complete command: %v", err)
+	}
+	if resp1 != "+OK\r\n" {
+		failf(t, "expected +OK\r\n for SET a 1, got %q", resp1)
+	}
+
+	/*
+	 set a short read deadline. 
+	 The server must NOT respond to the second command because it's incomplete.
+	 */
+	err = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	if err != nil {
+		failf(t, "failed to set read deadline: %v", err)
+	}
+
+	buf := make([]byte, 1024)
+	n, err := conn.Read(buf)
+	if err == nil {
+		failf(t, "server incorrectly responded prematurely to a partial pipeline with %q", string(buf[:n]))
+	}
+
+	if netErr, ok := err.(net.Error); !ok || !netErr.Timeout() {
+		failf(t, "expected timeout waiting for incomplete pipeline response, got: %v", err)
+	}
+
+	// Reset read deadline back to normal
+	_ = conn.SetReadDeadline(time.Time{})
+
+	
+	/*
+	    PACKET 2: Remainder of "SET b 2" + Complete "SET c 3"
+	   Completes SET b with "$1\r\n2\r\n", then pipelines:
+	   *3\r\n$3\r\nSET\r\n$1\r\nc\r\n$1\r\n3\r\n  <- Complete
+	*/
+	packet2 := "$1\r\n2\r\n*3\r\n$3\r\nSET\r\n$1\r\nc\r\n$1\r\n3\r\n"
+	if _, err := conn.Write([]byte(packet2)); err != nil {
+		failf(t, "failed to write second packet: %v", err)
+	}
+
+	/*
+		expecting two separate "+OK\r\n" responses in order.
+		One for the completed "SET b 2"
+	*/
+	resp2, err := readRESP(reader)
+	if err != nil {
+		failf(t, "failed to read response for completed SET b 2: %v", err)
+	}
+	if resp2 != "+OK\r\n" {
+		failf(t, "expected +OK\r\n for SET b 2, got %q", resp2)
+	}
+
+	// One for the pipelined "SET c 3"
+	resp3, err := readRESP(reader)
+	if err != nil {
+		failf(t, "failed to read response for pipelined SET c 3: %v", err)
+	}
+	if resp3 != "+OK\r\n" {
+		failf(t, "expected +OK\r\n for SET c 3, got %q", resp3)
+	}
+
+	// Finally, verify all values were actually saved to DB
+	if !waitForValue(t, masterPort, "a", "1", 1*time.Second) {
+		failf(t, "master DB missing 'a' value")
+	}
+	if !waitForValue(t, masterPort, "b", "2", 1*time.Second) {
+		failf(t, "master DB missing 'b' value")
+	}
+	if !waitForValue(t, masterPort, "c", "3", 1*time.Second) {
+		failf(t, "master DB missing 'c' value")
+	}
+
+	pass("parser beautifully handled merged partial stream segments with pipelined commands")
+}
+
+
 // Connection & Port Helpers
-// ===========================================================================
 
 func dialPort(t *testing.T, port int) net.Conn {
 	t.Helper()
