@@ -2,7 +2,6 @@ package replication
 
 import (
 	"CacheDB/app/RESP"
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -97,8 +96,6 @@ func WaitCommand(args [][]byte,config *RESP.SERVER) RESP.Response{
 
 		var totalCount int64
 
-		fmt.Printf("offset %d,replicas %d\n",config.MASTERREPLOFFSET.Load(),len(replicas))
-	
 		for{
          
 			config.ReplicasMutex.RLock()

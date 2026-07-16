@@ -47,7 +47,8 @@ func isWrite(command []byte) bool{
 }
 
 func handleClient(conn net.Conn, config *RESP.SERVER) {
-	var request = make([]byte, 1024)
+	var request []byte
+	var temp=make([]byte,1024)
    
 	defer conn.Close()
 
@@ -58,8 +59,10 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 
 
 	for {
+
+
      
-		bytesRead, err := conn.Read(request)
+		bytesRead, err := conn.Read(temp)
        
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 
@@ -72,62 +75,77 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 			return
 		}
 
-	   
-		parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request[:bytesRead])
-      
-		var response RESP.Response
+		request = append(request, temp[:bytesRead]...)
 
-		if err!=nil{
-			   response=RESP.Response{
-					   Body: []byte(err.Error()),
-                  Type: RESP.ERROR,
-				}
+      for{
+			parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
 
-		}else{
-			  
-			response= dispatchCommands(client,parsedRequest,config)
-		}
+			
+			var response RESP.Response
+	
+			if err!=nil{
 
-		_, err = conn.Write(RESP.EncodeResponse(response))
-
-		if len(parsedRequest)>0  && RESP.CompareBytes(parsedRequest[0],[]byte("PSYNC")){
-
-             if err != nil {
-						return
+				   if errors.Is(err,RESP.ErrIncomplete){
+						  break
 					}
 
-			   //  _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
-				// 	Body: replication.EmptyRDB,
-				// 	Type: RESP.RDBFILE,
-				
-				// }))
+					response=RESP.Response{
+							Body: []byte(err.Error()),
+							Type: RESP.ERROR,
+					}
+	
+			}else{
+				  
 
-				// if err != nil {
-				// 		return
-				// 	}
-            replica:=&RESP.REPLICA{
-					  Conn:conn,
-				}
-				replica.Offset.Store(-1)
-				config.ReplicasMutex.Lock()
-				config.REPLICAS = append(config.REPLICAS,replica)
-				config.ReplicasMutex.Unlock()
-				continue
-		}
-      
-		if err != nil {
-			return
-		}
-
-
-     if config.Role=="master"{
-		//only propagate successful write commands
-		   if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
-   
-					replication.PropagateCommands(request[:bytesRead],config)
-					config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
+				response= dispatchCommands(client,parsedRequest,config)
 			}
-	  }
+
+			commandBytes:=request[:bytesConsumed]
+			request=request[bytesConsumed:]
+	
+			_, err = conn.Write(RESP.EncodeResponse(response))
+	
+			if len(parsedRequest)>0  && RESP.CompareBytes(parsedRequest[0],[]byte("PSYNC")){
+	
+					 if err != nil {
+							return
+						}
+	
+					//  _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
+					// 	Body: replication.EmptyRDB,
+					// 	Type: RESP.RDBFILE,
+					
+					// }))
+	
+					// if err != nil {
+					// 		return
+					// 	}
+					replica:=&RESP.REPLICA{
+						  Conn:conn,
+					}
+					replica.Offset.Store(-1)
+					config.ReplicasMutex.Lock()
+					config.REPLICAS = append(config.REPLICAS,replica)
+					config.ReplicasMutex.Unlock()
+					continue
+			}
+			
+			if err != nil {
+				return
+			}
+	
+	
+		  if config.Role=="master"{
+			//only propagate successful write commands
+				if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type!=RESP.ERROR {
+		
+						replication.PropagateCommands(commandBytes,config)
+						config.MASTERREPLOFFSET.Add(int32(bytesConsumed))
+				}
+		  }
+		}
+		
+      
 
 	}
 
@@ -138,11 +156,11 @@ func handleClient(conn net.Conn, config *RESP.SERVER) {
 func handleMaster(conn net.Conn,config *RESP.SERVER) {
 
 	var request []byte
-   
+	temp:=make([]byte,1024)
+
 	defer conn.Close()
 	     
 	for {
-		      temp:=make([]byte,1024)
 			   
 				
 
