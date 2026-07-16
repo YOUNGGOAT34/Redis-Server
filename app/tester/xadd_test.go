@@ -368,11 +368,13 @@ func stage76_XAddConcurrent(t *testing.T) {
 
 			conn := dial(t)
 			defer conn.Close()
+         
+			val:=strconv.Itoa(i)
 
 			resp := send(conn,
 				fmt.Sprintf(
-					"*5\r\n$4\r\nXADD\r\n$9\r\nstream-76\r\n$1\r\n*\r\n$2\r\nid\r\n$2\r\n%d\r\n",
-					i,
+					"*5\r\n$4\r\nXADD\r\n$9\r\nstream-76\r\n$1\r\n*\r\n$2\r\nid\r\n$%d\r\n%s\r\n",
+					len(val),val,
 				),
 			)
 

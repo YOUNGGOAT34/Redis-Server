@@ -348,7 +348,7 @@ func stage305_RPushOtherKey(t *testing.T) {
 
 
 func stage308_LPushCreatesWatchedKey(t *testing.T) {
-	stage("STAGE 300: LPUSH CREATES WATCHED KEY")
+	stage("STAGE 308: LPUSH CREATES WATCHED KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -374,7 +374,7 @@ func stage308_LPushCreatesWatchedKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$27\r\nwatch_stage308_other_list\r\n")
+			"$25\r\nwatch_stage308_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+
@@ -392,7 +392,7 @@ func stage308_LPushCreatesWatchedKey(t *testing.T) {
 
 
 func stage309_RPushCreatesWatchedKey(t *testing.T) {
-	stage("STAGE 301: RPUSH CREATES WATCHED KEY")
+	stage("STAGE 309: RPUSH CREATES WATCHED KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -418,7 +418,7 @@ func stage309_RPushCreatesWatchedKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$26\r\nwatch_stage309_other_list\r\n")
+			"$25\r\nwatch_stage309_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+
@@ -435,7 +435,7 @@ func stage309_RPushCreatesWatchedKey(t *testing.T) {
 
 
 func stage310_LPushExistingWatchedKey(t *testing.T) {
-	stage("STAGE 302: LPUSH EXISTING WATCHED KEY")
+	stage("STAGE 310: LPUSH EXISTING WATCHED KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -467,7 +467,7 @@ func stage310_LPushExistingWatchedKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$26\r\nwatch_stage310_other_list\r\n")
+			"$25\r\nwatch_stage310_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+
@@ -485,7 +485,7 @@ func stage310_LPushExistingWatchedKey(t *testing.T) {
 
 
 func stage311_RPushExistingWatchedKey(t *testing.T) {
-	stage("STAGE 303: RPUSH EXISTING WATCHED KEY")
+	stage("STAGE 311: RPUSH EXISTING WATCHED KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -517,7 +517,7 @@ func stage311_RPushExistingWatchedKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$26\r\nwatch_stage311_other_list\r\n")
+			"$25\r\nwatch_stage311_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+
@@ -535,7 +535,7 @@ func stage311_RPushExistingWatchedKey(t *testing.T) {
 
 
 func stage312_LPushDifferentKey(t *testing.T) {
-	stage("STAGE 304: LPUSH DIFFERENT KEY")
+	stage("STAGE 312: LPUSH DIFFERENT KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -579,7 +579,7 @@ func stage312_LPushDifferentKey(t *testing.T) {
 
 
 func stage313_RPushDifferentKey(t *testing.T) {
-	stage("STAGE 305: RPUSH DIFFERENT KEY")
+	stage("STAGE 313: RPUSH DIFFERENT KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -623,7 +623,7 @@ func stage313_RPushDifferentKey(t *testing.T) {
 
 
 func stage314_LPopExistingWatchedKey(t *testing.T) {
-	stage("STAGE 306: LPOP EXISTING WATCHED KEY")
+	stage("STAGE 314: LPOP EXISTING WATCHED KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -654,7 +654,7 @@ func stage314_LPopExistingWatchedKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$26\r\nwatch_stage314_other_list\r\n")
+			"$25\r\nwatch_stage314_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+
@@ -671,7 +671,7 @@ func stage314_LPopExistingWatchedKey(t *testing.T) {
 
 
 func stage315_LPopMissingKey(t *testing.T) {
-	stage("STAGE 307: LPOP MISSING KEY")
+	stage("STAGE 315: LPOP MISSING KEY")
 
 	conn1 := dial(t)
 	conn2 := dial(t)
@@ -696,7 +696,7 @@ func stage315_LPopMissingKey(t *testing.T) {
 	send(conn1,
 		"*2\r\n"+
 			"$4\r\nLLEN\r\n"+
-			"$26\r\nwatch_stage314_other_list\r\n")
+			"$25\r\nwatch_stage314_other_list\r\n")
 
 	resp := send(conn1,
 		"*1\r\n"+

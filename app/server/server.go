@@ -101,7 +101,9 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 			}
 
 			commandBytes:=request[:bytesConsumed]
+			
 			request=request[bytesConsumed:]
+	
 	
 			_, err = conn.Write(RESP.EncodeResponse(response))
 	

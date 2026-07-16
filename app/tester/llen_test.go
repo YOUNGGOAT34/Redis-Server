@@ -40,8 +40,8 @@ func stage50_LLenSingleElement(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	send(conn, "*3\r\n$7\r\nRPUSH\r\n$4\r\nlelist\r\n$5\r\nhello\r\n")
-
+	send(conn, "*3\r\n$5\r\nRPUSH\r\n$6\r\nlelist\r\n$5\r\nhello\r\n")
+   
 	resp := send(conn, "*2\r\n$4\r\nLLEN\r\n$4\r\nlist\r\n")
 
 	expected := ":1\r\n"
@@ -59,7 +59,7 @@ func stage51_LLenMultipleElements(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	send(conn, "*6\r\n$7\r\nRPUSH\r\n$5\r\nlenums1\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n$1\r\n4\r\n")
+	send(conn, "*6\r\n$5\r\nRPUSH\r\n$7\r\nlenums1\r\n$1\r\n1\r\n$1\r\n2\r\n$1\r\n3\r\n$1\r\n4\r\n")
 
 	resp := send(conn, "*2\r\n$4\r\nLLEN\r\n$5\r\nnums1\r\n")
 
