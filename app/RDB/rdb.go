@@ -22,6 +22,20 @@ var EmptyRDB = []byte{
 }
 
 
+
+func readByte(data []byte,pos *int) (byte,error){
+      if *pos>=len(data){
+           return 0,io.ErrUnexpectedEOF
+      }
+
+      value:=data[*pos]
+
+      (*pos)++
+
+      return value,nil
+}
+
+
 func readHeader(data []byte,pos *int) ([]byte,error){
 
        if *pos+9>len(data){
@@ -55,7 +69,9 @@ func readRdbFile(rdbConfig RDB){
       }
 
 
+     
 
+      loop:
       for{
           
            opcode,err:=readByte(data,&pos)
@@ -63,20 +79,76 @@ func readRdbFile(rdbConfig RDB){
            if err!=nil{
               //handle error
            }
+
+           /*
+               0xFA-->auxilary field
+               0xFB-->database size
+               0XFE--->database selector
+               0xFF--->end of file
+           
+           */
+
+           switch opcode{
+                 case 0xFA:
+                    auxiliaryKey,auxiliaryValue,err:=parseAuxilarySection(data,&pos)
+                    if err!=nil{
+                          //handle error
+                    }
+
+
+                    fmt.Printf("key=%s,value=%s\r\n",auxiliaryKey,auxiliaryValue)
+
+                 case 0xFB:
+                 case 0xFE:
+                 case 0xFF:
+                    break loop
+                  
+
+           }
       }
 
 
 }
 
-
-func readByte(data []byte,pos *int) (byte,error){
-      if *pos>=len(data){
-           return 0,io.ErrUnexpectedEOF
+func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
+	  if *pos>=len(data){
+           return EOF()
       }
 
-      value:=data[*pos]
+      keyLength:=data[*pos]
 
       (*pos)++
 
-      return value,nil
+      if *pos+int(keyLength)>=len(data){
+          return EOF()
+      }
+
+      key:=data[*pos:*pos+int(keyLength)]
+
+      *pos+=int(keyLength)
+
+      if *pos>len(data){
+          return EOF()
+      }
+
+      valueLength:=data[*pos]
+      (*pos)++
+
+      if *pos+int(valueLength)>len(data){
+          return EOF()
+      }
+
+      value:=data[*pos:*pos+int(valueLength)]
+
+      *pos+=int(valueLength)
+
+      return key,value,nil
+
 }
+
+
+func EOF() ([]byte,[]byte,error){
+      return nil,nil,io.ErrUnexpectedEOF
+}
+
+
