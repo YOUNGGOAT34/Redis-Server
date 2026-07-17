@@ -52,7 +52,77 @@ func readHeader(data []byte,pos *int) ([]byte,error){
 }
 
 
-func readlength(data []byte,pos *int)(uint64,error){
+
+func specialEncoding(data []byte, encoding byte,pos *int) (uint64, error) {
+
+	  specialEncodingType:=encoding & 0x3F
+
+      /*
+          0-->read the next byte
+          1--->read the next two bytes
+          2--->read the next 4 bytes
+          3--->LZF compressed string
+      */
+
+      switch specialEncodingType{
+            case 0:
+                if *pos>=len(data){
+                      return 0,io.ErrUnexpectedEOF
+                }
+
+                value:=uint64(data[*pos])
+                (*pos)++
+
+                return value,nil
+
+            case 1:
+                if *pos+2>len(data){
+                     return 0,io.ErrUnexpectedEOF
+                }
+
+                firstByte:=data[*pos]
+                (*pos)++
+                secondByte:=data[*pos]
+                (*pos)++
+
+                value:=(uint64(firstByte)<<8 | uint64(secondByte))
+
+                return value,nil
+
+            case 2:
+
+                if *pos+4>len(data){
+                     return 0,io.ErrUnexpectedEOF
+                }
+
+
+                firstByte:=data[*pos]
+                (*pos)++
+                secondByte:=data[*pos]
+                (*pos)++
+                thirdByte:=data[*pos]
+                (*pos)++
+                fourthByte:=data[*pos]
+                (*pos)++
+            
+                value:=(uint64(firstByte)<<24 | uint64(secondByte)<<16 | uint64(thirdByte)<<8 | uint64(fourthByte))
+                return value,nil
+
+            case 3:
+                panic("LZF compressed string is not yet implemented")
+      }
+
+
+      return 0,nil
+
+}
+
+
+func readLength(data []byte,pos *int)(uint64,error){
+
+     if *pos>=len(data){
+           return 0,io.ErrUnexpectedEOF
+      }
 
      /* 
         encodings:
@@ -124,7 +194,7 @@ func readlength(data []byte,pos *int)(uint64,error){
           return uint64(length),nil
 
       case 3:
-        panic("Unimplemented length encoding type")
+           return specialEncoding(data,encoding,pos)
       }
 
 
@@ -132,6 +202,8 @@ func readlength(data []byte,pos *int)(uint64,error){
  return 0,nil
 
 }
+
+
 
 
 func readRdbFile(rdbConfig RDB){
@@ -194,15 +266,16 @@ func readRdbFile(rdbConfig RDB){
 }
 
 func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
-	  if *pos>=len(data){
-           return EOF()
+      
+	 
+
+      keyLength,err:=readLength(data,pos)
+
+      if err!=nil{
+          return EOF()
       }
 
-      keyLength:=data[*pos]
-
-      (*pos)++
-
-      if *pos+int(keyLength)>=len(data){
+      if keyLength> uint64(len(data)-*pos){
           return EOF()
       }
 
@@ -210,14 +283,14 @@ func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
 
       *pos+=int(keyLength)
 
-      if *pos>len(data){
+      valueLength,err:=readLength(data,pos)
+      
+   
+      if err!=nil{
           return EOF()
       }
 
-      valueLength:=data[*pos]
-      (*pos)++
-
-      if *pos+int(valueLength)>len(data){
+      if valueLength>uint64(len(data)-*pos){
           return EOF()
       }
 
