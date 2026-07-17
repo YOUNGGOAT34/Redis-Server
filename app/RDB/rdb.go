@@ -1,5 +1,12 @@
 package rdb
 
+import (
+	"CacheDB/app/RESP"
+	"fmt"
+	"io"
+	"os"
+)
+
 var EmptyRDB = []byte{
     0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
     0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
@@ -12,4 +19,64 @@ var EmptyRDB = []byte{
     0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66,
     0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00, 0xff,
     0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2,
+}
+
+
+func readHeader(data []byte,pos *int) ([]byte,error){
+
+       if *pos+9>len(data){
+           return nil,io.ErrUnexpectedEOF
+       }
+       
+     
+       header:=data[*pos:*pos+9]
+
+       *pos+=9
+      
+      return header,nil
+}
+
+
+func readRdbFile(rdbConfig RDB){
+
+     //cursor position
+     pos:=0
+
+      data,err:=os.ReadFile(rdbConfig.Dir+"/"+rdbConfig.DbFileName)
+
+      header,err:=readHeader(data,&pos)
+      
+      if err!=nil{
+           
+      }
+
+      if   !RESP.CompareBytes(header[:5],[]byte("REDIS")){
+           fmt.Printf("Not an rdb file\r\n");
+      }
+
+
+
+      for{
+          
+           opcode,err:=readByte(data,&pos)
+           
+           if err!=nil{
+              //handle error
+           }
+      }
+
+
+}
+
+
+func readByte(data []byte,pos *int) (byte,error){
+      if *pos>=len(data){
+           return 0,io.ErrUnexpectedEOF
+      }
+
+      value:=data[*pos]
+
+      (*pos)++
+
+      return value,nil
 }
