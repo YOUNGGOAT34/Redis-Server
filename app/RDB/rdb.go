@@ -22,6 +22,7 @@ var EmptyRDB = []byte{
 }
 
 
+//helpers
 
 func readByte(data []byte,pos *int) (byte,error){
       if *pos>=len(data){
@@ -46,8 +47,90 @@ func readHeader(data []byte,pos *int) ([]byte,error){
        header:=data[*pos:*pos+9]
 
        *pos+=9
-      
+       
       return header,nil
+}
+
+
+func readlength(data []byte,pos *int)(uint64,error){
+
+     /* 
+        encodings:
+
+        first 2 bits of the first byte
+
+        if they are:
+
+        00-->the length is the remaining 6 bits
+        01-->the length value is the next 14 bits (next byte+ 6 bits of the current byte)
+        10-->the length value is 4 bytes
+        11-->special encoded value (will be implemented later)
+     
+     */
+
+     
+      encoding:=data[*pos]
+
+      (*pos)++
+
+      encodingType:=encoding>>6
+      
+      
+
+      switch encodingType{
+      case 0:
+        length:=encoding & 0x3F
+        return uint64(length),nil
+
+      case 1:
+          if *pos>=len(data){
+              return 0,io.ErrUnexpectedEOF
+          }
+         //get the remaining 6 bits
+         low6Bits:=encoding & 0x3F
+         //get the second byte
+         secondByte:=data[*pos]
+         (*pos)++
+         /* 
+              The length should be 
+              [the low 6 bits][8 bits from the second byte]
+
+              therefore:
+               we shit the low 6 bits left by 8
+               then perform and or operation with the 8 bits from the second byte
+         */
+
+         length:= (uint32(low6Bits)<<8 | uint32(secondByte))
+         return uint64(length),nil
+      case 2:
+           if *pos+4>len(data){
+              return 0,io.ErrUnexpectedEOF
+           }
+
+          firstByte:=data[*pos]
+          (*pos)++
+          secondByte:=data[*pos]
+          (*pos)++
+          thirdByte:=data[*pos]
+          (*pos)++
+
+          fourthByte:=data[*pos]
+          (*pos)++
+
+          length:=(uint32(firstByte)<<24 |
+                   uint32(secondByte)<<16 |
+                   uint32(thirdByte)<<8|
+                   uint32(fourthByte))
+          return uint64(length),nil
+
+      case 3:
+        panic("Unimplemented length encoding type")
+      }
+
+
+
+ return 0,nil
+
 }
 
 
