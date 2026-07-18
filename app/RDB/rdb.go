@@ -237,7 +237,7 @@ func readRdbFile(rdbConfig RDB){
 
            /*
                0xFA-->auxilary field
-               0xFB-->database size
+               0xFB-->database size(RESIZEDB)
                0XFE--->database selector
                0xFF--->end of file
            
@@ -254,14 +254,25 @@ func readRdbFile(rdbConfig RDB){
                     fmt.Printf("key=%s,value=%s\r\n",auxiliaryKey,auxiliaryValue)
 
                  case 0xFB:
-                    
+                       dbHashTableSize,err:=readLength(data,&pos)
+                       if err!=nil{
+                            //handle error
+                       }
+
+                       expiryHashTableSize,err:=readLength(data,&pos)
+                       if err!=nil{
+                          //handle error
+                       }
+                       fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize,expiryHashTableSize)
+
+
                  case 0xFE:
-                 case 0xFF:
                     dbNumber,err:=selectDatabase(data,&pos)
                     if err!=nil{
                         //handle error
                     }
                       fmt.Printf("database number=%d\r\n",dbNumber)
+                 case 0xFF:
                     break loop
                   
 
