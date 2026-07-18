@@ -254,8 +254,14 @@ func readRdbFile(rdbConfig RDB){
                     fmt.Printf("key=%s,value=%s\r\n",auxiliaryKey,auxiliaryValue)
 
                  case 0xFB:
+                    
                  case 0xFE:
                  case 0xFF:
+                    dbNumber,err:=selectDatabase(data,&pos)
+                    if err!=nil{
+                        //handle error
+                    }
+                      fmt.Printf("database number=%d\r\n",dbNumber)
                     break loop
                   
 
@@ -263,6 +269,16 @@ func readRdbFile(rdbConfig RDB){
       }
 
 
+}
+
+func selectDatabase(data []byte, pos *int) (uint64,error){
+	   databaseNumber,err:=readLength(data,pos)
+
+       if err!=nil{
+           return 0,err
+       }
+
+       return databaseNumber,nil
 }
 
 func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
