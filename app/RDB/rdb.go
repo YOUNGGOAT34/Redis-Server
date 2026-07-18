@@ -7,6 +7,11 @@ import (
 	"os"
 )
 
+type LengthResult struct{
+      Value uint64
+      Special bool
+}
+
 var EmptyRDB = []byte{
     0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
     0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
@@ -17,10 +22,34 @@ var EmptyRDB = []byte{
     0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73,
     0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
     0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66,
-    0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00, 0xff,
+    0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00,
+
+    // SELECTDB
+    0xfe,
+    0x00,
+
+    // RESIZEDB
+    0xfb,
+    0x01, // one key
+    0x00, // zero expiring keys
+
+    // String object
+    0x00,
+
+    // key: "name"
+    0x04,
+    0x6e, 0x61, 0x6d, 0x65,
+
+    // value: "goat"
+    0x04,
+    0x67, 0x6f, 0x61, 0x74,
+
+    // EOF
+    0xff,
+
+    // checksum
     0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2,
 }
-
 
 //helpers
 
@@ -36,6 +65,16 @@ func readByte(data []byte,pos *int) (byte,error){
       return value,nil
 }
 
+
+func readNBytes(data []byte,pos *int,n int) ([]byte,error){
+       if *pos+n>len(data){
+           return nil,io.ErrUnexpectedEOF
+       }
+
+       result:=data[*pos:*pos+n]
+       *pos+=n
+       return result,nil
+}
 
 func readHeader(data []byte,pos *int) ([]byte,error){
 
@@ -118,10 +157,77 @@ func specialEncoding(data []byte, encoding byte,pos *int) (uint64, error) {
 }
 
 
-func readLength(data []byte,pos *int)(uint64,error){
+
+func readEntry(data []byte, pos *int) {
+	  if *pos>=len(data){
+            fmt.Printf("Unexpected end of file\r\n")
+            return
+      }
+
+      opcode:=data[*pos]
+      (*pos)++
+
+      switch opcode{
+            case 0xFD:
+                fmt.Printf("expiry in seconds\r\n")
+                _,err:=readNBytes(data,pos,4)
+                if err!=nil{
+                    //handle error
+                    fmt.Printf("expiry in seconds error\r\n")
+                    return
+                }
+
+                opcode,err=readByte(data,pos)
+                if err!=nil{
+                      fmt.Printf("%s in oxFD reading entry\r\n",err.Error())
+                }
+               
+            case 0xFC:
+                 fmt.Printf("expiry in Milliseconds\r\n")
+                _,err:=readNBytes(data,pos,8)
+                if err!=nil{
+                    //handle error
+                    fmt.Printf("expiry in Milliseconds error\r\n")
+                    return
+                }
+                opcode,err=readByte(data,pos)
+                if err!=nil{
+                      fmt.Printf("%s in oxFC reading entry\r\n",err.Error())
+                }
+       
+      }
+
+    
+      switch opcode{
+
+            case 0x00:
+                  //read key value length
+                    key,value,err:=readKeyValuePair(data,pos)
+
+                    if err!=nil{
+                        //handle error
+                        return
+                    }
+                    fmt.Printf("Key=%s,value=%s\r\n",key,value)
+            case 0x01:
+                fmt.Printf("List\r\n")
+            case 0x02:
+                fmt.Printf("set\r\n")
+      }
+
+    
+
+    
+}
+
+
+func readLength(data []byte,pos *int)(LengthResult,error){
 
      if *pos>=len(data){
-           return 0,io.ErrUnexpectedEOF
+           return LengthResult{
+             Value: 0,
+             Special: false,
+           },io.ErrUnexpectedEOF
       }
 
      /* 
@@ -150,11 +256,17 @@ func readLength(data []byte,pos *int)(uint64,error){
       switch encodingType{
       case 0:
         length:=encoding & 0x3F
-        return uint64(length),nil
+        return LengthResult{
+             Value: uint64(length),
+             Special: false,
+        },nil
 
       case 1:
           if *pos>=len(data){
-              return 0,io.ErrUnexpectedEOF
+              return LengthResult{
+                 Value: 0,
+                 Special: false,
+              },io.ErrUnexpectedEOF
           }
          //get the remaining 6 bits
          low6Bits:=encoding & 0x3F
@@ -170,11 +282,19 @@ func readLength(data []byte,pos *int)(uint64,error){
                then perform and or operation with the 8 bits from the second byte
          */
 
+         
+
          length:= (uint32(low6Bits)<<8 | uint32(secondByte))
-         return uint64(length),nil
+         return LengthResult{
+                Value: uint64(length),
+                Special: false,
+         },nil
       case 2:
            if *pos+4>len(data){
-              return 0,io.ErrUnexpectedEOF
+              return LengthResult{
+                 Value: 0,
+                 Special: false,
+              },io.ErrUnexpectedEOF
            }
 
           firstByte:=data[*pos]
@@ -191,22 +311,31 @@ func readLength(data []byte,pos *int)(uint64,error){
                    uint32(secondByte)<<16 |
                    uint32(thirdByte)<<8|
                    uint32(fourthByte))
-          return uint64(length),nil
+          return LengthResult{
+              Value: uint64(length),
+              Special: false,
+          },nil
 
       case 3:
-           return specialEncoding(data,encoding,pos)
+           value,err:=specialEncoding(data,encoding,pos)
+           if err!=nil{
+             return LengthResult{},err
+           }
+
+           return LengthResult{
+             Value: value,
+             Special: true,
+           },nil
       }
 
 
 
- return 0,nil
+ return LengthResult{},nil
 
 }
 
 
-
-
-func readRdbFile(rdbConfig RDB){
+func ReadRDBFile(rdbConfig RDB){
 
      //cursor position
      pos:=0
@@ -245,7 +374,7 @@ func readRdbFile(rdbConfig RDB){
 
            switch opcode{
                  case 0xFA:
-                    auxiliaryKey,auxiliaryValue,err:=parseAuxilarySection(data,&pos)
+                    auxiliaryKey,auxiliaryValue,err:=readKeyValuePair(data,&pos)
                     if err!=nil{
                           //handle error
                     }
@@ -263,7 +392,9 @@ func readRdbFile(rdbConfig RDB){
                        if err!=nil{
                           //handle error
                        }
-                       fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize,expiryHashTableSize)
+                       fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize.Value,expiryHashTableSize.Value)
+
+                       readEntry(data,&pos)
 
 
                  case 0xFE:
@@ -282,17 +413,25 @@ func readRdbFile(rdbConfig RDB){
 
 }
 
+
+
 func selectDatabase(data []byte, pos *int) (uint64,error){
-	   databaseNumber,err:=readLength(data,pos)
+	   length,err:=readLength(data,pos)
+      
+
 
        if err!=nil{
            return 0,err
        }
 
-       return databaseNumber,nil
+       if length.Special{
+           return length.Value,nil
+       }
+
+       return length.Value,err
 }
 
-func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
+func readKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
       
 	 
 
@@ -302,13 +441,21 @@ func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
           return EOF()
       }
 
-      if keyLength> uint64(len(data)-*pos){
-          return EOF()
+      var key []byte
+
+      if keyLength.Special{
+           key=[]byte(fmt.Sprintf("%d",keyLength.Value))
+      }else{
+        
+          if keyLength.Value> uint64(len(data)-*pos){
+              return EOF()
+          }
+    
+          key=data[*pos:*pos+int(keyLength.Value)]
+    
+          *pos+=int(keyLength.Value)
       }
 
-      key:=data[*pos:*pos+int(keyLength)]
-
-      *pos+=int(keyLength)
 
       valueLength,err:=readLength(data,pos)
       
@@ -317,13 +464,23 @@ func parseAuxilarySection(data []byte, pos *int) ([]byte, []byte, error) {
           return EOF()
       }
 
-      if valueLength>uint64(len(data)-*pos){
-          return EOF()
+
+
+      var value []byte
+
+      if valueLength.Special{
+           value=[]byte(fmt.Sprintf("%d",valueLength.Value))
+      }else{
+         
+          if valueLength.Value>uint64(len(data)-*pos){
+              return EOF()
+          }
+    
+          value=data[*pos:*pos+int(valueLength.Value)]
+    
+          *pos+=int(valueLength.Value)
       }
 
-      value:=data[*pos:*pos+int(valueLength)]
-
-      *pos+=int(valueLength)
 
       return key,value,nil
 
