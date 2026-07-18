@@ -62,8 +62,8 @@ type readErr struct{
 }
 
 
-func (err *readErr) Error() string{
-       return fmt.Sprintf("%s:%s\r\n",err.Name,err.Error())
+func (err *readErr) Error(){
+       fmt.Fprintf(os.Stderr,"%s:%s\r\n",err.Name,err.Err.Error())
 }
 
 //helpers
@@ -197,7 +197,7 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                     //handle error
                     err:=&readErr{
                     Name: "0xFD reading Expiry In seconds",
-                    Err: io.ErrUnexpectedEOF,
+                    Err: err,
                     }
 
                     err.Error()
@@ -208,7 +208,7 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                 if err!=nil{
                       err:=&readErr{
                       Name: "0xFD reading entry",
-                      Err: io.ErrUnexpectedEOF,
+                      Err: err,
                     }
 
                     err.Error()
@@ -221,11 +221,10 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                 _,err:=readNBytes(data,pos,8)
 
                 if err!=nil{
-                 
-                       
+
                         err:=&readErr{
                         Name: "0xFC expiry in milliseconds",
-                        Err: io.ErrUnexpectedEOF,
+                        Err: err,
                     }
 
                     err.Error()
@@ -239,7 +238,7 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                       
                       err:=&readErr{
                         Name: "Reading entry's Opcode(key type)",
-                        Err: io.ErrUnexpectedEOF,
+                        Err: err,
                       }
 
                     err.Error()
@@ -259,7 +258,7 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                     if err!=nil{
                         err:=&readErr{
                             Name: "Key of string type",
-                            Err: io.ErrUnexpectedEOF,
+                            Err: err,
                         }
 
                         err.Error()
@@ -394,7 +393,9 @@ func readLength(data []byte,pos *int)(LengthResult,error){
 }
 
 
-func ReadRDBFile(rdbConfig RDB) ([][]byte,error){
+func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
+
+    var keys [][]byte
 
      //cursor position
      pos:=0
@@ -408,10 +409,18 @@ func ReadRDBFile(rdbConfig RDB) ([][]byte,error){
       }
 
       if   !RESP.CompareBytes(header[:5],[]byte("REDIS")){
-            fmt.Fprintf(os.Stderr,"Not an rdb file\r\n")
-            return [][]byte{},errors.New("Internal error")
+            err:=&readErr{
+                  Name: "The file is not an rdb file",
+                  Err: io.ErrUnexpectedEOF,
+            }
+
+            err.Error()
+
+            return [][]byte{},readError
       }
 
+
+    
 
     
       loop:
@@ -431,36 +440,76 @@ func ReadRDBFile(rdbConfig RDB) ([][]byte,error){
            
            */
 
+        
            switch opcode{
                  case 0xFA:
                     auxiliaryKey,auxiliaryValue,err:=readKeyValuePair(data,&pos)
                     if err!=nil{
-                          return [][]byte{},err
-                    }
+                           err:=&readErr{
+                            Name: "Auxilary values",
+                            Err: err,
+                        }
 
+                         err.Error()
+                          return [][]byte{},readError
+                    }
 
                     fmt.Printf("key=%s,value=%s\r\n",auxiliaryKey,auxiliaryValue)
 
                  case 0xFB:
                        dbHashTableSize,err:=readLength(data,&pos)
                        if err!=nil{
-                            return 
+                                err:=&readErr{
+                                Name: "Database HashTable size",
+                                Err: io.ErrUnexpectedEOF,
+                             }
+
+                            err.Error()
                        }
 
                        expiryHashTableSize,err:=readLength(data,&pos)
                        if err!=nil{
-                          //handle error
+                       
+                          err:=&readErr{
+                                Name: "Database expiry HashTable size",
+                                Err: io.ErrUnexpectedEOF,
+                             }
+
+                            err.Error()
                        }
                        fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize.Value,expiryHashTableSize.Value)
 
                        
-                       readEntry(data,&pos)
+                       for i:=uint64(0);i<dbHashTableSize.Value;i++{
+                           keyValue,err:=readEntry(data,&pos)
 
+                           if err!=nil{
+                                err:=&readErr{
+                                Name: "Key value pair",
+                                Err: io.ErrUnexpectedEOF,
+                             }
 
+                                err.Error()
+
+                                return nil,readError
+                           }
+
+                            keys = append(keys, keyValue[0])
+
+                       }
+
+            
                  case 0xFE:
                     dbNumber,err:=selectDatabase(data,&pos)
                     if err!=nil{
-                        //handle error
+                        err:=&readErr{
+                                Name: "Database number",
+                                Err: err,
+                             }
+
+                            err.Error()
+
+                            return nil,readError
                     }
                       fmt.Printf("database number=%d\r\n",dbNumber)
                  case 0xFF:
@@ -470,6 +519,7 @@ func ReadRDBFile(rdbConfig RDB) ([][]byte,error){
            }
       }
 
+      return keys,nil
 
 }
 

@@ -23,5 +23,5 @@ func TestReadRDB(t *testing.T) {
         DbFileName:  filename,
     }
 
-    rdb.ReadRDBFile(config)
+    rdb.ReadRDBFile(&config)
 }
