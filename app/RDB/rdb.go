@@ -2,10 +2,14 @@ package rdb
 
 import (
 	"CacheDB/app/RESP"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 )
+
+
+var readError=errors.New("Internal server error")
 
 type LengthResult struct{
       Value uint64
@@ -51,7 +55,20 @@ var EmptyRDB = []byte{
     0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2,
 }
 
+
+type readErr struct{
+      Name string
+      Err error
+}
+
+
+func (err *readErr) Error() string{
+       return fmt.Sprintf("%s:%s\r\n",err.Name,err.Error())
+}
+
 //helpers
+
+
 
 func readByte(data []byte,pos *int) (byte,error){
       if *pos>=len(data){
@@ -158,10 +175,15 @@ func specialEncoding(data []byte, encoding byte,pos *int) (uint64, error) {
 
 
 
-func readEntry(data []byte, pos *int) {
+func readEntry(data []byte, pos *int) ([][]byte,error){
 	  if *pos>=len(data){
-            fmt.Printf("Unexpected end of file\r\n")
-            return
+            err:=&readErr{
+                  Name: "No entry",
+                  Err: io.ErrUnexpectedEOF,
+            }
+
+            err.Error()
+            return nil,io.ErrUnexpectedEOF
       }
 
       opcode:=data[*pos]
@@ -169,30 +191,60 @@ func readEntry(data []byte, pos *int) {
 
       switch opcode{
             case 0xFD:
-                fmt.Printf("expiry in seconds\r\n")
+               
                 _,err:=readNBytes(data,pos,4)
                 if err!=nil{
                     //handle error
-                    fmt.Printf("expiry in seconds error\r\n")
-                    return
+                    err:=&readErr{
+                    Name: "0xFD reading Expiry In seconds",
+                    Err: io.ErrUnexpectedEOF,
+                    }
+
+                    err.Error()
+                    return nil,readError
                 }
 
                 opcode,err=readByte(data,pos)
                 if err!=nil{
-                      fmt.Printf("%s in oxFD reading entry\r\n",err.Error())
+                      err:=&readErr{
+                      Name: "0xFD reading entry",
+                      Err: io.ErrUnexpectedEOF,
+                    }
+
+                    err.Error()
+
+                    return nil,readError
                 }
                
             case 0xFC:
-                 fmt.Printf("expiry in Milliseconds\r\n")
+                
                 _,err:=readNBytes(data,pos,8)
+
                 if err!=nil{
-                    //handle error
-                    fmt.Printf("expiry in Milliseconds error\r\n")
-                    return
+                 
+                       
+                        err:=&readErr{
+                        Name: "0xFC expiry in milliseconds",
+                        Err: io.ErrUnexpectedEOF,
+                    }
+
+                    err.Error()
+                    return nil,readError
                 }
+
                 opcode,err=readByte(data,pos)
+
                 if err!=nil{
-                      fmt.Printf("%s in oxFC reading entry\r\n",err.Error())
+
+                      
+                      err:=&readErr{
+                        Name: "Reading entry's Opcode(key type)",
+                        Err: io.ErrUnexpectedEOF,
+                      }
+
+                    err.Error()
+
+                    return nil,readError
                 }
        
       }
@@ -205,10 +257,15 @@ func readEntry(data []byte, pos *int) {
                     key,value,err:=readKeyValuePair(data,pos)
 
                     if err!=nil{
-                        //handle error
-                        return
+                        err:=&readErr{
+                            Name: "Key of string type",
+                            Err: io.ErrUnexpectedEOF,
+                        }
+
+                        err.Error()
+                        return nil,readError
                     }
-                    fmt.Printf("Key=%s,value=%s\r\n",key,value)
+                    return [][]byte{key,value},nil
             case 0x01:
                 fmt.Printf("List\r\n")
             case 0x02:
@@ -216,6 +273,8 @@ func readEntry(data []byte, pos *int) {
       }
 
     
+
+      return [][]byte{},nil
 
     
 }
@@ -229,7 +288,7 @@ func readLength(data []byte,pos *int)(LengthResult,error){
              Special: false,
            },io.ErrUnexpectedEOF
       }
-
+     
      /* 
         encodings:
 
@@ -335,7 +394,7 @@ func readLength(data []byte,pos *int)(LengthResult,error){
 }
 
 
-func ReadRDBFile(rdbConfig RDB){
+func ReadRDBFile(rdbConfig RDB) ([][]byte,error){
 
      //cursor position
      pos:=0
@@ -345,23 +404,23 @@ func ReadRDBFile(rdbConfig RDB){
       header,err:=readHeader(data,&pos)
       
       if err!=nil{
-           
+            return [][]byte{},nil
       }
 
       if   !RESP.CompareBytes(header[:5],[]byte("REDIS")){
-           fmt.Printf("Not an rdb file\r\n");
+            fmt.Fprintf(os.Stderr,"Not an rdb file\r\n")
+            return [][]byte{},errors.New("Internal error")
       }
 
 
-     
-
+    
       loop:
       for{
           
            opcode,err:=readByte(data,&pos)
            
            if err!=nil{
-              //handle error
+              return [][]byte{},err
            }
 
            /*
@@ -376,7 +435,7 @@ func ReadRDBFile(rdbConfig RDB){
                  case 0xFA:
                     auxiliaryKey,auxiliaryValue,err:=readKeyValuePair(data,&pos)
                     if err!=nil{
-                          //handle error
+                          return [][]byte{},err
                     }
 
 
@@ -385,7 +444,7 @@ func ReadRDBFile(rdbConfig RDB){
                  case 0xFB:
                        dbHashTableSize,err:=readLength(data,&pos)
                        if err!=nil{
-                            //handle error
+                            return 
                        }
 
                        expiryHashTableSize,err:=readLength(data,&pos)
@@ -394,6 +453,7 @@ func ReadRDBFile(rdbConfig RDB){
                        }
                        fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize.Value,expiryHashTableSize.Value)
 
+                       
                        readEntry(data,&pos)
 
 

@@ -123,6 +123,8 @@ func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdb
 
 	case "CONFIG":
 		  return rdbConfig.RdbConfig(args[1:])
+	case "KEYS":
+		//pass
 
 	default:
 		return RESP.Response{
