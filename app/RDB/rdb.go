@@ -395,17 +395,70 @@ func readLength(data []byte,pos *int)(LengthResult,error){
 
 func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
 
+    
+
     var keys [][]byte
 
      //cursor position
      pos:=0
 
+     path:=rdbConfig.Dir+"/"+rdbConfig.DbFileName
+
+     _,err:=os.Stat(path)
+
+     if os.IsNotExist(err){
+           err=os.WriteFile(path,EmptyRDB,0644)
+
+           if err!=nil{
+                err:=&readErr{
+                  Name: "Creating new file",
+                  Err: err,
+              }
+
+              err.Error()
+
+              return nil,readError
+           }
+
+
+     }
+
+
+     if err!=nil{
+          err:=&readErr{
+                  Name: "getting file information",
+                  Err: err,
+            }
+
+            err.Error()
+
+            return nil,readError
+     }
+
       data,err:=os.ReadFile(rdbConfig.Dir+"/"+rdbConfig.DbFileName)
+
+      if err!=nil{
+            err:=&readErr{
+                  Name: "reading rdb file",
+                  Err:err,
+            }
+
+            err.Error()
+
+            return nil,readError
+      }
 
       header,err:=readHeader(data,&pos)
       
+     
       if err!=nil{
-            return [][]byte{},nil
+            err:=&readErr{
+                  Name: "empty header",
+                  Err: io.ErrUnexpectedEOF,
+            }
+
+            err.Error()
+            return [][]byte{},readError
       }
 
       if   !RESP.CompareBytes(header[:5],[]byte("REDIS")){
@@ -420,7 +473,9 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
       }
 
 
-    
+
+
+   
 
     
       loop:
@@ -478,7 +533,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
                             err.Error()
                        }
                        fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize.Value,expiryHashTableSize.Value)
-
+                        fmt.Printf("here\r\n")
                        
                        for i:=uint64(0);i<dbHashTableSize.Value;i++{
                            keyValue,err:=readEntry(data,&pos)
