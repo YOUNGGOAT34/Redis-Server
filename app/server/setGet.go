@@ -42,9 +42,9 @@ func getCommand(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		value := dataObject.Value.(string)
+		value := dataObject.Value.([]byte)
 		return RESP.Response{
-			Body: []byte(value),
+			Body: value,
 			Type: RESP.BULK_STRING,
 		}
 	}
@@ -127,7 +127,7 @@ func setCommand(arguments [][]byte, client *Client) RESP.Response {
 	databaseMutex.Lock()
 	database[string(arguments[0])] = Data{
 		Type:  STRING,
-		Value: string(arguments[1]),
+		Value: arguments[1],
 	}
 	databaseMutex.Unlock()
 

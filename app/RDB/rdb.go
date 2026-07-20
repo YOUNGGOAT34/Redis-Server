@@ -16,6 +16,9 @@ type LengthResult struct{
       Special bool
 }
 
+
+
+
 var EmptyRDB = []byte{
     0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
     0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
@@ -59,6 +62,21 @@ var EmptyRDB = []byte{
 type readErr struct{
       Name string
       Err error
+}
+
+
+type TYPE int
+
+const (
+	STRING TYPE = iota
+	LIST
+	STREAM
+)
+
+type Data struct{
+     Key []byte
+     Value []byte
+     Type TYPE
 }
 
 
@@ -175,13 +193,16 @@ func specialEncoding(data []byte, encoding byte,pos *int) (uint64, error) {
 
 
 
-func readEntry(data []byte, pos *int) ([][]byte,error){
+func readEntry(data []byte, pos *int) (*Data,error){
+
+      DATA:=&Data{}
+       
 	  if *pos>=len(data){
             err:=&readErr{
                   Name: "No entry",
                   Err: io.ErrUnexpectedEOF,
             }
-
+            
             err.Error()
             return nil,io.ErrUnexpectedEOF
       }
@@ -264,7 +285,11 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
                         err.Error()
                         return nil,readError
                     }
-                    return [][]byte{key,value},nil
+
+                    DATA.Key=key
+                    DATA.Value=value
+                    DATA.Type=STRING
+                    return DATA,nil
             case 0x01:
                 fmt.Printf("List\r\n")
             case 0x02:
@@ -273,7 +298,7 @@ func readEntry(data []byte, pos *int) ([][]byte,error){
 
     
 
-      return [][]byte{},nil
+      return &Data{},nil
 
     
 }
@@ -393,11 +418,11 @@ func readLength(data []byte,pos *int)(LengthResult,error){
 }
 
 
-func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
+func ReadRDBFile(rdbConfig *RDB) ([]*Data,error){
 
     
 
-    var keys [][]byte
+    var database []*Data
 
      //cursor position
      pos:=0
@@ -458,7 +483,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
             }
 
             err.Error()
-            return [][]byte{},readError
+            return []*Data{},readError
       }
 
       if   !RESP.CompareBytes(header[:5],[]byte("REDIS")){
@@ -469,7 +494,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
 
             err.Error()
 
-            return [][]byte{},readError
+            return []*Data{},readError
       }
 
 
@@ -484,7 +509,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
            opcode,err:=readByte(data,&pos)
            
            if err!=nil{
-              return [][]byte{},err
+              return []*Data{},err
            }
 
            /*
@@ -506,7 +531,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
                         }
 
                          err.Error()
-                          return [][]byte{},readError
+                          return []*Data{},readError
                     }
 
                     fmt.Printf("key=%s,value=%s\r\n",auxiliaryKey,auxiliaryValue)
@@ -533,10 +558,9 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
                             err.Error()
                        }
                        fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n",dbHashTableSize.Value,expiryHashTableSize.Value)
-                        fmt.Printf("here\r\n")
                        
                        for i:=uint64(0);i<dbHashTableSize.Value;i++{
-                           keyValue,err:=readEntry(data,&pos)
+                           dataEntry,err:=readEntry(data,&pos)
 
                            if err!=nil{
                                 err:=&readErr{
@@ -549,7 +573,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
                                 return nil,readError
                            }
 
-                            keys = append(keys, keyValue[0])
+                            database = append(database,dataEntry)
 
                        }
 
@@ -574,7 +598,7 @@ func ReadRDBFile(rdbConfig *RDB) ([][]byte,error){
            }
       }
 
-      return keys,nil
+      return database,nil
 
 }
 

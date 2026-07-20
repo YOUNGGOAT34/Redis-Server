@@ -245,6 +245,22 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 		os.Exit(1)
 	}
 
+    
+
+    //load rdb file from memory
+	 dataEntries,err:=rdb.ReadRDBFile(rdbConfig)
+	 if err!=nil{
+		    fmt.Fprintf(os.Stderr,"Error loading an rdb file :%s\r\n",err.Error())
+	 }
+
+	 for _,dataEntry:=range dataEntries{
+		   database[string(dataEntry.Key)]=Data{
+				   Value: dataEntry.Value,
+					Type: TYPE(dataEntry.Type),
+			}
+	 }
+
+
 
 	//sync with the master if this server is a replica
 
