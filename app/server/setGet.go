@@ -15,7 +15,7 @@ func getCommand(arguments [][]byte) RESP.Response {
 	}
 
 	expiryMutex.Lock()
-
+	
 	expires, exists := expiry[string(arguments[0])]
 
 	if exists {
