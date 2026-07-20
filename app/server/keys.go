@@ -25,32 +25,17 @@ func keys(args [][]byte) RESP.Response{
 
 
 		
-       count:=0
-		 exists,index:=hasWildCard(args[0])
+      
+		 exists,index:=hasWildCard(args[0],'*')
 
 		
 		 if exists{
                 
-			      databaseMutex.RLock()
-		         
-			   
-			      for key:=range database{
-						   if startsWith([]byte(key),args[0][:index]){
-								  count++
-							}
-					}
-					matchingKeys:=make([][]byte,0,count)
-				 
-					if exists,index:=hasWildCard(args[0]);exists{
-							  for strkey:=range database{
-								      key:=[]byte(strkey)
-									  if startsWith(key,args[0][:index]){
-											 matchingKeys = append(matchingKeys, key)
-									  }
-							  }
-					}
-
-					databaseMutex.RUnlock()
+			       prefix:=string(args[0][:index])
+			     
+					matchingKeys:=collectMatchingKeys(func (key string) bool{
+						    return startsWith(key,prefix)
+					})
 
 					 return RESP.Response{
 							Body: RESP.EncodeArray(matchingKeys),
@@ -59,17 +44,31 @@ func keys(args [][]byte) RESP.Response{
 		 }
 
 
+	exists,index=hasWildCard(args[0],'?')
+
+	if exists{
+		       
+		         
+			      prefix:=string(args[0][:index])
+			     
+					matchingKeys:=collectMatchingKeys(func (key string) bool{
+						    return startsWith(key,prefix) && len(prefix)+1==len(key)
+					})
+				 
+					
+					 return RESP.Response{
+							Body: RESP.EncodeArray(matchingKeys),
+							Type: RESP.ARRAY,
+		           }
+	}
 
 
 	 
-		
-
-
 	return RESP.Response{}
 		
 }
 
-func startsWith(key []byte, pattern []byte) bool {
+func startsWith(key string, pattern string) bool {
 	if len(key)<len(pattern){
 		   return false
 	}
@@ -82,4 +81,32 @@ func startsWith(key []byte, pattern []byte) bool {
 	}
 
 	return true
+}
+
+
+
+func collectMatchingKeys(matches func(string) bool) [][]byte{
+	  databaseMutex.RLock()
+		         
+			count:=0
+			for key:=range database{
+					if matches(key){
+								count++
+							
+					}
+			}
+			matchingKeys:=make([][]byte,0,count)
+			
+			
+				for key:=range database{
+					
+						if matches(key){
+								matchingKeys = append(matchingKeys, []byte(key))
+						}
+				}
+			
+
+			databaseMutex.RUnlock()
+
+			return  matchingKeys
 }

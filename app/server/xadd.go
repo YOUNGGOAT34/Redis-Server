@@ -97,7 +97,7 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	} else {
 		var err error
 
-		if exists,_:=hasWildCard(arguments[1]); exists{
+		if exists,_:=hasWildCard(arguments[1],'*'); exists{
 			Id, err = stream.generateSequence(arguments[1])
 		} else {
 

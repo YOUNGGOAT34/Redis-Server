@@ -23,9 +23,9 @@ func markDirty(key string, writer *Client) {
 }
 
 
-func hasWildCard(userInput []byte) (bool,int) {
+func hasWildCard(userInput []byte,card byte) (bool,int) {
 	for i, char := range userInput {
-		if char == '*' {
+		if char == card {
 			return true,i
 		}
 	}
