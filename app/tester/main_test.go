@@ -42,7 +42,10 @@ func info(msg string) {
 func TestMain(t *testing.T) {
 	go server.StartServer(&RESP.SERVER{
 		PORT: 6379,
-	},&rdb.RDB{})
+	},&rdb.RDB{
+		Dir: ".",
+		DbFileName: "dump.rdb",
+	})
 
 	waitForServer()
 
@@ -67,7 +70,7 @@ func TestMain(t *testing.T) {
 	// watch_test(t)
 	// list_watch_test(t)
 	// stream_xadd_watch_test(t)
-	// replication_test(t)
+	replication_test(t)
 
 }
 

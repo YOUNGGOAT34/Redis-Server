@@ -426,6 +426,9 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 	data, err := os.ReadFile(rdbConfig.Dir + "/" + rdbConfig.DbFileName)
 
 	if err != nil {
+     
+		fmt.Printf("directory: %s ,file name :%s\r\n",rdbConfig.DbFileName,rdbConfig.Dir)
+
 		WrappedError := &readErr{
 			Name: "reading rdb file",
 			Err:  err,
@@ -478,7 +481,7 @@ loop:
 
 		switch opcode {
 		case 0xFA:
-			auxiliaryKey, auxiliaryValue, err := readKeyValuePair(data, &pos)
+			_ , _ , err := readKeyValuePair(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
 					Name: "Auxilary values",
@@ -489,7 +492,7 @@ loop:
 				return []*Data{}, err
 			}
 
-			fmt.Printf("key=%s,value=%s\r\n", auxiliaryKey, auxiliaryValue)
+			// fmt.Printf("key=%s,value=%s\r\n", auxiliaryKey, auxiliaryValue)
 
 		case 0xFB:
 			dbHashTableSize, err := readLengthOrEncoding(data, &pos)
@@ -502,7 +505,7 @@ loop:
 				fmt.Fprintln(os.Stderr,WrappedError.Error())
 			}
 
-			expiryHashTableSize, err := readLengthOrEncoding(data, &pos)
+			_, err = readLengthOrEncoding(data, &pos)
 			if err != nil {
 
 				WrappedError := &readErr{
@@ -512,7 +515,7 @@ loop:
 
 				fmt.Fprintln(os.Stderr,WrappedError.Error())
 			}
-			fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n", dbHashTableSize.Value, expiryHashTableSize.Value)
+			// fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n", dbHashTableSize.Value, expiryHashTableSize.Value)
 
 			for i := uint64(0); i < dbHashTableSize.Value; i++ {
 				dataEntry, err := readEntry(data, &pos)
@@ -533,7 +536,7 @@ loop:
 			}
 
 		case 0xFE:
-			dbNumber, err := selectDatabase(data, &pos)
+			_, err := selectDatabase(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
 					Name: "Database number",
@@ -544,7 +547,7 @@ loop:
 
 				return nil, err
 			}
-			fmt.Printf("database number=%d\r\n", dbNumber)
+			// fmt.Printf("database number=%d\r\n", dbNumber)
 		case 0xFF:
 			break loop
 

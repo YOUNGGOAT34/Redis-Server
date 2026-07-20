@@ -26,9 +26,9 @@ func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 			return RESP.WrongType()
 		}
 
-		value := data.Value.(string)
+		value := data.Value.([]byte)
 
-		intValue, err = strconv.ParseInt(value, 10, 64)
+		intValue, err = strconv.ParseInt(string(value), 10, 64)
 
 		if err != nil {
 			return RESP.Response{
@@ -57,7 +57,7 @@ func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	database[key] = Data{
 		Type:  STRING,
-		Value: strValue,
+		Value: []byte(strValue),
 	}
 
 	markDirty(key, client)

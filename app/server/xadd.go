@@ -97,15 +97,15 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	} else {
 		var err error
 
-		if hasWildCard(arguments[1]) {
+		if exists,_:=hasWildCard(arguments[1]); exists{
 			Id, err = stream.generateSequence(arguments[1])
 		} else {
 
 			Id, err = createStreamID(arguments[1])
 
-			if err != nil && RESP.CompareBytes(arguments[1], []byte("-")) {
+			// if err != nil && RESP.CompareBytes(arguments[1], []byte("-")) {
 
-			}
+			// }
 
 		}
 
@@ -195,11 +195,4 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 
 }
 
-func hasWildCard(userSpecifiedId []byte) bool {
-	for _, char := range userSpecifiedId {
-		if char == '*' {
-			return true
-		}
-	}
-	return false
-}
+

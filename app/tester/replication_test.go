@@ -16,7 +16,6 @@ import (
 
 // Runner & Stages
 
-
 func replication_test(t *testing.T) {
 	stageXX_ReplicaHandshake(t)
 	stageXX_WritePropagation(t)
@@ -46,7 +45,7 @@ func stageXX_ReplicaHandshake(t *testing.T) {
 	if !strings.Contains(infoResp, "role: master") {
 		failf(t, "expected 'role: master' in INFO block, got: %q", infoResp)
 	}
-
+   
 	if !replicaRegistered && !strings.Contains(infoResp, "connected_slaves:1") {
 		failf(t, "replica never registered in master's REPLICAS slice, and INFO doesn't report connected_slaves:1")
 	}
@@ -798,7 +797,12 @@ func startMaster(t *testing.T) (*RESP.SERVER, int) {
 		MASTERREPLID: "8371b4fb115b71c4a0413b1db346e45071511224",
 		REPLICAS:     make([]*RESP.REPLICA, 0),
 	}
-	go server.StartServer(cfg,&rdb.RDB{})
+
+	rdb:=&rdb.RDB{
+		  Dir: ".",
+		  DbFileName: "dump.rdb",
+	}
+	go server.StartServer(cfg,rdb)
 	time.Sleep(100 * time.Millisecond)
 	return cfg, port
 }
@@ -812,7 +816,11 @@ func startReplica(t *testing.T, masterPort int) (*RESP.SERVER, int) {
 		MasterHost: "127.0.0.1",
 		MasterPort: masterPort,
 	}
-	go server.StartServer(cfg,&rdb.RDB{})
+	rdb:=&rdb.RDB{
+		  Dir: ".",
+		  DbFileName: "dump.rdb",
+	}
+	go server.StartServer(cfg,rdb)
 	return cfg, port
 }
 

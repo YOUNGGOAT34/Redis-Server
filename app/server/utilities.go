@@ -21,3 +21,13 @@ func markDirty(key string, writer *Client) {
 		}
 	}
 }
+
+
+func hasWildCard(userInput []byte) (bool,int) {
+	for i, char := range userInput {
+		if char == '*' {
+			return true,i
+		}
+	}
+	return false,-1
+}
