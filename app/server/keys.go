@@ -23,12 +23,8 @@ func keys(args [][]byte) RESP.Response{
 				}
 		 }
 
-
-		
-      
 		 exists,index:=hasWildCard(args[0],'*')
 
-		
 		 if exists{
                 
 			       prefix:=string(args[0][:index])

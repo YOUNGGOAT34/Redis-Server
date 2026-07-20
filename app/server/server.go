@@ -1,8 +1,10 @@
 package server
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"strconv"
 	"io"
 	"net"
 	"os"
@@ -112,19 +114,28 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 					 if err != nil {
 							return
 						}
-	
-					//  _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
-					// 	Body: replication.EmptyRDB,
-					// 	Type: RESP.RDBFILE,
+	           
+					data,err:=os.ReadFile(rdbConfig.Dir+"/"+rdbConfig.DbFileName)
+					if err!=nil{
+						   fmt.Fprintf(os.Stderr,"Error reading the rdb file in the master: %s\r\n",err.Error())
+							return
+					}
+
+					 _,err=conn.Write(RESP.EncodeResponse(RESP.Response{
+						Body: data,
+						Type: RESP.RDBFILE,
 					
-					// }))
+					}))
 	
-					// if err != nil {
-					// 		return
-					// 	}
+					if err != nil {
+						   fmt.Fprintf(os.Stderr,"Error sending an rdb file to the replica: %s\r\n",err.Error())
+							return
+						}
+
 					replica:=&RESP.REPLICA{
 						  Conn:conn,
 					}
+
 					replica.Offset.Store(-1)
 					replConfig.ReplicasMutex.Lock()
 					replConfig.REPLICAS = append(replConfig.REPLICAS,replica)
@@ -169,9 +180,7 @@ func handleMaster(conn net.Conn,replConfig *RESP.SERVER) {
 				bytesRead, err := conn.Read(temp)
             
 				if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
-
 					return
-
 				}
 
 				if err != nil {
@@ -301,11 +310,37 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 
 
 		message="*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
-		err=handShake(message,conn,ExpectFullResync)
+		rdbBytes,err:=receiveFullResync(message,conn)
+
 
 		if err!=nil{
 			  panic(err)
 		}
+
+
+	path := rdbConfig.Dir + "/" + rdbConfig.DbFileName
+
+	_, err = os.Stat(path)
+
+	if os.IsNotExist(err) {
+		err = os.WriteFile(path, rdbBytes, 0644)
+
+		if err != nil {
+
+			panic(err)
+		}
+
+	}else{
+		
+		err=os.WriteFile(path,rdbBytes,0644)
+		   
+	}
+
+   
+	 if err!=nil{
+		   panic(err)
+	 }
+
 
 		go handleMaster(conn,replConfig)
    
@@ -356,15 +391,128 @@ func handShake(message string,conn net.Conn,RES ExpectedResponse) error{
 							if string(response[:n])!="+OK\r\n"{
 							return errors.New("Unexpected Response from the master\n")
 					  }
-
-					case ExpectFullResync:
-
-						if !strings.HasPrefix(string(response[:n]), "+FULLRESYNC"){
-								return errors.New("Unexpected Response from the master\n")
-							}
-
 		  }
 
-
 		return nil
+}
+
+
+func receiveFullResync(message string,conn net.Conn) ([]byte,error){
+	    temp:=make([]byte,1024)
+		 var buffer []byte
+
+		
+
+		  _,err:=conn.Write([]byte(message))
+	
+		  if err!=nil{
+					return nil,err
+		  }
+
+		 
+
+		 firstNewLinePos:=0
+
+		 //read the fullresync line
+		
+		 for{
+
+			   n,err:=conn.Read(temp)
+
+				if err!=nil{
+					  return nil,err
+				}
+
+				buffer = append(buffer, temp[:n]...)
+
+				firstNewLinePos=bytes.Index(buffer[:n],[]byte("\r\n"))
+
+				if firstNewLinePos==-1{
+					
+					  continue
+				}
+
+				
+				fullyResync:=buffer[:firstNewLinePos]
+
+            if !strings.HasPrefix(string(fullyResync), "+FULLRESYNC"){
+								return nil,errors.New("Unexpected Response from the master\n")
+					}
+
+				buffer=buffer[firstNewLinePos+2:]
+				
+				break
+		 }
+
+		 //read the rdb length
+		 secondNewLine:=0
+		 rdbLength:=0
+		 for{
+			secondNewLine=bytes.Index(buffer,[]byte("\r\n"))
+
+			if secondNewLine!=-1{
+				  lengthLine:=buffer[:secondNewLine]
+				  //skip the header(+2 for the crlf)
+				  buffer=buffer[secondNewLine+2:]
+
+				  if len(lengthLine)==0 || lengthLine[0]!='$'{
+					   return nil,errors.New("Expected RDB length")
+				  }
+
+				  rdbLength,err=strconv.Atoi(string(lengthLine[1:]))
+
+				  if err!=nil{
+					 return nil,err
+				  }
+
+				  break
+				 
+				  
+			}
+
+			n,err:=conn.Read(temp)
+
+			if err!=nil{
+				  return nil,err
+			}
+
+
+			   buffer = append(buffer, temp[:n]...)
+		 }
+
+
+		 rdbData:=make([]byte,rdbLength)
+		 /*
+		   There might be some rdb files in the buffer ,so copy them and get the number of bytes we copied
+		 */
+		 copiedBytes:=copy(rdbData,buffer)
+		 buffer=buffer[copiedBytes:]
+
+
+		 for copiedBytes<rdbLength{
+			  n,err:=conn.Read(temp)
+    
+			  if err!=nil{
+				 return nil,err
+			  }
+
+			  bytesNeeded:=rdbLength-copiedBytes
+
+
+			  if n<=bytesNeeded{
+				  copy(rdbData[copiedBytes:],temp[:n])
+				  copiedBytes+=n
+			  }else{
+				   
+				    copy(rdbData[copiedBytes:],temp[:bytesNeeded])
+					 buffer=append(buffer, temp[bytesNeeded:n]...)
+					 copiedBytes=bytesNeeded
+
+			  }
+		 }
+
+
+
+		 return rdbData,nil
+
 }
