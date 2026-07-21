@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"strconv"
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
@@ -264,6 +265,15 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 
 	 for _,dataEntry:=range dataEntries{
 
+
+		    if dataEntry.HasExpiry{
+				   expiresAt:=time.UnixMilli(int64(dataEntry.ExpiresAt))
+					if time.Now().After(expiresAt){
+						  continue
+					}
+				   expiry[string(dataEntry.Key)]=expiresAt
+			 }
+
 		    switch dataEntry.Type{
 					case rdb.STRING:
 
@@ -272,18 +282,12 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 									Type: STRING,
 							}
 					case rdb.LIST:
-						   if len(dataEntry.Value.([][]byte))>0{
-								   node:=&Node{
-										  data: dataEntry.Value.([][]byte)[0],
-									}
+						        items:=dataEntry.Value.([][]byte)
+						  
 
-									list := &List{
-											Head: node,
-											Tail: node,
-											len:  1,
-										}
+									list := &List{}
 
-									for _,entry :=range dataEntry.Value.([][]byte)[1:]{
+									for _,entry :=range items{
 										     list.PushBack(entry)
 									}
 
@@ -291,16 +295,15 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 									Type:  LIST,
 									Value: list,
 								}
-							}
+							
 
 					default:
 						 panic("Unknown data type was stored in the rdb file")
 
 			 }
 
-		   if dataEntry.Type==rdb.STRING{
-				 
-			}
+		  
+			
 
 	 }
 

@@ -490,6 +490,8 @@ loop:
 				}
 
 				fmt.Fprintln(os.Stderr,WrappedError.Error())
+
+				return nil,err
 			}
 
 			_, err = readLengthOrEncoding(data, &pos)
