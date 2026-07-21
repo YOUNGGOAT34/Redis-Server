@@ -1,6 +1,7 @@
 package rdb
 
 import (
+	"errors"
 	"fmt"
 	"io"
 )
@@ -30,6 +31,8 @@ type Data struct {
 	Key   []byte
 	Value any
 	Type  TYPE
+	HasExpiry bool
+	ExpiresAt uint64
 }
 
 func (err *readErr) Error() string {
@@ -40,7 +43,7 @@ func (err *readErr) Error() string {
 
 
 
-func readString(data []byte ,pos *int) ([]byte,error){
+func readString(data []byte ,pos *int,isKey bool) ([]byte,error){
 
 	length, err := readLengthOrEncoding(data, pos)
 	        
@@ -51,6 +54,9 @@ func readString(data []byte ,pos *int) ([]byte,error){
 	var value []byte
 
 	if length.Special {
+		if isKey{
+			 return nil,errors.New("Special encoding for keys is not allowed")
+		}
 		value = fmt.Appendf(nil, "%d", length.Value)
 	} else {
 

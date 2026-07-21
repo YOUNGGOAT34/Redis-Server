@@ -2,6 +2,7 @@ package rdb
 
 import (
 	"CacheDB/app/RESP"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -148,9 +149,9 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 	switch opcode {
 	case 0xFD:
 
-		_, err := readNBytes(data, pos, 4)
+		expiryInSeconds, err := readNBytes(data, pos, 4)
 		if err != nil {
-			//handle error
+			
 			WrappedError := &readErr{
 				Name: "0xFD reading Expiry In seconds",
 				Err:  err,
@@ -159,6 +160,11 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 			fmt.Fprintln(os.Stderr, WrappedError.Error())
 			return nil, err
 		}
+
+		seconds:=binary.LittleEndian.Uint32(expiryInSeconds)
+
+		DATA.HasExpiry=true
+		DATA.ExpiresAt=uint64(seconds)*1000
 
 		opcode, err = readByte(data, pos)
 		if err != nil {
@@ -174,7 +180,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 
 	case 0xFC:
 
-		_, err := readNBytes(data, pos, 8)
+		expiryInMilliseconds, err := readNBytes(data, pos, 8)
 
 		if err != nil {
 
@@ -186,6 +192,11 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 			fmt.Fprintln(os.Stderr, WrappedError.Error())
 			return nil, err
 		}
+
+		milliseconds:=binary.LittleEndian.Uint64(expiryInMilliseconds)
+
+		DATA.HasExpiry=true
+		DATA.ExpiresAt=milliseconds
 
 		opcode, err = readByte(data, pos)
 
@@ -241,10 +252,15 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 
 
 	case 0x02:
-		fmt.Printf("set\r\n")
+		return nil,errors.New("sets encoding is not implemented")
+	case 0x0F:
+		return nil,errors.New("streams encoding is not implemented")
+	default:
+		return nil, fmt.Errorf("unknown object type: 0x%02x", opcode)
+
 	}
 
-	return &Data{}, nil
+	// return &Data{}, nil
 
 }
 
@@ -543,13 +559,13 @@ func selectDatabase(data []byte, pos *int) (uint64, error) {
 //strings
 func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
 
-	key,err:=readString(data,pos)
+	key,err:=readString(data,pos,true)
 
 	if err!=nil{
 		  return EOF()
 	}
 
-	value,err:=readString(data,pos)
+	value,err:=readString(data,pos,false)
 
 	if err!=nil{
 		  return EOF()
@@ -562,7 +578,7 @@ func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
 
 //lists
 func readListKeyValuePair(data []byte, pos *int) ([]byte,[][]byte,error){
-	   key,err:=readString(data,pos)
+	   key,err:=readString(data,pos,true)
 
 		if err!=nil{
 			  return nil,nil,err
@@ -577,7 +593,7 @@ func readListKeyValuePair(data []byte, pos *int) ([]byte,[][]byte,error){
 		list:=make([][]byte,0,listLength.Value)
 
 		for i:=uint64(0);i<listLength.Value;i++{
-			   element,err:=readString(data,pos)
+			   element,err:=readString(data,pos,false)
 
 				if err!=nil{
 					  return nil,nil,err
