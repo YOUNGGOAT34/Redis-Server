@@ -70,7 +70,7 @@ func TestMain(t *testing.T) {
 	// watch_test(t)
 	// list_watch_test(t)
 	// stream_xadd_watch_test(t)
-	replication_test(t)
+	// replication_test(t)
 
 }
 

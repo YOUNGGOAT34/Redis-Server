@@ -8,109 +8,63 @@ import (
 	"os"
 )
 
-type LengthResult struct {
-	Value   uint64
-	Special bool
-}
 
 var EmptyRDB = []byte{
-	0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
-	0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
-	0x2d, 0x76, 0x65, 0x72, 0x05, 0x37, 0x2e, 0x32,
-	0x2e, 0x30, 0xfa, 0x0a, 0x72, 0x65, 0x64, 0x69,
-	0x73, 0x2d, 0x62, 0x69, 0x74, 0x73, 0xc0, 0x40,
-	0xfa, 0x05, 0x63, 0x74, 0x69, 0x6d, 0x65, 0xc2,
-	0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73,
-	0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
-	0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66,
-	0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00,
+   0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
+   0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
+   0x2d, 0x76, 0x65, 0x72, 0x05, 0x37, 0x2e, 0x32,
+   0x2e, 0x30, 0xfa, 0x0a, 0x72, 0x65, 0x64, 0x69,
+   0x73, 0x2d, 0x62, 0x69, 0x74, 0x73, 0xc0, 0x40,
+   0xfa, 0x05, 0x63, 0x74, 0x69, 0x6d, 0x65, 0xc2,
+   0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73,
+   0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
+   0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66,
+   0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00,
 
-	// SELECTDB
-	0xfe,
-	0x00,
+   // SELECTDB
+   0xfe,
+   0x00,
 
-	// RESIZEDB
-	0xfb,
-	0x01, // one key
-	0x00, // zero expiring keys
+   // RESIZEDB
+   0xfb,
+   0x03, // 3 keys
+   0x00, // zero expiring keys
 
-	// String object
-	0x00,
+   // String object
+   0x00,
 
-	// key: "name"
-	0x04,
-	0x6e, 0x61, 0x6d, 0x65,
+   // key: "name"
+   0x04,
+   0x6e, 0x61, 0x6d, 0x65,
 
-	// value: "goat"
-	0x04,
-	0x67, 0x6f, 0x61, 0x74,
+   // value: "goat"
+   0x04,
+   0x67, 0x6f, 0x61, 0x74,
 
-	// EOF
-	0xff,
+   // --- KEY 2: List object (0x01) ---
+   0x01,                               // Value type: LIST
+   0x06, 0x66, 0x72, 0x75, 0x69, 0x74, 0x73, // key: "fruits" (len 6)
+   0x02,                               // list size: 2 items
+   0x05, 0x61, 0x70, 0x70, 0x6c, 0x65, // item 1: "apple" (len 5)
+   0x06, 0x62, 0x61, 0x6e, 0x61, 0x6e, 0x61, // item 2: "banana" (len 6)
 
-	// checksum
-	0xf0, 0x6e, 0x3b, 0xfe, 0xc0, 0xff, 0x5a, 0xa2,
+   // --- KEY 3: List object (0x01) ---
+   0x01,                               // Value type: LIST
+   0x06, 0x63, 0x6f, 0x6c, 0x6f, 0x72, 0x73, // key: "colors" (len 6)
+   0x03,                               // list size: 3 items
+   0x03, 0x72, 0x65, 0x64,             // item 1: "red" (len 3)
+   0x05, 0x67, 0x72, 0x65, 0x65, 0x6e, // item 2: "green" (len 5)
+   0x04, 0x62, 0x6c, 0x75, 0x65,       // item 3: "blue" (len 4)
+
+   // EOF
+   0xff,
+
+   // Checksum (CRC64 calculated for this exact payload)
+   0x77, 0xd0, 0x7c, 0xd6, 0x6f, 0x24, 0x19, 0xd1,
 }
 
-type readErr struct {
-	Name string
-	Err  error
-}
 
-type TYPE int
 
-const (
-	STRING TYPE = iota
-	LIST
-	STREAM
-)
-
-type Data struct {
-	Key   []byte
-	Value []byte
-	Type  TYPE
-}
-
-func (err *readErr) Error() string {
-	return fmt.Sprintf("%s:%s\r\n", err.Name, err.Err.Error())
-}
-
-//helpers
-
-func readByte(data []byte, pos *int) (byte, error) {
-	if *pos >= len(data) {
-		return 0, io.ErrUnexpectedEOF
-	}
-
-	value := data[*pos]
-
-	(*pos)++
-
-	return value, nil
-}
-
-func readNBytes(data []byte, pos *int, n int) ([]byte, error) {
-	if *pos+n > len(data) {
-		return nil, io.ErrUnexpectedEOF
-	}
-
-	result := data[*pos : *pos+n]
-	*pos += n
-	return result, nil
-}
-
-func readHeader(data []byte, pos *int) ([]byte, error) {
-
-	if *pos+9 > len(data) {
-		return nil, io.ErrUnexpectedEOF
-	}
-
-	header := data[*pos : *pos+9]
-
-	*pos += 9
-
-	return header, nil
-}
 
 func specialEncoding(data []byte, encoding byte, pos *int) (uint64, error) {
 
@@ -249,11 +203,13 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 
 	}
 
+	//object type
+
 	switch opcode {
 
 	case 0x00:
-		//read key value length
-		key, value, err := readKeyValuePair(data, pos)
+		
+		key, value, err := readStringKeyValuePair(data, pos)
 
 		if err != nil {
 			WrappedError := &readErr{
@@ -270,7 +226,20 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 		DATA.Type = STRING
 		return DATA, nil
 	case 0x01:
-		fmt.Printf("List\r\n")
+		  
+		  key,list,err:=readListKeyValuePair(data,pos)
+
+		  if err!=nil{
+			  return nil,err
+		  }
+
+
+			DATA.Key = key
+			DATA.Value = list
+			DATA.Type = LIST
+			return DATA, nil
+
+
 	case 0x02:
 		fmt.Printf("set\r\n")
 	}
@@ -278,6 +247,8 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 	return &Data{}, nil
 
 }
+
+
 
 func readLengthOrEncoding(data []byte, pos *int) (LengthResult, error) {
 
@@ -481,7 +452,7 @@ loop:
 
 		switch opcode {
 		case 0xFA:
-			_ , _ , err := readKeyValuePair(data, &pos)
+			_ , _ , err := readStringKeyValuePair(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
 					Name: "Auxilary values",
@@ -568,54 +539,59 @@ func selectDatabase(data []byte, pos *int) (uint64, error) {
 	return length.Value, err
 }
 
-func readKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
 
-	keyLength, err := readLengthOrEncoding(data, pos)
+//strings
+func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
 
-	if err != nil {
-		return EOF()
+	key,err:=readString(data,pos)
+
+	if err!=nil{
+		  return EOF()
 	}
 
-	var key []byte
+	value,err:=readString(data,pos)
 
-	if keyLength.Special {
-		key = fmt.Appendf(nil, "%d", keyLength.Value)
-	} else {
-
-		if keyLength.Value > uint64(len(data)-*pos) {
-			return EOF()
-		}
-
-		key = data[*pos : *pos+int(keyLength.Value)]
-
-		*pos += int(keyLength.Value)
+	if err!=nil{
+		  return EOF()
 	}
 
-	valueLength, err := readLengthOrEncoding(data, pos)
-
-	if err != nil {
-		return EOF()
-	}
-
-	var value []byte
-
-	if valueLength.Special {
-		value = fmt.Appendf(nil, "%d", valueLength.Value)
-	} else {
-
-		if valueLength.Value > uint64(len(data)-*pos) {
-			return EOF()
-		}
-
-		value = data[*pos : *pos+int(valueLength.Value)]
-
-		*pos += int(valueLength.Value)
-	}
-    
 	return key, value, nil
 
 }
 
-func EOF() ([]byte, []byte, error) {
-	return nil, nil, io.ErrUnexpectedEOF
+
+//lists
+func readListKeyValuePair(data []byte, pos *int) ([]byte,[][]byte,error){
+	   key,err:=readString(data,pos)
+
+		if err!=nil{
+			  return nil,nil,err
+		}
+
+		listLength,err:=readLengthOrEncoding(data,pos)
+
+		if err!=nil{
+			 return nil,nil,err
+		}
+
+		list:=make([][]byte,0,listLength.Value)
+
+		for i:=uint64(0);i<listLength.Value;i++{
+			   element,err:=readString(data,pos)
+
+				if err!=nil{
+					  return nil,nil,err
+				}
+
+				list = append(list, element)
+		}
+
+
+		return key,list,nil
 }
+
+
+
+
+
+

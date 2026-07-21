@@ -263,10 +263,45 @@ func StartServer(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) {
 	 }
 
 	 for _,dataEntry:=range dataEntries{
-		   database[string(dataEntry.Key)]=Data{
-				   Value: dataEntry.Value,
-					Type: TYPE(dataEntry.Type),
+
+		    switch dataEntry.Type{
+					case rdb.STRING:
+
+							database[string(dataEntry.Key)]=Data{
+									Value: dataEntry.Value.([]byte),
+									Type: STRING,
+							}
+					case rdb.LIST:
+						   if len(dataEntry.Value.([][]byte))>0{
+								   node:=&Node{
+										  data: dataEntry.Value.([][]byte)[0],
+									}
+
+									list := &List{
+											Head: node,
+											Tail: node,
+											len:  1,
+										}
+
+									for _,entry :=range dataEntry.Value.([][]byte)[1:]{
+										     list.PushBack(entry)
+									}
+
+									database[string(dataEntry.Key)] = Data{
+									Type:  LIST,
+									Value: list,
+								}
+							}
+
+					default:
+						 panic("Unknown data type was stored in the rdb file")
+
+			 }
+
+		   if dataEntry.Type==rdb.STRING{
+				 
 			}
+
 	 }
 
 
