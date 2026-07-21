@@ -102,11 +102,6 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 		} else {
 
 			Id, err = createStreamID(arguments[1])
-
-			// if err != nil && RESP.CompareBytes(arguments[1], []byte("-")) {
-
-			// }
-
 		}
 
 		if err != nil {
