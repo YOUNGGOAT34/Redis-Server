@@ -19,7 +19,42 @@ func writeAuxFileds(w io.Writer) error{
 	    
 }
 
-func writeAuxFiled(w io.Writer,key string,value string) error{
+
+
+
+func specialEncoding(w io.Writer,key string,value int) error{
+	  if value<0{
+		  return errors.New("negative integers are not supported")
+	  }
+	   if value <256{
+			     buffer:=[2]byte{0xc0,byte(value&0xFF)}
+				  _,err:=w.Write(buffer[:])
+
+				  return err
+		}else if value<65536{
+			     buffer:=[3]byte{0xc1,byte(value>>8),byte(value&0xFF)}
+              _,err:=w.Write(buffer[:])
+
+				  return err
+
+		}else{
+			  buffer:=[5]byte{
+				         0xc2,
+							byte(value>>24),
+							byte(value>>16),
+							byte(value>>8),
+							byte(value&0xFF),
+			  }
+
+			  _,err:=w.Write(buffer[:])
+
+				  return err
+		}
+
+
+}
+
+func writeAuxString(w io.Writer,key string,value string) error{
 	     /*
 		      AUX opcode
 				length of key
@@ -31,9 +66,11 @@ func writeAuxFiled(w io.Writer,key string,value string) error{
 			   return err
 		 }
 
-		 if _,err:=w.Write([]byte{byte(len(key))});err!=nil{
+		err:=encodeLength(w,len(key))
+
+		if err!=nil{
 			  return err
-		 }
+		}
 
 
 		 if _,err:=w.Write([]byte(key));err!=nil{
@@ -41,17 +78,16 @@ func writeAuxFiled(w io.Writer,key string,value string) error{
 		 }
 
 
-		if _,err:=w.Write([]byte{byte(len(value))});err!=nil{
-			  return err
-		 }
+		err=encodeLength(w,len(value))
 
+		if err!=nil{
+			  return err
+		}
 
 		 if _,err:=w.Write([]byte(value));err!=nil{
 			  return err
 		 }
-      
-		 
-
+       
 		 return nil
 }
 
