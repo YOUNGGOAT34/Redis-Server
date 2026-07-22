@@ -3,6 +3,7 @@ package rdb
 import (
 	"errors"
 	"io"
+	"time"
 )
 
 
@@ -15,17 +16,38 @@ func writeRDBHeader(w io.Writer) error{
 		 return nil
 }
 
+
 func writeAuxFileds(w io.Writer) error{
-	    
+	if err := writeAuxString(w,"redis-ver","7.2.0",); err != nil {
+        return err
+    }
+
+    if err := writeAuxInteger(w,"redis-bits",64,); err != nil {
+        return err
+    }
+
+	 if err := writeAuxInteger(w, "ctime", uint32(time.Now().Unix())); err != nil {
+        return err
+    }
+	 
+
+	  if err := writeAuxInteger(w, "used-mem", 0); err != nil {
+        return err
+    }
+
+
+	 if err := writeAuxInteger(w, "aof-base", 0); err != nil {
+        return err
+    }
+
+	return nil
 }
 
 
 
 
-func specialEncoding(w io.Writer,key string,value int) error{
-	  if value<0{
-		  return errors.New("negative integers are not supported")
-	  }
+func encodeSpecialInteger(w io.Writer,value uint32) error{
+
 	   if value <256{
 			     buffer:=[2]byte{0xc0,byte(value&0xFF)}
 				  _,err:=w.Write(buffer[:])
@@ -52,6 +74,41 @@ func specialEncoding(w io.Writer,key string,value int) error{
 		}
 
 
+}
+
+func writeAuxInteger(w io.Writer,key string,value uint32) error{
+
+	   /*
+					AUX opcode
+					encoded length of key
+					key
+					special encoding
+					integer bytes
+		*/
+
+	    if  _,err:=w.Write([]byte{0xFA});err !=nil{
+			   return err
+		 }
+
+		err:=encodeLength(w,len(key))
+
+		if err!=nil{
+			  return err
+		}
+
+
+		 if _,err:=w.Write([]byte(key));err!=nil{
+			  return err
+		 }
+
+
+		 err=encodeSpecialInteger(w,value)
+
+		 if err!=nil{
+			  return err
+		 }
+       
+		 return nil
 }
 
 func writeAuxString(w io.Writer,key string,value string) error{
