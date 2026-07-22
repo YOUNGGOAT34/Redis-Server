@@ -9,65 +9,7 @@ import (
 	"os"
 )
 
-
-var EmptyRDB = []byte{
-   0x52, 0x45, 0x44, 0x49, 0x53, 0x30, 0x30, 0x31,
-   0x31, 0xfa, 0x09, 0x72, 0x65, 0x64, 0x69, 0x73,
-   0x2d, 0x76, 0x65, 0x72, 0x05, 0x37, 0x2e, 0x32,
-   0x2e, 0x30, 0xfa, 0x0a, 0x72, 0x65, 0x64, 0x69,
-   0x73, 0x2d, 0x62, 0x69, 0x74, 0x73, 0xc0, 0x40,
-   0xfa, 0x05, 0x63, 0x74, 0x69, 0x6d, 0x65, 0xc2,
-   0x6d, 0x08, 0xbc, 0x65, 0xfa, 0x08, 0x75, 0x73,
-   0x65, 0x64, 0x2d, 0x6d, 0x65, 0x6d, 0xc2, 0xb0,
-   0xc4, 0x10, 0x00, 0xfa, 0x08, 0x61, 0x6f, 0x66,
-   0x2d, 0x62, 0x61, 0x73, 0x65, 0xc0, 0x00,
-
-   // SELECTDB
-   0xfe,
-   0x00,
-
-   // RESIZEDB
-   0xfb,
-   0x03, // 3 keys
-   0x00, // zero expiring keys
-
-   // String object
-   0x00,
-
-   // key: "name"
-   0x04,
-   0x6e, 0x61, 0x6d, 0x65,
-
-   // value: "goat"
-   0x04,
-   0x67, 0x6f, 0x61, 0x74,
-
-   // --- KEY 2: List object (0x01) ---
-   0x01,                               // Value type: LIST
-   0x06, 0x66, 0x72, 0x75, 0x69, 0x74, 0x73, // key: "fruits" (len 6)
-   0x02,                               // list size: 2 items
-   0x05, 0x61, 0x70, 0x70, 0x6c, 0x65, // item 1: "apple" (len 5)
-   0x06, 0x62, 0x61, 0x6e, 0x61, 0x6e, 0x61, // item 2: "banana" (len 6)
-
-   // --- KEY 3: List object (0x01) ---
-   0x01,                               // Value type: LIST
-   0x06, 0x63, 0x6f, 0x6c, 0x6f, 0x72, 0x73, // key: "colors" (len 6)
-   0x03,                               // list size: 3 items
-   0x03, 0x72, 0x65, 0x64,             // item 1: "red" (len 3)
-   0x05, 0x67, 0x72, 0x65, 0x65, 0x6e, // item 2: "green" (len 5)
-   0x04, 0x62, 0x6c, 0x75, 0x65,       // item 3: "blue" (len 4)
-
-   // EOF
-   0xff,
-
-   // Checksum (CRC64 calculated for this exact payload)
-   0x77, 0xd0, 0x7c, 0xd6, 0x6f, 0x24, 0x19, 0xd1,
-}
-
-
-
-
-func specialEncoding(data []byte, encoding byte, pos *int) (uint64, error) {
+func decodeSpecialEncoding(data []byte, encoding byte, pos *int) (uint64, error) {
 
 	specialEncodingType := encoding & 0x3F
 
@@ -139,7 +81,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 			Err:  io.ErrUnexpectedEOF,
 		}
 
-		fmt.Fprintln(os.Stderr,WrappedError.Error())
+		fmt.Fprintln(os.Stderr, WrappedError.Error())
 		return nil, io.ErrUnexpectedEOF
 	}
 
@@ -151,7 +93,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 
 		expiryInSeconds, err := readNBytes(data, pos, 4)
 		if err != nil {
-			
+
 			WrappedError := &readErr{
 				Name: "0xFD reading Expiry In seconds",
 				Err:  err,
@@ -161,10 +103,10 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 			return nil, err
 		}
 
-		seconds:=binary.LittleEndian.Uint32(expiryInSeconds)
+		seconds := binary.LittleEndian.Uint32(expiryInSeconds)
 
-		DATA.HasExpiry=true
-		DATA.ExpiresAt=uint64(seconds)*1000
+		DATA.HasExpiry = true
+		DATA.ExpiresAt = uint64(seconds) * 1000
 
 		opcode, err = readByte(data, pos)
 		if err != nil {
@@ -173,7 +115,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 				Err:  err,
 			}
 
-			fmt.Fprintln(os.Stderr,WrappedError.Error())
+			fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 			return nil, err
 		}
@@ -193,21 +135,21 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 			return nil, err
 		}
 
-		milliseconds:=binary.LittleEndian.Uint64(expiryInMilliseconds)
+		milliseconds := binary.LittleEndian.Uint64(expiryInMilliseconds)
 
-		DATA.HasExpiry=true
-		DATA.ExpiresAt=milliseconds
+		DATA.HasExpiry = true
+		DATA.ExpiresAt = milliseconds
 
 		opcode, err = readByte(data, pos)
 
 		if err != nil {
 
-			WrappedError:= &readErr{
+			WrappedError := &readErr{
 				Name: "Reading entry's Opcode(key type)",
 				Err:  err,
 			}
 
-			fmt.Fprintln(os.Stderr,WrappedError.Error())
+			fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 			return nil, err
 		}
@@ -219,7 +161,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 	switch opcode {
 
 	case 0x00:
-		
+
 		key, value, err := readStringKeyValuePair(data, pos)
 
 		if err != nil {
@@ -228,7 +170,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 				Err:  err,
 			}
 
-			fmt.Fprintln(os.Stderr,WrappedError.Error())
+			fmt.Fprintln(os.Stderr, WrappedError.Error())
 			return nil, err
 		}
 
@@ -237,24 +179,22 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 		DATA.Type = STRING
 		return DATA, nil
 	case 0x01:
-		  
-		  key,list,err:=readListKeyValuePair(data,pos)
 
-		  if err!=nil{
-			  return nil,err
-		  }
+		key, list, err := readListKeyValuePair(data, pos)
 
+		if err != nil {
+			return nil, err
+		}
 
-			DATA.Key = key
-			DATA.Value = list
-			DATA.Type = LIST
-			return DATA, nil
-
+		DATA.Key = key
+		DATA.Value = list
+		DATA.Type = LIST
+		return DATA, nil
 
 	case 0x02:
-		return nil,errors.New("sets encoding is not implemented")
+		return nil, errors.New("sets encoding is not implemented")
 	case 0x0F:
-		return nil,errors.New("streams encoding is not implemented")
+		return nil, errors.New("streams encoding is not implemented")
 	default:
 		return nil, fmt.Errorf("unknown object type: 0x%02x", opcode)
 
@@ -264,9 +204,7 @@ func readEntry(data []byte, pos *int) (*Data, error) {
 
 }
 
-
-
-func readLengthOrEncoding(data []byte, pos *int) (LengthResult, error) {
+func decodeLength(data []byte, pos *int) (LengthResult, error) {
 
 	if *pos >= len(data) {
 		return LengthResult{
@@ -357,7 +295,7 @@ func readLengthOrEncoding(data []byte, pos *int) (LengthResult, error) {
 		}, nil
 
 	case 3:
-		value, err := specialEncoding(data, encoding, pos)
+		value, err := decodeSpecialEncoding(data, encoding, pos)
 		if err != nil {
 			return LengthResult{}, err
 		}
@@ -392,7 +330,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 				Err:  err,
 			}
 
-			fmt.Fprintln(os.Stderr,WrappedError.Error())
+			fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 			return nil, err
 		}
@@ -405,7 +343,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 			Err:  err,
 		}
 
-		fmt.Fprintln(os.Stderr,WrappedError.Error())
+		fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 		return nil, err
 	}
@@ -413,15 +351,15 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 	data, err := os.ReadFile(rdbConfig.Dir + "/" + rdbConfig.DbFileName)
 
 	if err != nil {
-     
-		fmt.Printf("directory: %s ,file name :%s\r\n",rdbConfig.DbFileName,rdbConfig.Dir)
+
+		fmt.Printf("directory: %s ,file name :%s\r\n", rdbConfig.DbFileName, rdbConfig.Dir)
 
 		WrappedError := &readErr{
 			Name: "reading rdb file",
 			Err:  err,
 		}
 
-		fmt.Fprintln(os.Stderr,WrappedError.Error())
+		fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 		return nil, err
 	}
@@ -434,7 +372,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 			Err:  io.ErrUnexpectedEOF,
 		}
 
-		fmt.Fprintln(os.Stderr,WrappedError.Error())
+		fmt.Fprintln(os.Stderr, WrappedError.Error())
 		return []*Data{}, err
 	}
 
@@ -444,7 +382,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 			Err:  io.ErrUnexpectedEOF,
 		}
 
-		fmt.Fprintln(os.Stderr,WrappedError.Error())
+		fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 		return []*Data{}, errors.New("The given file is not an rdb file")
 	}
@@ -468,33 +406,33 @@ loop:
 
 		switch opcode {
 		case 0xFA:
-			_ , _ , err := readStringKeyValuePair(data, &pos)
+			_, _, err := readStringKeyValuePair(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
 					Name: "Auxilary values",
 					Err:  err,
 				}
 
-				fmt.Fprintln(os.Stderr,WrappedError.Error())
+				fmt.Fprintln(os.Stderr, WrappedError.Error())
 				return []*Data{}, err
 			}
 
 			// fmt.Printf("key=%s,value=%s\r\n", auxiliaryKey, auxiliaryValue)
 
 		case 0xFB:
-			dbHashTableSize, err := readLengthOrEncoding(data, &pos)
+			dbHashTableSize, err := decodeLength(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
 					Name: "Database HashTable size",
 					Err:  io.ErrUnexpectedEOF,
 				}
 
-				fmt.Fprintln(os.Stderr,WrappedError.Error())
+				fmt.Fprintln(os.Stderr, WrappedError.Error())
 
-				return nil,err
+				return nil, err
 			}
 
-			_, err = readLengthOrEncoding(data, &pos)
+			_, err = decodeLength(data, &pos)
 			if err != nil {
 
 				WrappedError := &readErr{
@@ -502,7 +440,7 @@ loop:
 					Err:  io.ErrUnexpectedEOF,
 				}
 
-				fmt.Fprintln(os.Stderr,WrappedError.Error())
+				fmt.Fprintln(os.Stderr, WrappedError.Error())
 			}
 			// fmt.Printf("hash table size=%d, expiry hash table size=%d\r\n", dbHashTableSize.Value, expiryHashTableSize.Value)
 
@@ -515,7 +453,7 @@ loop:
 						Err:  io.ErrUnexpectedEOF,
 					}
 
-					fmt.Fprintln(os.Stderr,WrappedError.Error())
+					fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 					return nil, err
 				}
@@ -532,7 +470,7 @@ loop:
 					Err:  err,
 				}
 
-				fmt.Fprintln(os.Stderr,WrappedError.Error())
+				fmt.Fprintln(os.Stderr, WrappedError.Error())
 
 				return nil, err
 			}
@@ -548,68 +486,59 @@ loop:
 }
 
 func selectDatabase(data []byte, pos *int) (uint64, error) {
-	length, err := readLengthOrEncoding(data, pos)
+	length, err := decodeLength(data, pos)
 
 	if err != nil {
 		return 0, err
 	}
-    
+
 	return length.Value, err
 }
 
-
-//strings
+// strings
 func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
 
-	key,err:=readString(data,pos,true)
+	key, err := readString(data, pos, true)
 
-	if err!=nil{
-		  return EOF()
+	if err != nil {
+		return EOF()
 	}
 
-	value,err:=readString(data,pos,false)
+	value, err := readString(data, pos, false)
 
-	if err!=nil{
-		  return EOF()
+	if err != nil {
+		return EOF()
 	}
 
 	return key, value, nil
 
 }
 
+// lists
+func readListKeyValuePair(data []byte, pos *int) ([]byte, [][]byte, error) {
+	key, err := readString(data, pos, true)
 
-//lists
-func readListKeyValuePair(data []byte, pos *int) ([]byte,[][]byte,error){
-	   key,err:=readString(data,pos,true)
+	if err != nil {
+		return nil, nil, err
+	}
 
-		if err!=nil{
-			  return nil,nil,err
+	listLength, err := decodeLength(data, pos)
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	list := make([][]byte, 0, listLength.Value)
+
+	for i := uint64(0); i < listLength.Value; i++ {
+		element, err := readString(data, pos, false)
+
+		if err != nil {
+			return nil, nil, err
 		}
 
-		listLength,err:=readLengthOrEncoding(data,pos)
+		list = append(list, element)
+	}
 
-		if err!=nil{
-			 return nil,nil,err
-		}
-
-		list:=make([][]byte,0,listLength.Value)
-
-		for i:=uint64(0);i<listLength.Value;i++{
-			   element,err:=readString(data,pos,false)
-
-				if err!=nil{
-					  return nil,nil,err
-				}
-
-				list = append(list, element)
-		}
-
-
-		return key,list,nil
+	return key, list, nil
 }
-
-
-
-
-
-
