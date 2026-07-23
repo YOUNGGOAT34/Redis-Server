@@ -1,6 +1,7 @@
 package rdb
 
 import (
+	"CacheDB/app/storage"
 	"errors"
 	"io"
 	"time"
@@ -77,7 +78,7 @@ func encodeSpecialInteger(w io.Writer,value uint32) error{
 }
 
 
-func selectdatabase(w io.Writer,databaseNumber int) error{
+func writeselectdatabase(w io.Writer,databaseNumber int) error{
 	   _,err:=w.Write([]byte{0xFE})
 		if err!=nil{
 			  return err
@@ -87,8 +88,33 @@ func selectdatabase(w io.Writer,databaseNumber int) error{
 }
 
 
-func reSizeDB(){
-	 
+func WriteReSizeDB(w io.Writer) error{
+	     _,err:=w.Write([]byte{0xFB})
+
+		  if err!=nil{
+			 return err
+		  }
+
+
+		  storage.DatabaseMutex.RLock()
+
+		  err=encodeLength(w,len(storage.Database))
+		  storage.DatabaseMutex.RUnlock()
+		  
+		  if err!=nil{
+			 return err
+		  }
+
+		 storage.ExpiryMutex.RLock()
+		 err=encodeLength(w,len(storage.Expiry))
+		  storage.ExpiryMutex.RUnlock()
+
+		 if err!=nil{
+			 return err
+		 }
+
+		 return nil
+
 }
 
 func writeAuxInteger(w io.Writer,key string,value uint32) error{
