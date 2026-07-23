@@ -1,6 +1,9 @@
 package server
 
-import "CacheDB/app/RESP"
+import (
+	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
+)
 
 func typeCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) != 1 {
@@ -8,10 +11,10 @@ func typeCommand(arguments [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("TYPE")
 	}
 
-	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
+	storage.DatabaseMutex.Lock()
+	defer storage.DatabaseMutex.Unlock()
 
-	data, exists := database[string(arguments[0])]
+	data, exists := storage.Database[string(arguments[0])]
 
 	if exists {
 		_type := typeToByte(data.Type)
@@ -28,12 +31,12 @@ func typeCommand(arguments [][]byte) RESP.Response {
 
 }
 
-func typeToByte(_type TYPE) []byte {
+func typeToByte(_type storage.TYPE) []byte {
 	switch _type {
-	case STRING:
+	case storage.STRING:
 		return []byte("string")
 
-	case LIST:
+	case storage.LIST:
 		return []byte("list")
 
 	default:

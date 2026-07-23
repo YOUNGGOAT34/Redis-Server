@@ -3,12 +3,13 @@ package server
 import (
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"fmt"
 )
 
 //     |----------------------MULTI COMMAND----------------------|
 
-func multiCommand(arguments [][]byte, client *Client) RESP.Response {
+func multiCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("MULTI")
 	}
@@ -30,7 +31,7 @@ func multiCommand(arguments [][]byte, client *Client) RESP.Response {
 
 //     |----------------------EXEC COMMAND----------------------|
 
-func execCommand(arguments [][]byte, client *Client, replConfig *RESP.SERVER) RESP.Response {
+func execCommand(arguments [][]byte, client *storage.Client, replConfig *RESP.SERVER) RESP.Response {
 
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("EXEC")
@@ -74,7 +75,7 @@ func execCommand(arguments [][]byte, client *Client, replConfig *RESP.SERVER) RE
 
 //     |----------------------DISCARD COMMAND----------------------|
 
-func discardCommand(arguments [][]byte, client *Client) RESP.Response {
+func discardCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("DISCARD")
 	}
@@ -98,7 +99,7 @@ func discardCommand(arguments [][]byte, client *Client) RESP.Response {
 
 //     |----------------------WATCH COMMAND----------------------|
 
-func watchCommand(arguments [][]byte, client *Client) RESP.Response {
+func watchCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 1 {
 		return RESP.WrongNumberOfArguments("WATCH")
 	}
@@ -114,20 +115,20 @@ func watchCommand(arguments [][]byte, client *Client) RESP.Response {
 
 		key := string(argument)
 
-		watchedKeysMutex.Lock()
-		set, exists := watchedKeys[key]
+		storage.WatchedKeysMutex.Lock()
+		set, exists := storage.WatchedKeys[key]
 
 		if !exists {
-			set = make(map[*Client]struct{})
-			watchedKeys[key] = set
+			set = make(map[*storage.Client]struct{})
+			storage.WatchedKeys[key] = set
 
 		}
 
 		set[client] = struct{}{}
 
-		watchedKeysMutex.Unlock()
+		storage.WatchedKeysMutex.Unlock()
 
-		client.keysWatched[key] = struct{}{}
+		client.KeysWatched[key] = struct{}{}
 	}
 
 	return RESP.Response{
@@ -136,7 +137,7 @@ func watchCommand(arguments [][]byte, client *Client) RESP.Response {
 	}
 }
 
-func unwatchCommand(arguments [][]byte, client *Client) RESP.Response {
+func unwatchCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("UNWATCH")
 	}
@@ -149,18 +150,18 @@ func unwatchCommand(arguments [][]byte, client *Client) RESP.Response {
 	}
 }
 
-func clearWatches(client *Client) {
-	watchedKeysMutex.Lock()
+func clearWatches(client *storage.Client) {
+	storage.WatchedKeysMutex.Lock()
 
-	for key := range client.keysWatched {
-		delete(watchedKeys[key], client)
-		if len(watchedKeys[key]) == 0 {
-			delete(watchedKeys, key)
+	for key := range client.KeysWatched {
+		delete(storage.WatchedKeys[key], client)
+		if len(storage.WatchedKeys[key]) == 0 {
+			delete(storage.WatchedKeys, key)
 		}
 	}
 
-	watchedKeysMutex.Unlock()
+	storage.WatchedKeysMutex.Unlock()
 
-	client.keysWatched = make(map[string]struct{})
+	client.KeysWatched = make(map[string]struct{})
 	client.Dirty = false
 }

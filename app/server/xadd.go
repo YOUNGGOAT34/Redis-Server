@@ -2,11 +2,12 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"errors"
 	"strconv"
 )
 
-func createStreamID(id []byte) (StreamID, error) {
+func createStreamID(id []byte) (storage.StreamID, error) {
 	//find the hyphen in the user's id
 
 	hyphenIndex := -1
@@ -18,26 +19,26 @@ func createStreamID(id []byte) (StreamID, error) {
 	}
 
 	if hyphenIndex == -1 {
-		return StreamID{}, errors.New("invalid stream Id")
+		return storage.StreamID{}, errors.New("invalid stream Id")
 	}
 
 	milliseconds, err := strconv.ParseUint(string(id[0:hyphenIndex]), 10, 64)
 	if err != nil {
-		return StreamID{}, err
+		return storage.StreamID{}, err
 	}
 	sequence, err := strconv.ParseUint(string(id[hyphenIndex+1:]), 10, 64)
 
 	if err != nil {
-		return StreamID{}, err
+		return storage.StreamID{}, err
 	}
 
-	return StreamID{
+	return storage.StreamID{
 		Milliseconds: milliseconds,
 		Sequence:     sequence,
 	}, err
 }
 
-func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
+func xAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 4 {
 
 		return RESP.WrongNumberOfArguments("XADD")
@@ -50,37 +51,37 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 		}
 	}
 
-	var stream *Stream
+	var stream *storage.Stream
 
 	key := string(arguments[0])
 
-	databaseMutex.Lock()
-	data, exists := database[key]
-	databaseMutex.Unlock()
+	storage.DatabaseMutex.Lock()
+	data, exists := storage.Database[key]
+	storage.DatabaseMutex.Unlock()
 
 	if exists {
-		if data.Type != STREAM {
+		if data.Type != storage.STREAM {
 			return RESP.WrongType()
 		}
 
-		stream = data.Value.(*Stream)
-		stream.streamMutex.Lock()
-		defer stream.streamMutex.Unlock()
+		stream = data.Value.(*storage.Stream)
+		stream.StreamMutex.Lock()
+		defer stream.StreamMutex.Unlock()
 
 	} else {
 
-		stream = &Stream{
+		stream = &storage.Stream{
 			// Tree:NewRadix(),
 		}
 
-		database[string(arguments[0])] = Data{
-			Type:  STREAM,
+		storage.Database[string(arguments[0])] = storage.Data{
+			Type:  storage.STREAM,
 			Value: stream,
 		}
 
 	}
 
-	var Id StreamID
+	var Id storage.StreamID
 
 	/*
 		     The id format is millisecondsTime-sequence
@@ -97,8 +98,8 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	} else {
 		var err error
 
-		if exists,_:=hasWildCard(arguments[1],'*'); exists{
-			Id, err = stream.generateSequence(arguments[1])
+		if exists, _ := hasWildCard(arguments[1], '*'); exists {
+			Id, err = stream.GenerateSequence(arguments[1])
 		} else {
 
 			Id, err = createStreamID(arguments[1])
@@ -154,21 +155,21 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 		fields[string(arguments[i])] = arguments[i+1]
 	}
 
-	entry := &StreamEntry{
+	entry := &storage.StreamEntry{
 		ID:     Id,
 		Fields: fields,
 	}
 
-	entry.stream = key
+	entry.Stream= key
 
 	stream.LastID = Id
 	stream.Entries = append(stream.Entries, entry)
 	stream.Len++
 
-	waitingClientsMutex.Lock()
-	defer waitingClientsMutex.Unlock()
+	storage.WaitingClientsMutex.Lock()
+	defer storage.WaitingClientsMutex.Unlock()
 
-	if q, ok := waitingClients[key]; ok {
+	if q, ok := storage.WaitingClients[key]; ok {
 
 		for element := q.Front(); element != nil; element = element.Next() {
 			ch := element.Value.(chan bool)
@@ -189,5 +190,3 @@ func xAddCommand(arguments [][]byte, client *Client) RESP.Response {
 	}
 
 }
-
-

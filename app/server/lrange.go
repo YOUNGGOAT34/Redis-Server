@@ -2,12 +2,13 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"fmt"
 	"os"
 	"strconv"
 )
 
-func encodeRespArray(list *List, startIndex int, endIndex int) []byte {
+func encodeRespArray(list *storage.List, startIndex int, endIndex int) []byte {
 
 	var respArray []byte
 
@@ -27,7 +28,7 @@ func encodeRespArray(list *List, startIndex int, endIndex int) []byte {
 	currentNode := list.Head
 	currentIndex := 0
 
-	if startIndex <= (list.len-1)-startIndex {
+	if startIndex <= (list.Len-1)-startIndex {
 
 		for currentNode != nil && currentIndex != startIndex {
 			currentNode = currentNode.Next
@@ -36,7 +37,7 @@ func encodeRespArray(list *List, startIndex int, endIndex int) []byte {
 
 	} else {
 
-		currentIndex = list.len - 1
+		currentIndex = list.Len - 1
 		currentNode = list.Tail
 		for currentNode != nil && currentIndex != startIndex {
 			currentNode = currentNode.Prev
@@ -46,7 +47,7 @@ func encodeRespArray(list *List, startIndex int, endIndex int) []byte {
 	}
 
 	for i := startIndex; i <= endIndex; i++ {
-		element := currentNode.data
+		element := currentNode.Data
 
 		respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(element), element)
 		currentNode = currentNode.Next
@@ -85,22 +86,22 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		}
 	}
 
-	databaseMutex.RLock()
-	data, exists := database[key]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[key]
+	storage.DatabaseMutex.RUnlock()
 
 	if exists {
 
-		if data.Type != LIST {
+		if data.Type != storage.LIST {
 			return RESP.WrongType()
 		}
 
-		list := data.Value.(*List)
+		list := data.Value.(*storage.List)
 
-		list.listMutex.RLock()
-		defer list.listMutex.RUnlock()
+		list.ListMutex.RLock()
+		defer list.ListMutex.RUnlock()
 
-		if list == nil || list.len == 0 {
+		if list == nil || list.Len == 0 {
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
 				Type: RESP.ARRAY,
@@ -108,10 +109,10 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		}
 
 		if startIndex < 0 {
-			startIndex = list.len + startIndex
+			startIndex = list.Len + startIndex
 		}
 
-		if startIndex >= list.len {
+		if startIndex >= list.Len {
 
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
@@ -120,12 +121,12 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 
 		}
 
-		if endIndex >= list.len {
-			endIndex = list.len - 1
+		if endIndex >= list.Len {
+			endIndex = list.Len - 1
 		}
 
 		if endIndex < 0 {
-			endIndex = list.len + endIndex
+			endIndex = list.Len + endIndex
 		}
 
 		if startIndex < 0 {

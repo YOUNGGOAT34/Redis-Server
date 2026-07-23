@@ -2,6 +2,7 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"strconv"
 	"time"
 )
@@ -14,28 +15,28 @@ func getCommand(arguments [][]byte) RESP.Response {
 		}
 	}
 
-	expiryMutex.Lock()
-	
-	expires, exists := expiry[string(arguments[0])]
+	storage.ExpiryMutex.Lock()
+
+	expires, exists := storage.Expiry[string(arguments[0])]
 
 	if exists {
 		if time.Now().After(expires) {
-			databaseMutex.Lock()
-			delete(database, string(arguments[0]))
-			databaseMutex.Unlock()
-			delete(expiry, string(arguments[0]))
+			storage.DatabaseMutex.Lock()
+			delete(storage.Database, string(arguments[0]))
+			storage.DatabaseMutex.Unlock()
+			delete(storage.Expiry, string(arguments[0]))
 		}
 	}
 
-	expiryMutex.Unlock()
+	storage.ExpiryMutex.Unlock()
 
-	databaseMutex.RLock()
-	dataObject, exists := database[string(arguments[0])]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	dataObject, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.RUnlock()
 
 	if exists {
 
-		if dataObject.Type != STRING {
+		if dataObject.Type != storage.STRING {
 			return RESP.Response{
 				Body: []byte("RESP.WrongType Operation against a key holding the wrong kind of value"),
 				Type: RESP.ERROR,
@@ -55,7 +56,7 @@ func getCommand(arguments [][]byte) RESP.Response {
 	}
 }
 
-func setCommand(arguments [][]byte, client *Client) RESP.Response {
+func setCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 2 {
 		return RESP.WrongNumberOfArguments("SET")
 	}
@@ -67,9 +68,9 @@ func setCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	*/
 
-	expiryMutex.Lock()
-	delete(expiry, string(arguments[0]))
-	expiryMutex.Unlock()
+	storage.ExpiryMutex.Lock()
+	delete(storage.Expiry, string(arguments[0]))
+	storage.ExpiryMutex.Unlock()
 
 	if len(arguments) > 2 {
 		if RESP.CompareBytes(arguments[2], []byte("EX")) || RESP.CompareBytes(arguments[2], []byte("PX")) {
@@ -90,13 +91,13 @@ func setCommand(arguments [][]byte, client *Client) RESP.Response {
 					}
 				}
 
-				expiryMutex.Lock()
+				storage.ExpiryMutex.Lock()
 
 				duration := time.Duration(timeInSeconds) * time.Second
 				expiresAt := time.Now().Add(duration)
-				expiry[string(arguments[0])] = expiresAt
+				storage.Expiry[string(arguments[0])] = expiresAt
 
-				expiryMutex.Unlock()
+				storage.ExpiryMutex.Unlock()
 
 			} else if RESP.CompareBytes(arguments[2], []byte("PX")) {
 				timeInMilliSeconds, err := strconv.Atoi(string(arguments[3]))
@@ -107,11 +108,11 @@ func setCommand(arguments [][]byte, client *Client) RESP.Response {
 					}
 				}
 
-				expiryMutex.Lock()
+				storage.ExpiryMutex.Lock()
 				duration := time.Duration(timeInMilliSeconds) * time.Millisecond
 				expiresAt := time.Now().Add(duration)
-				expiry[string(arguments[0])] = expiresAt
-				expiryMutex.Unlock()
+				storage.Expiry[string(arguments[0])] = expiresAt
+				storage.ExpiryMutex.Unlock()
 			}
 		} else {
 
@@ -124,12 +125,12 @@ func setCommand(arguments [][]byte, client *Client) RESP.Response {
 		}
 	}
 
-	databaseMutex.Lock()
-	database[string(arguments[0])] = Data{
-		Type:  STRING,
+	storage.DatabaseMutex.Lock()
+	storage.Database[string(arguments[0])] =storage. Data{
+		Type:  storage.STRING,
 		Value: arguments[1],
 	}
-	databaseMutex.Unlock()
+	storage.DatabaseMutex.Unlock()
 
 	markDirty(string(arguments[0]), client)
 

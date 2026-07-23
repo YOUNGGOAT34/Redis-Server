@@ -2,13 +2,14 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"container/list"
 	"fmt"
 	"strconv"
 	"time"
 )
 
-func encodeStreams(streams [][]*StreamEntry) []byte {
+func encodeStreams(streams [][]*storage.StreamEntry) []byte {
 
 	var respArray []byte
 	count := len(streams)
@@ -21,7 +22,7 @@ func encodeStreams(streams [][]*StreamEntry) []byte {
 		}
 
 		respArray = fmt.Appendf(respArray, "*2\r\n")
-		respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(entries[0].stream), entries[0].stream)
+		respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(entries[0].Stream), entries[0].Stream)
 		respArray = fmt.Appendf(respArray, "*%d\r\n", len(entries))
 
 		for _, entry := range entries {
@@ -57,27 +58,27 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 		keys[string(arguments[i])] = arguments[i+mid]
 	}
 
-	var streams [][]*StreamEntry
+	var streams [][]*storage.StreamEntry
 
 	for key, startingId := range keys {
 
-		databaseMutex.RLock()
-		data, exists := database[string(key)]
-		databaseMutex.RUnlock()
+		storage.DatabaseMutex.RLock()
+		data, exists := storage.Database[string(key)]
+		storage.DatabaseMutex.RUnlock()
 
 		if exists {
 
-			if data.Type != STREAM {
+			if data.Type != storage.STREAM {
 
 				return RESP.WrongType()
 			}
 
-			stream := data.Value.(*Stream)
+			stream := data.Value.(*storage.Stream)
 
-			stream.streamMutex.RLock()
-			defer stream.streamMutex.RUnlock()
+			stream.StreamMutex.RLock()
+			defer stream.StreamMutex.RUnlock()
 
-			startId, err := stream.createStreamID(startingId)
+			startId, err := stream.CreateStreamID(startingId)
 
 			if err != nil {
 				return RESP.Response{
@@ -86,7 +87,7 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 				}
 			}
 
-			s := stream.xRead(startId)
+			s := stream.XRead(startId)
 
 			if len(s) > 0 {
 
@@ -144,13 +145,13 @@ func blockingXread(arguments [][]byte) RESP.Response {
 		}
 	}
 
-	var streams [][]*StreamEntry
+	var streams [][]*storage.StreamEntry
 
-	databaseMutex.RLock()
-	data, exists := database[string(arguments[0])]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.RUnlock()
 	if exists {
-		if data.Type != STREAM {
+		if data.Type != storage.STREAM {
 
 			return RESP.Response{
 				Body: []byte("RESP.WrongType Operation against a key holding the wrong kind of value"),
@@ -158,9 +159,9 @@ func blockingXread(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		stream := data.Value.(*Stream)
-		stream.streamMutex.RLock()
-		startId, err := stream.createStreamID(arguments[1])
+		stream := data.Value.(*storage.Stream)
+		stream.StreamMutex.RLock()
+		startId, err := stream.CreateStreamID(arguments[1])
 
 		if err != nil {
 
@@ -170,8 +171,8 @@ func blockingXread(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		s := stream.xRead(startId)
-		stream.streamMutex.RUnlock()
+		s := stream.XRead(startId)
+		stream.StreamMutex.RUnlock()
 		if len(s) > 0 {
 
 			streams = append(streams, s)
@@ -181,15 +182,15 @@ func blockingXread(arguments [][]byte) RESP.Response {
 		}
 	} else {
 
-		databaseMutex.Lock()
-		stream := &Stream{}
-		database[string(arguments[0])] = Data{
-			Type:  STREAM,
+		storage.DatabaseMutex.Lock()
+		stream := &storage.Stream{}
+		storage.Database[string(arguments[0])] = storage.Data{
+			Type:  storage.STREAM,
 			Value: stream,
 		}
-		databaseMutex.Unlock()
+		storage.DatabaseMutex.Unlock()
 
-		startId, err := stream.createStreamID(arguments[1])
+		startId, err := stream.CreateStreamID(arguments[1])
 
 		if err != nil {
 			return RESP.Response{
@@ -215,24 +216,24 @@ func blockingXread(arguments [][]byte) RESP.Response {
 	}
 }
 
-func waitForData(stream *Stream, timeout int, startId StreamID, key string) [][]*StreamEntry {
+func waitForData(stream *storage.Stream, timeout int, startId storage.StreamID, key string) [][]*storage.StreamEntry {
 
-	var streams [][]*StreamEntry
+	var streams [][]*storage.StreamEntry
 
 	ch := make(chan bool, 1)
 
-	waitingClientsMutex.Lock()
+	storage.WaitingClientsMutex.Lock()
 
-	q, ok := waitingClients[key]
+	q, ok := storage.WaitingClients[key]
 
 	if !ok {
 		q = list.New()
-		waitingClients[key] = q
+		storage.WaitingClients[key] = q
 	}
 
 	element := q.PushBack(ch)
 
-	waitingClientsMutex.Unlock()
+	storage.WaitingClientsMutex.Unlock()
 
 	if timeout == 0 {
 
@@ -240,15 +241,15 @@ func waitForData(stream *Stream, timeout int, startId StreamID, key string) [][]
 
 			<-ch
 
-			stream.streamMutex.RLock()
-			s := stream.xRead(startId)
-			stream.streamMutex.RUnlock()
+			stream.StreamMutex.RLock()
+			s := stream.XRead(startId)
+			stream.StreamMutex.RUnlock()
 
 			if len(s) > 0 {
 				streams = append(streams, s)
-				waitingClientsMutex.Lock()
+				storage.WaitingClientsMutex.Lock()
 				q.Remove(element)
-				waitingClientsMutex.Unlock()
+				storage.WaitingClientsMutex.Unlock()
 				break
 			}
 
@@ -265,22 +266,22 @@ func waitForData(stream *Stream, timeout int, startId StreamID, key string) [][]
 
 			case <-ch:
 
-				stream.streamMutex.RLock()
-				s := stream.xRead(startId)
-				stream.streamMutex.RUnlock()
+				stream.StreamMutex.RLock()
+				s := stream.XRead(startId)
+				stream.StreamMutex.RUnlock()
 
 				if len(s) > 0 {
 					streams = append(streams, s)
-					waitingClientsMutex.Lock()
+					storage.WaitingClientsMutex.Lock()
 					q.Remove(element)
-					waitingClientsMutex.Unlock()
+					storage.WaitingClientsMutex.Unlock()
 					break WaitLoop
 				}
 
 			case <-timer.C:
-				waitingClientsMutex.Lock()
+				storage.WaitingClientsMutex.Lock()
 				q.Remove(element)
-				waitingClientsMutex.Unlock()
+				storage.WaitingClientsMutex.Unlock()
 				break WaitLoop
 
 			}

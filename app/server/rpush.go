@@ -2,15 +2,16 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"strconv"
 )
 
 func wakeUpWaitingClients(key string, values *[][]byte) {
-	blockedClientsMutex.Lock()
+	storage.BlockedClientsMutex.Lock()
 
 	for len(*values) > 0 {
 
-		q, ok := blockedClients[key]
+		q, ok := storage.BlockedClients[key]
 
 		if !ok {
 
@@ -21,26 +22,26 @@ func wakeUpWaitingClients(key string, values *[][]byte) {
 			ch := front.Value.(chan []byte)
 			q.Remove(front)
 			if q.Len() == 0 {
-				delete(blockedClients, key)
+				delete(storage.BlockedClients, key)
 			}
-			blockedClientsMutex.Unlock()
+			storage.BlockedClientsMutex.Unlock()
 			res := (*values)[0]
 			*values = (*values)[1:]
 			ch <- res
 
 		} else {
-			delete(blockedClients, key)
+			delete(storage.BlockedClients, key)
 			break
 		}
 
-		blockedClientsMutex.Lock()
+		storage.BlockedClientsMutex.Lock()
 
 	}
 
-	blockedClientsMutex.Unlock()
+	storage.BlockedClientsMutex.Unlock()
 }
 
-func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
+func rPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) == 0 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'RPUSH' command"),
@@ -64,20 +65,20 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	values := arguments[1:]
 
-	databaseMutex.Lock()
-	data, exists := database[string(key)]
-	databaseMutex.Unlock()
+	storage.DatabaseMutex.Lock()
+	data, exists := storage.Database[string(key)]
+	storage.DatabaseMutex.Unlock()
 
 	if exists {
 
-		if data.Type != LIST {
+		if data.Type != storage.LIST {
 
 			return RESP.WrongType()
 		}
 
-		list := data.Value.(*List)
-		list.listMutex.Lock()
-		defer list.listMutex.Unlock()
+		list := data.Value.(*storage.List)
+		list.ListMutex.Lock()
+		defer list.ListMutex.Unlock()
 
 		wakeUpWaitingClients(string(arguments[0]), &values)
 
@@ -93,7 +94,7 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 		var buf [32]byte
 		return RESP.Response{
 
-			Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
+			Body: strconv.AppendInt(buf[:0], int64(list.Len), 10),
 			Type: RESP.INTEGER,
 		}
 
@@ -111,22 +112,22 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 		}
 	}
 
-	node := &Node{
-		data: values[0],
+	node := &storage.Node{
+		Data: values[0],
 	}
 
-	list := &List{
+	list := &storage.List{
 		Head: node,
 		Tail: node,
-		len:  1,
+		Len:  1,
 	}
 
 	for _, value := range values[1:] {
 		list.PushBack(value)
 	}
 
-	database[string(key)] = Data{
-		Type:  LIST,
+	storage.Database[string(key)] = storage.Data{
+		Type:  storage.LIST,
 		Value: list,
 	}
 
@@ -136,7 +137,7 @@ func rPushCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	return RESP.Response{
 
-		Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
+		Body: strconv.AppendInt(buf[:0], int64(list.Len), 10),
 		Type: RESP.INTEGER,
 	}
 

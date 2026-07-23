@@ -2,11 +2,12 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"math"
 	"strconv"
 )
 
-func incrCommand(arguments [][]byte, client *Client) RESP.Response {
+func incrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	if len(arguments) != 1 {
 		return RESP.WrongNumberOfArguments("INCR")
@@ -14,15 +15,15 @@ func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	key := string(arguments[0])
 
-	databaseMutex.Lock()
-	defer databaseMutex.Unlock()
+	storage.DatabaseMutex.Lock()
+	defer storage.DatabaseMutex.Unlock()
 
 	var intValue int64
 	var err error
 
-	data, exists := database[key]
+	data, exists := storage.Database[key]
 	if exists {
-		if data.Type != STRING {
+		if data.Type != storage.STRING {
 			return RESP.WrongType()
 		}
 
@@ -55,8 +56,8 @@ func incrCommand(arguments [][]byte, client *Client) RESP.Response {
 
 	strValue := strconv.FormatInt(intValue, 10)
 
-	database[key] = Data{
-		Type:  STRING,
+	storage.Database[key] = storage.Data{
+		Type:  storage.STRING,
 		Value: []byte(strValue),
 	}
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"container/list"
 	"strconv"
 	"time"
@@ -10,17 +11,17 @@ import (
 func blockClient(arguments [][]byte) RESP.Response {
 
 	ch := make(chan []byte, 1)
-	blockedClientsMutex.Lock()
-	q, ok := blockedClients[string(arguments[0])]
+	storage.BlockedClientsMutex.Lock()
+	q, ok := storage.BlockedClients[string(arguments[0])]
 
 	if !ok {
 		q = list.New()
-		blockedClients[string(arguments[0])] = q
+		storage.BlockedClients[string(arguments[0])] = q
 	}
 
 	element := q.PushBack(ch)
 
-	blockedClientsMutex.Unlock()
+	storage.BlockedClientsMutex.Unlock()
 
 	timeout, err := strconv.Atoi(string(arguments[1]))
 
@@ -51,9 +52,9 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 	case <-time.After(time.Duration(timeout) * time.Second):
 
-		blockedClientsMutex.Lock()
+		storage.BlockedClientsMutex.Lock()
 		q.Remove(element)
-		blockedClientsMutex.Unlock()
+		storage.BlockedClientsMutex.Unlock()
 		return RESP.Response{
 			Body: nil,
 			Type: RESP.NIL,
@@ -63,31 +64,31 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 }
 
-func bLPopCommand(arguments [][]byte, client *Client) RESP.Response {
+func bLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) != 2 {
 		return RESP.WrongNumberOfArguments("BLOP")
 	}
 
-	databaseMutex.RLock()
-	data, exists := database[string(arguments[0])]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.RUnlock()
 
 	if exists {
 
-		if data.Type != LIST {
+		if data.Type != storage.LIST {
 			return RESP.WrongType()
 		}
 
-		listData := data.Value.(*List)
+		listData := data.Value.(*storage.List)
 
-		if listData == nil || listData.len == 0 {
+		if listData == nil || listData.Len == 0 {
 			return blockClient(arguments)
 
 		}
 
-		listData.listMutex.Lock()
+		listData.ListMutex.Lock()
 		value := listData.LPop()
-		listData.listMutex.Unlock()
+		listData.ListMutex.Unlock()
 
 		markDirty(string(arguments[0]), client)
 

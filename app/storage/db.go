@@ -1,4 +1,4 @@
-package server
+package storage
 
 import (
 	"container/list"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"CacheDB/app/RESP"
+	
 )
 
 type Command struct {
@@ -21,12 +22,12 @@ type Client struct {
 	InTransaction bool
 	Queue         []Command
 	Dirty         bool
-	keysWatched   map[string]struct{}
+	KeysWatched   map[string]struct{}
 }
 
 var (
-	watchedKeys      = make(map[string]map[*Client]struct{})
-	watchedKeysMutex sync.RWMutex
+	WatchedKeys      = make(map[string]map[*Client]struct{})
+	WatchedKeysMutex sync.RWMutex
 )
 
 type TYPE int
@@ -58,7 +59,7 @@ type Data struct {
 }
 
 type Node struct {
-	data []byte
+	Data []byte
 	Prev *Node
 	Next *Node
 }
@@ -66,36 +67,36 @@ type Node struct {
 type List struct {
 	Head      *Node
 	Tail      *Node
-	len       int
-	listMutex sync.RWMutex
+	Len       int
+	ListMutex sync.RWMutex
 }
 
 // for blocking pops
 var (
-	blockedClients      = make(map[string]*list.List)
-	blockedClientsMutex sync.RWMutex
+	BlockedClients      = make(map[string]*list.List)
+	BlockedClientsMutex sync.RWMutex
 )
 
 // for blocking reads(of streams)
 var (
-	waitingClients      = make(map[string]*list.List)
-	waitingClientsMutex sync.RWMutex
+	WaitingClients      = make(map[string]*list.List)
+	WaitingClientsMutex sync.RWMutex
 )
 
 var (
-	database      = make(map[string]Data)
-	databaseMutex sync.RWMutex
+	Database      = make(map[string]Data)
+	DatabaseMutex sync.RWMutex
 )
 
 var (
-	expiry      = make(map[string]time.Time)
-	expiryMutex sync.RWMutex
+	Expiry      = make(map[string]time.Time)
+	ExpiryMutex sync.RWMutex
 )
 
 func (list *List) PushFront(value []byte) {
 
 	node := &Node{
-		data: value,
+		Data: value,
 	}
 
 	if list.Head != nil {
@@ -109,13 +110,13 @@ func (list *List) PushFront(value []byte) {
 		list.Head = node
 		list.Tail = node
 	}
-	list.len++
+	list.Len++
 
 }
 
 func (list *List) PushBack(value []byte) {
 	node := &Node{
-		data: value,
+		Data: value,
 	}
 
 	if list.Head != nil {
@@ -129,12 +130,12 @@ func (list *List) PushBack(value []byte) {
 		list.Tail = node
 	}
 
-	list.len++
+	list.Len++
 }
 
 func (list *List) LPop() []byte {
 
-	if list == nil || list.len == 0 {
+	if list == nil || list.Len == 0 {
 		return nil
 	}
 
@@ -145,9 +146,9 @@ func (list *List) LPop() []byte {
 	} else {
 		list.Tail = nil
 	}
-	list.len--
+	list.Len--
 
-	return tmp.data
+	return tmp.Data
 }
 
 /*
@@ -169,7 +170,7 @@ type StreamID struct {
 
 type StreamEntry struct {
 	ID     StreamID
-	stream string //name of the associated stream
+	Stream string //name of the associated stream
 	Fields map[string][]byte
 }
 
@@ -177,11 +178,11 @@ type Stream struct {
 	Entries []*StreamEntry
 	// Tree *Radix
 	LastID      StreamID
-	streamMutex sync.RWMutex
+	StreamMutex sync.RWMutex
 	Len         int
 }
 
-func (stream *Stream) createStreamID(id []byte) (StreamID, error) {
+func (stream *Stream) CreateStreamID(id []byte) (StreamID, error) {
 
 	if RESP.CompareBytes(id, []byte("-")) {
 		return stream.Entries[0].ID, nil
@@ -241,7 +242,7 @@ func (stream *Stream) NextID() StreamID {
 
 //auto generate the sequence number
 
-func (stream *Stream) generateSequence(userSpecifiedId []byte) (StreamID, error) {
+func (stream *Stream) GenerateSequence(userSpecifiedId []byte) (StreamID, error) {
 
 	hyphenIndex := 0
 
@@ -268,7 +269,7 @@ func (stream *Stream) generateSequence(userSpecifiedId []byte) (StreamID, error)
 	}, err
 }
 
-//converts a streamId into a string
+//converts a storage.storage.StreamID into a string
 
 func (id StreamID) String() string {
 	return strconv.FormatUint(id.Milliseconds, 10) + "-" + strconv.FormatUint(id.Sequence, 10)
@@ -298,7 +299,7 @@ func (stream *Stream) binarySearch(startId StreamID, inclusive bool) int {
 }
 
 // find all entries in a given range
-func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
+func (stream *Stream) XRange(startId StreamID, endId StreamID) []*StreamEntry {
 	if stream.Len == 0 {
 		return nil
 	}
@@ -322,7 +323,7 @@ func (stream *Stream) xRange(startId StreamID, endId StreamID) []*StreamEntry {
 	return entries
 }
 
-func (stream *Stream) xRead(startId StreamID) []*StreamEntry {
+func (stream *Stream) XRead(startId StreamID) []*StreamEntry {
 	if stream.Len == 0 {
 		return nil
 	}
@@ -342,7 +343,7 @@ func (stream *Stream) xRead(startId StreamID) []*StreamEntry {
 }
 
 // //converts a string version of stream id into []bytes
-// func(id StreamID) Bytes() []byte{
+// func(id storage.storage.StreamID) Bytes() []byte{
 // 	   return []byte(id.String())
 // }
 

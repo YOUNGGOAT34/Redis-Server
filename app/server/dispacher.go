@@ -6,9 +6,10 @@ import (
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/replication"
+	"CacheDB/app/storage"
 )
 
-func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdbConfig *rdb.RDB) RESP.Response {
+func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SERVER, rdbConfig *rdb.RDB) RESP.Response {
 
 	if len(args) < 1 {
 		return RESP.Response{
@@ -19,7 +20,6 @@ func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdb
 
 	command := args[0]
 
-	
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
@@ -39,7 +39,7 @@ func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdb
 
 	if client.InTransaction {
 		client.Queue = append(client.Queue,
-			Command{
+			storage.Command{
 				Args: args,
 			})
 
@@ -115,14 +115,14 @@ func dispatchCommands(client *Client, args [][]byte, replConfig *RESP.SERVER,rdb
 	case "INFO":
 		return replication.InfoCommand(args[1:], replConfig)
 	case "REPLCONF":
-		return replication.ReplConfig(args[1:],replConfig,client.Conn)
+		return replication.ReplConfig(args[1:], replConfig, client.Conn)
 	case "PSYNC":
-		return replication.Psync(args[:],replConfig)
+		return replication.Psync(args[:], replConfig)
 	case "WAIT":
-		return replication.WaitCommand(args[1:],replConfig)
+		return replication.WaitCommand(args[1:], replConfig)
 
 	case "CONFIG":
-		  return rdbConfig.RdbConfig(args[1:])
+		return rdbConfig.RdbConfig(args[1:])
 	case "KEYS":
 		return keys(args[1:])
 

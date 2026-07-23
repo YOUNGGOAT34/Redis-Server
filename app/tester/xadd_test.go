@@ -59,29 +59,29 @@ func parseError(resp string) (string, bool) {
 	return resp[1:end], true
 }
 
-// streamID represents a parsed <ms>-<seq> stream entry ID.
-type streamID struct {
+// storage.storage.StreamID represents a parsed <ms>-<seq> stream entry ID.
+type StreamID struct {
 	ms  uint64
 	seq uint64
 }
 
-func parseStreamID(id string) (streamID, error) {
+func parseStreamID(id string) (StreamID, error) {
 	parts := strings.SplitN(id, "-", 2)
 	if len(parts) != 2 {
-		return streamID{}, fmt.Errorf("malformed stream ID %q: expected <ms>-<seq>", id)
+		return StreamID{}, fmt.Errorf("malformed stream ID %q: expected <ms>-<seq>", id)
 	}
 	ms, err := strconv.ParseUint(parts[0], 10, 64)
 	if err != nil {
-		return streamID{}, fmt.Errorf("malformed stream ID %q: bad ms part: %w", id, err)
+		return StreamID{}, fmt.Errorf("malformed stream ID %q: bad ms part: %w", id, err)
 	}
 	seq, err := strconv.ParseUint(parts[1], 10, 64)
 	if err != nil {
-		return streamID{}, fmt.Errorf("malformed stream ID %q: bad seq part: %w", id, err)
+		return StreamID{}, fmt.Errorf("malformed stream ID %q: bad seq part: %w", id, err)
 	}
-	return streamID{ms: ms, seq: seq}, nil
+	return StreamID{ms: ms, seq: seq}, nil
 }
 
-func (a streamID) lessThan(b streamID) bool {
+func (a StreamID) lessThan(b StreamID) bool {
 	if a.ms != b.ms {
 		return a.ms < b.ms
 	}
@@ -89,7 +89,7 @@ func (a streamID) lessThan(b streamID) bool {
 }
 
 // mustBulkID parses a bulk-string reply as a stream ID or fails the test.
-func mustBulkID(t *testing.T, resp string, context string) streamID {
+func mustBulkID(t *testing.T, resp string, context string) StreamID {
 	t.Helper()
 
 	payload, ok := parseBulkString(resp)
@@ -228,7 +228,7 @@ func stage71_XAddMultipleEntries(t *testing.T) {
 	conn := dial(t)
 	defer conn.Close()
 
-	var prev streamID
+	var prev StreamID
 	for i := 0; i < 5; i++ {
 		resp := send(conn,
 			fmt.Sprintf(

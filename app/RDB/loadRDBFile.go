@@ -398,8 +398,8 @@ loop:
 
 		/*
 		   0xFA-->auxilary field
-		   0xFB-->database size(RESIZEDB)
-		   0XFE--->database selector
+		   0xFB-->storage.Database size(RESIZEDB)
+		   0XFE--->storage.Database selector
 		   0xFF--->end of file
 
 		*/
@@ -423,7 +423,7 @@ loop:
 			dbHashTableSize, err := decodeLength(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
-					Name: "Database HashTable size",
+					Name: "storage.Database HashTable size",
 					Err:  io.ErrUnexpectedEOF,
 				}
 
@@ -436,7 +436,7 @@ loop:
 			if err != nil {
 
 				WrappedError := &readErr{
-					Name: "Database expiry HashTable size",
+					Name: "storage.Database expiry HashTable size",
 					Err:  io.ErrUnexpectedEOF,
 				}
 
@@ -466,7 +466,7 @@ loop:
 			_, err := selectDatabase(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
-					Name: "Database number",
+					Name: "storage.Database number",
 					Err:  err,
 				}
 
@@ -474,7 +474,7 @@ loop:
 
 				return nil, err
 			}
-			// fmt.Printf("database number=%d\r\n", dbNumber)
+			// fmt.Printf("storage.Database number=%d\r\n", dbNumber)
 		case 0xFF:
 			break loop
 
@@ -494,6 +494,7 @@ func selectDatabase(data []byte, pos *int) (uint64, error) {
 
 	return length.Value, err
 }
+
 
 // strings
 func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {

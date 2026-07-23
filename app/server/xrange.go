@@ -2,10 +2,11 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"fmt"
 )
 
-func encodeEntries(entries []*StreamEntry) []byte {
+func encodeEntries(entries []*storage.StreamEntry) []byte {
 	if len(entries) == 0 {
 		return []byte("*0\r\n")
 	}
@@ -37,24 +38,24 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("XRANGE")
 	}
 
-	var entries []*StreamEntry
+	var entries []*storage.StreamEntry
 
-	databaseMutex.RLock()
-	data, exists := database[string(arguments[0])]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.RUnlock()
 	if exists {
 
-		if data.Type != STREAM {
+		if data.Type != storage.STREAM {
 			return RESP.WrongType()
 		}
 
-		stream := data.Value.(*Stream)
-		stream.streamMutex.RLock()
-		defer stream.streamMutex.RUnlock()
+		stream := data.Value.(*storage.Stream)
+		stream.StreamMutex.RLock()
+		defer stream.StreamMutex.RUnlock()
 
 		/*
 			    This guard will prevent against accessing invalid memory when the use queries with -
-				 Since for empty entries the stream.createStreamID function will never be called
+				 Since for empty entries the stream.createstorage.storage.StreamID function will never be called
 				 Inside the stream.Entities entities[0] can be safely accessed ,with a guarantee that there is data inside the stream
 		*/
 		if stream.Len == 0 {
@@ -64,7 +65,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		startId, err := stream.createStreamID(arguments[1])
+		startId, err := stream.CreateStreamID(arguments[1])
 
 		if err != nil {
 
@@ -74,7 +75,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		endId, err := stream.createStreamID(arguments[2])
+		endId, err := stream.CreateStreamID(arguments[2])
 
 		if err != nil {
 			return RESP.Response{
@@ -83,7 +84,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 			}
 		}
 
-		entries = stream.xRange(startId, endId)
+		entries = stream.XRange(startId, endId)
 
 	}
 

@@ -2,40 +2,41 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"fmt"
 	"os"
 	"strconv"
 )
 
-func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
+func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	if len(arguments) < 1 {
 		return RESP.WrongNumberOfArguments("LPOP")
 	}
 
-	databaseMutex.Lock()
-	data, exists := database[string(arguments[0])]
-	databaseMutex.Unlock()
+	storage.DatabaseMutex.Lock()
+	data, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.Unlock()
 
 	if exists {
 
-		if data.Type != LIST {
+		if data.Type != storage.LIST {
 
 			return RESP.WrongType()
 		}
 
-		list := data.Value.(*List)
+		list := data.Value.(*storage.List)
 
-		list.listMutex.Lock()
-		defer list.listMutex.Unlock()
+		list.ListMutex.Lock()
+		defer list.ListMutex.Unlock()
 
 		if len(arguments) == 1 {
 			body := list.LPop()
 
 			if body != nil {
 
-				if list.len == 0 {
-					delete(database, string(arguments[0]))
+				if list.Len == 0 {
+					delete(storage.Database, string(arguments[0]))
 
 				}
 
@@ -77,8 +78,8 @@ func lPopCommand(arguments [][]byte, client *Client) RESP.Response {
 
 			}
 
-			if list.len == 0 {
-				delete(database, string(arguments[0]))
+			if list.Len == 0 {
+				delete(storage.Database, string(arguments[0]))
 			}
 
 			if len(res) > 0 {

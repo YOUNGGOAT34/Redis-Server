@@ -2,6 +2,7 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"strconv"
 )
 
@@ -10,19 +11,19 @@ func llenCommand(arguments [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("LLEN")
 	}
 
-	databaseMutex.RLock()
-	data, exists := database[string(arguments[0])]
-	databaseMutex.RUnlock()
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(arguments[0])]
+	storage.DatabaseMutex.RUnlock()
 
 	if exists {
-		if data.Type != LIST {
+		if data.Type != storage.LIST {
 			return RESP.WrongType()
 		}
 
-		list := data.Value.(*List)
+		list := data.Value.(*storage.List)
 
-		list.listMutex.RLock()
-		defer list.listMutex.RUnlock()
+		list.ListMutex.RLock()
+		defer list.ListMutex.RUnlock()
 
 		if list == nil {
 			return RESP.Response{
@@ -34,7 +35,7 @@ func llenCommand(arguments [][]byte) RESP.Response {
 		var buf [32]byte
 
 		return RESP.Response{
-			Body: strconv.AppendInt(buf[:0], int64(list.len), 10),
+			Body: strconv.AppendInt(buf[:0], int64(list.Len), 10),
 			Type: RESP.INTEGER,
 		}
 	}
