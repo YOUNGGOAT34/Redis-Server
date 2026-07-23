@@ -76,6 +76,16 @@ func encodeSpecialInteger(w io.Writer,value uint32) error{
 
 }
 
+
+func selectDataBase(w io.Writer,databaseNumber int) error{
+	   _,err:=w.Write([]byte{0xFE})
+		if err!=nil{
+			  return err
+		}
+
+	   return encodeLength(w,databaseNumber)
+}
+
 func writeAuxInteger(w io.Writer,key string,value uint32) error{
 
 	   /*
