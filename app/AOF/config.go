@@ -68,9 +68,6 @@ func (aofConfig *AOF) CreateAOFDir() error{
 			  return err
 		 }
 
-		 aofFile.Close()
-       
-
 		 aofConfig.File=aofFile
 
 		 return os.WriteFile(manifestPath,fmt.Appendf(nil, "file %s sequence %d type i\n",aofFileName,aofConfig.Sequence),0644)
