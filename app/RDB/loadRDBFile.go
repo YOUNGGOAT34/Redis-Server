@@ -2,12 +2,41 @@ package rdb
 
 import (
 	"CacheDB/app/RESP"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 )
+
+
+func createEmptyRDB(path string) error {
+    var buffer bytes.Buffer
+
+    if err := writeRDBHeader(&buffer); err != nil {
+        return err
+    }
+
+    if err := writeAuxFileds(&buffer); err != nil {
+        return err
+    }
+
+    if err := writeselectdatabase(&buffer, 0); err != nil {
+        return err
+    }
+
+    if err := WriteReSizeDB(&buffer); err != nil {
+        return err
+    }
+
+    if _, err := buffer.Write([]byte{0xFF}); err != nil {
+        return err
+    }
+
+    return os.WriteFile(path, buffer.Bytes(), 0644)
+}
+
 
 func decodeSpecialEncoding(data []byte, encoding byte, pos *int) (uint64, error) {
 
@@ -322,7 +351,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 	_, err := os.Stat(path)
 
 	if os.IsNotExist(err) {
-		err = os.WriteFile(path, EmptyRDB, 0644)
+		err = createEmptyRDB(path)
 
 		if err != nil {
 			WrappedError := &readErr{

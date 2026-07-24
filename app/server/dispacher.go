@@ -125,6 +125,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 		return rdbConfig.RdbConfig(args[1:])
 	case "KEYS":
 		return keys(args[1:])
+	case "SAVE":
+		return handleSave(args,rdbConfig)
 
 	default:
 		return RESP.Response{

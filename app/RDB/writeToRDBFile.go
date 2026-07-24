@@ -4,8 +4,57 @@ import (
 	"CacheDB/app/storage"
 	"errors"
 	"io"
+	"os"
 	"time"
 )
+
+
+
+
+func SaveRDB(path string) error {
+    tempPath := path + ".tmp"
+
+    file, err := os.Create(tempPath)
+    if err != nil {
+        return err
+    }
+
+    if err := writeRDBHeader(file); err != nil {
+        file.Close()
+        return err
+    }
+
+    if err := writeAuxFileds(file); err != nil {
+        file.Close()
+        return err
+    }
+
+    if err := writeselectdatabase(file, 0); err != nil {
+        file.Close()
+        return err
+    }
+
+    if err := WriteReSizeDB(file); err != nil {
+        file.Close()
+        return err
+    }
+
+    if err := writeKeyValueString(file); err != nil {
+        file.Close()
+        return err
+    }
+
+    if _, err := file.Write([]byte{0xFF}); err != nil {
+        file.Close()
+        return err
+    }
+
+    if err := file.Close(); err != nil {
+        return err
+    }
+
+    return os.Rename(tempPath, path)
+}
 
 
 func writeRDBHeader(w io.Writer) error{
@@ -96,19 +145,15 @@ func WriteReSizeDB(w io.Writer) error{
 		  }
 
 
-		  storage.DatabaseMutex.RLock()
+	
 
 		  err=encodeLength(w,len(storage.Database))
-		  storage.DatabaseMutex.RUnlock()
+	
 		  
 		  if err!=nil{
 			 return err
 		  }
-
-		 storage.ExpiryMutex.RLock()
 		 err=encodeLength(w,len(storage.Expiry))
-		  storage.ExpiryMutex.RUnlock()
-
 		 if err!=nil{
 			 return err
 		 }
@@ -232,3 +277,81 @@ func encodeLength(w io.Writer,length int) error{
 		}
 
 }
+
+
+func writeKeyValueString(w io.Writer) error{
+	   
+	     for key,value:=range storage.Database{
+
+			    err:=writeObjectType(w,value.Type)
+				 if err!=nil{
+					 return err
+					}
+					
+				err=writeKey(w,key)
+				 if err!=nil{
+					 return err
+				 }
+
+				 err=writeValue(w,value)
+
+				 if err!=nil{
+					  return err
+				 }
+              
+		  }
+
+		  return nil
+}
+
+func writeKey(w io.Writer,key string) error{
+	   err:=encodeLength(w,len(key))
+
+		if err!=nil{
+			 return err
+		}
+
+		_,err=w.Write([]byte(key))
+
+    return err
+}
+
+func writeValue(w io.Writer,data storage.Data) error{
+	    switch data.Type{
+		 case storage.STRING:
+			    value,ok:=data.Value.([]byte)
+
+				 if !ok {
+					  return  errors.New("Wrong data stored in a string type")
+				 }
+
+				 err:=encodeLength(w,len(value))
+
+				 if err!=nil{
+					 return err
+				 }
+
+				 _,err=w.Write(value)
+
+				 return err
+
+				default:
+					return errors.New("unknown data type")
+
+		 }
+}
+
+
+func writeObjectType(w io.Writer,objectType storage.TYPE) error{
+	   switch objectType{
+
+				case storage.STRING:
+					_,err:=w.Write([]byte{0x00})
+
+					return err
+				default:
+					return errors.New("Unkown object type")
+		}
+}
+
+
