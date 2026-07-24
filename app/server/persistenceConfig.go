@@ -25,14 +25,9 @@ func getConfig(args [][]byte,rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Respons
 									  Type: RESP.ARRAY,
 									 }
 							case "appendonly":
-								      var appendonly string
-								      if aofConfig.AppendOnly{
-											  appendonly="yes"
-										}else{
-											appendonly="no"
-										}
+								      
 										return RESP.Response{
-											Body: RESP.EncodeArray([][]byte{args[1],[]byte(appendonly)}),
+											Body: RESP.EncodeArray([][]byte{args[1],[]byte(aofConfig.AppendOnly)}),
 											Type: RESP.ARRAY,
 									 }
 

@@ -14,6 +14,14 @@ import (
 )
 
 func main() {
+
+
+	currentWorkingDir,err:=os.Getwd()
+	
+	if err!=nil{
+		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+		return
+	}
     
 	replConfig := &RESP.SERVER{}
 	rdbFileConfig:=&rdb.RDB{}
@@ -22,8 +30,18 @@ func main() {
 	PORT := flag.Int("port", 6379, "server port")
 	replicaof := flag.String("replicaof", "", "master and host port")
 
-	dir:=flag.String("dir",".","rdb file directory")
+	dir:=flag.String("dir",currentWorkingDir,"rdb file directory")
 	dbfilename:=flag.String("dbfilename","rdbfile.db","rdb filename")
+
+	appendonly:=flag.String("appendonly","no","yes or no")
+
+	appenddirname:=flag.String("appenddirname",currentWorkingDir,"appendonly directory")
+
+	appendfilename:=flag.String("appendfilename","appendnoly.aof","appendonly filename")
+
+	appendfsync:=flag.String("appendfsync","everysec","i.e everysec")
+
+
 
 	flag.Parse()
 
@@ -63,18 +81,13 @@ func main() {
 
 	//aof file config
 
-	currentWorkingDir,err:=os.Getwd()
 	
-	if err!=nil{
-		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
-		return
-	}
 	
-	aofFileConfig.AppendDirName=currentWorkingDir
-	aofFileConfig.AppendFilename="appendnoly.aof"
-	aofFileConfig.AppendOnly=false
-	aofFileConfig.AppendDirName="appendonlydir"
-	aofFileConfig.AppendFsync="everysec"
+	aofFileConfig.AppendDirName=*dir
+	aofFileConfig.AppendFilename=*appendfilename
+	aofFileConfig.AppendOnly=*appendonly
+	aofFileConfig.AppendDirName=*appenddirname
+	aofFileConfig.AppendFsync=*appendfsync
 
 	server.StartServer(replConfig,rdbFileConfig,aofFileConfig)
 
