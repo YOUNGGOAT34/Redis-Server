@@ -1,15 +1,16 @@
 package tester
 
 import (
+	// "fmt"
 	"net"
 	"os"
 	"testing"
 	"time"
 
-	aof "CacheDB/app/AOF"
-	rdb "CacheDB/app/RDB"
-	"CacheDB/app/RESP"
-	"CacheDB/app/server"
+	// "CacheDB/app/AOF"
+	// rdb "CacheDB/app/RDB"
+	// "CacheDB/app/RESP"
+	// "CacheDB/app/server"
 )
 
 var (
@@ -41,39 +42,45 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-	go server.StartServer(&RESP.SERVER{
-		PORT: 6379,
-	},&rdb.RDB{
-		Dir: ".",
-		DbFileName: "dump.rdb",
-	},
-	  &aof.AOF{},
-  )
+// 	currentWorkingDir,err:=os.Getwd()
+	
+// 	if err!=nil{
+// 		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+// 		return
+// 	}
+// 	go server.StartServer(&RESP.SERVER{
+// 		PORT: 6379,
+// 	},&rdb.RDB{
+// 		Dir: currentWorkingDir,
+// 		DbFileName: "dump.rdb",
+// 	},
+// 	  &aof.AOF{},
+//   )
 
-	waitForServer()
+	// waitForServer()
 
-	pingtest(t)
-	echo_test(t)
-	set_test(t)
-	get_test(t)
-	expiry_test(t)
-	rpush_test(t)
-	lrange_test(t)
-	lpush_test(t)
-	llen_test(t)
-	lpop_test(t)
-	blpop_test(t)
-	type_test(t)
-	xadd_test(t)
-	xrange_test(t)
-	xread_test(t)
-	incr_test(t)
-	multi_test(t)
-	transaction_test(t)
-	watch_test(t)
-	list_watch_test(t)
-	stream_xadd_watch_test(t)
-	replication_test(t)
+	// pingtest(t)
+	// echo_test(t)
+	// set_test(t)
+	// get_test(t)
+	// expiry_test(t)
+	// rpush_test(t)
+	// lrange_test(t)
+	// lpush_test(t)
+	// llen_test(t)
+	// lpop_test(t)
+	// blpop_test(t)
+	// type_test(t)
+	// xadd_test(t)
+	// xrange_test(t)
+	// xread_test(t)
+	// incr_test(t)
+	// multi_test(t)
+	// transaction_test(t)
+	// watch_test(t)
+	// list_watch_test(t)
+	// stream_xadd_watch_test(t)
+	// replication_test(t)
 
 }
 

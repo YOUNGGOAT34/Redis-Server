@@ -236,6 +236,7 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 	err:=aofFileConfig.CreateAOFDir()
 
 	if err!=nil{
+		
 		  fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
 		  return 
 	}
