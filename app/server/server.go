@@ -145,7 +145,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aof
 			if replConfig.Role == "master" {
 				//only propagate successful write commands
 				if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type != RESP.ERROR {
-
+                aofConfig.File.Write(commandBytes)
 					replication.PropagateCommands(commandBytes, replConfig)
 					replConfig.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}
@@ -234,7 +234,7 @@ func accept(listener net.Listener) net.Conn {
 func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) {
    
 	err:=aofFileConfig.CreateAOFDir()
-
+   
 	if err!=nil{
 		
 		  fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
