@@ -232,6 +232,14 @@ func accept(listener net.Listener) net.Conn {
 }
 
 func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) {
+   
+	err:=aofFileConfig.CreateAOFDir()
+
+	if err!=nil{
+		  fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+		  return 
+	}
+
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {

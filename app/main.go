@@ -35,13 +35,13 @@ func main() {
 
 	appendonly:=flag.String("appendonly","no","yes or no")
 
-	appenddirname:=flag.String("appenddirname",currentWorkingDir,"appendonly directory")
+	appenddirname:=flag.String("appenddirname","appendonly","appendonly directory")
 
 	appendfilename:=flag.String("appendfilename","appendnoly.aof","appendonly filename")
 
 	appendfsync:=flag.String("appendfsync","everysec","i.e everysec")
 
-
+   
 
 	flag.Parse()
 
