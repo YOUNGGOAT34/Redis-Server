@@ -1,6 +1,7 @@
 package aof
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -13,6 +14,8 @@ type AOF struct{
 		AppendFsync string
 }
 
+
+var Sequence int
 
 
 func (aofConfig *AOF) CreateAOFDir() error{
@@ -27,17 +30,33 @@ func (aofConfig *AOF) CreateAOFDir() error{
 			  return err
 		 }
 
-		 aofPath:=filepath.Join(aofDir,aofConfig.AppendFilename)
+		 Sequence=1
 
-		 file,err:=os.OpenFile(aofPath,os.O_CREATE|os.O_WRONLY|os.O_APPEND,0644)
+		 aofFileName:=buildAOFFileName(aofConfig.AppendFilename)
+
+
+		 aofPath:=filepath.Join(aofDir,aofFileName)
+
+		 aofFile,err:=os.OpenFile(aofPath,os.O_CREATE|os.O_WRONLY|os.O_APPEND,0644)
 
 		 if err!=nil{
 			  return err
 		 }
 
-		 file.Close()
-		
+		 aofFile.Close()
 
-		 return nil
+
+		 manifestPath:=filepath.Join(aofDir,buildManifestFileName(aofConfig.AppendFilename))
+
+		 return os.WriteFile(manifestPath,[]byte(fmt.Sprintf("file %s sequence %d type i",aofFileName,Sequence)),0644)
+}
+
+
+func buildAOFFileName(baseName string) string{
+	    return fmt.Sprintf("%s.%d.incr.aof",baseName,Sequence)
+}
+
+func buildManifestFileName(aofFilename string) string{
+	   return fmt.Sprintf("%s.manifest",aofFilename)
 }
 
