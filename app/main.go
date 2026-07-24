@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/server"
 )
@@ -16,6 +17,7 @@ func main() {
     
 	replConfig := &RESP.SERVER{}
 	rdbFileConfig:=&rdb.RDB{}
+	aofFileConfig:=&aof.AOF{}
 
 	PORT := flag.Int("port", 6379, "server port")
 	replicaof := flag.String("replicaof", "", "master and host port")
@@ -24,6 +26,8 @@ func main() {
 	dbfilename:=flag.String("dbfilename","rdbfile.db","rdb filename")
 
 	flag.Parse()
+
+	//replication configuration
     
 	replConfig.PORT = *PORT
 
@@ -53,9 +57,25 @@ func main() {
 	replConfig.MASTERREPLOFFSET.Store(0)
 
 
+	//rdb file config
 	rdbFileConfig.Dir=*dir
 	rdbFileConfig.DbFileName=*dbfilename
 
-	server.StartServer(replConfig,rdbFileConfig)
+	//aof file config
+
+	currentWorkingDir,err:=os.Getwd()
+	
+	if err!=nil{
+		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+		return
+	}
+	
+	aofFileConfig.AppendDirName=currentWorkingDir
+	aofFileConfig.AppendFilename="appendnoly.aof"
+	aofFileConfig.AppendOnly=false
+	aofFileConfig.AppendDirName="appendonlydir"
+	aofFileConfig.AppendFsync="everysec"
+
+	server.StartServer(replConfig,rdbFileConfig,aofFileConfig)
 
 }

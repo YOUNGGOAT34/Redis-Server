@@ -1,6 +1,7 @@
 package server
 
 import (
+	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/storage"
@@ -31,7 +32,7 @@ func multiCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 //     |----------------------EXEC COMMAND----------------------|
 
-func execCommand(arguments [][]byte, client *storage.Client, replConfig *RESP.SERVER) RESP.Response {
+func execCommand(arguments [][]byte, client *storage.Client, replConfig *RESP.SERVER,aofConfig *aof.AOF) RESP.Response {
 
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("EXEC")
@@ -63,7 +64,7 @@ func execCommand(arguments [][]byte, client *storage.Client, replConfig *RESP.SE
 	resp = fmt.Appendf(resp, "*%d\r\n", len(queued))
 
 	for _, cmd := range queued {
-		r := dispatchCommands(client, cmd.Args, replConfig, &rdb.RDB{})
+		r := dispatchCommands(client, cmd.Args, replConfig, &rdb.RDB{},aofConfig)
 		resp = append(resp, RESP.EncodeResponse(r)...)
 	}
 

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/server"
@@ -45,7 +46,9 @@ func TestMain(t *testing.T) {
 	},&rdb.RDB{
 		Dir: ".",
 		DbFileName: "dump.rdb",
-	})
+	},
+	  &aof.AOF{},
+  )
 
 	waitForServer()
 

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/replication"
@@ -49,7 +50,7 @@ func isWrite(command []byte) bool {
 	return false
 }
 
-func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
+func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) {
 	var request []byte
 	var temp = make([]byte, 1024)
 
@@ -95,7 +96,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
 
 			} else {
 
-				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig)
+				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig,aofConfig)
 			}
 
 			commandBytes := request[:bytesConsumed]
@@ -156,7 +157,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
 }
 
 // for replicas
-func handleMaster(conn net.Conn, replConfig *RESP.SERVER) {
+func handleMaster(conn net.Conn, replConfig *RESP.SERVER,aofConfig *aof.AOF) {
 
 	var request []byte
 	temp := make([]byte, 1024)
@@ -200,7 +201,7 @@ func handleMaster(conn net.Conn, replConfig *RESP.SERVER) {
 
 			request = request[bytesConsumed:]
 
-			response := dispatchCommands(&storage.Client{}, parsedRequest, replConfig, &rdb.RDB{})
+			response := dispatchCommands(&storage.Client{}, parsedRequest, replConfig, &rdb.RDB{},aofConfig)
 
 			if len(parsedRequest) > 0 && RESP.CompareBytes(parsedRequest[0], []byte("REPLCONF")) {
 
@@ -230,7 +231,7 @@ func accept(listener net.Listener) net.Conn {
 
 }
 
-func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
+func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) {
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
@@ -346,7 +347,7 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
 			panic(err)
 		}
 
-		go handleMaster(conn, replConfig)
+		go handleMaster(conn, replConfig,aofFileConfig)
 
 	}
 
@@ -354,7 +355,7 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB) {
 
 		conn := accept(l)
 		if conn != nil {
-			go handleClient(conn, replConfig, rdbConfig)
+			go handleClient(conn, replConfig, rdbConfig,aofFileConfig)
 		}
 	}
 

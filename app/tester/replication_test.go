@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/server"
@@ -802,7 +803,7 @@ func startMaster(t *testing.T) (*RESP.SERVER, int) {
 		  Dir: ".",
 		  DbFileName: "dump.rdb",
 	}
-	go server.StartServer(cfg,rdb)
+	go server.StartServer(cfg,rdb,&aof.AOF{})
 	time.Sleep(100 * time.Millisecond)
 	return cfg, port
 }
@@ -820,7 +821,7 @@ func startReplica(t *testing.T, masterPort int) (*RESP.SERVER, int) {
 		  Dir: ".",
 		  DbFileName: "dump.rdb",
 	}
-	go server.StartServer(cfg,rdb)
+	go server.StartServer(cfg,rdb,&aof.AOF{})
 	return cfg, port
 }
 

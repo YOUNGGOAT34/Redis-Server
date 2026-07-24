@@ -3,13 +3,14 @@ package server
 import (
 	"strings"
 
+	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
 )
 
-func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SERVER, rdbConfig *rdb.RDB) RESP.Response {
+func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Response {
 
 	if len(args) < 1 {
 		return RESP.Response{
@@ -28,7 +29,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 	case "MULTI":
 		return multiCommand(args[1:], client)
 	case "EXEC":
-		return execCommand(args[1:], client, replConfig)
+		return execCommand(args[1:], client, replConfig,aofConfig)
 
 	case "DISCARD":
 		return discardCommand(args[1:], client)
@@ -122,7 +123,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 		return replication.WaitCommand(args[1:], replConfig)
 
 	case "CONFIG":
-		return rdbConfig.RdbConfig(args[1:])
+		return getConfig(args[1:],rdbConfig,aofConfig)
 	case "KEYS":
 		return keys(args[1:])
 	case "SAVE":
