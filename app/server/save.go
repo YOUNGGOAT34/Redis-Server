@@ -1,7 +1,7 @@
 package server
 
 import (
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 )
 

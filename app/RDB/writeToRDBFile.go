@@ -39,7 +39,7 @@ func SaveRDB(path string) error {
         return err
     }
 
-    if err := writeKeyValueString(file); err != nil {
+    if err := writeDatabase(file); err != nil {
         file.Close()
         return err
     }
@@ -279,7 +279,7 @@ func encodeLength(w io.Writer,length int) error{
 }
 
 
-func writeKeyValueString(w io.Writer) error{
+func writeDatabase(w io.Writer) error{
 	   
 	     for key,value:=range storage.Database{
 
@@ -335,10 +335,53 @@ func writeValue(w io.Writer,data storage.Data) error{
 
 				 return err
 
-				default:
+		case storage.LIST:
+					values,ok:=data.Value.(*storage.List)
+
+					if !ok{
+						return  errors.New("Wrong data stored in list type")
+					}
+
+					err:=encodeLength(w,values.Len)
+
+					if err!=nil{
+						return err
+					}
+
+					current:=values.Head
+
+					for{
+						
+							if current==nil{
+								break
+							}
+
+							nodeData:=current.Data
+
+							err=encodeLength(w,len(nodeData))
+
+							if err!=nil{
+								return err
+							}
+
+							_,err=w.Write(nodeData)
+
+							if err!=nil{
+								return err
+							}
+
+							current=current.Next
+						
+					}
+
+
+
+			default:
 					return errors.New("unknown data type")
 
 		 }
+
+		 return nil
 }
 
 
@@ -349,6 +392,9 @@ func writeObjectType(w io.Writer,objectType storage.TYPE) error{
 					_,err:=w.Write([]byte{0x00})
 
 					return err
+				case storage.LIST:
+					 _,err:=w.Write([]byte{0x01})
+					 return err
 				default:
 					return errors.New("Unkown object type")
 		}
