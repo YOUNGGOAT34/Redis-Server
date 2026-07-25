@@ -2,12 +2,14 @@ package rdb
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/storage"
 	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
 	"os"
+	"time"
 )
 
 
@@ -571,4 +573,55 @@ func readListKeyValuePair(data []byte, pos *int) ([]byte, [][]byte, error) {
 	}
 
 	return key, list, nil
+}
+
+
+
+func LoadFileToMemory(rdbConfig *RDB) error{
+
+	dataEntries, err :=ReadRDBFile(rdbConfig)
+	if err != nil {
+		return err
+	}
+	
+	for _, dataEntry := range dataEntries {
+		
+		if dataEntry.HasExpiry {
+			expiresAt := time.UnixMilli(int64(dataEntry.ExpiresAt))
+			if time.Now().After(expiresAt) {
+				continue
+			}
+			storage.Expiry[string(dataEntry.Key)] = expiresAt
+		}
+		
+		switch dataEntry.Type {
+		case STRING:
+			
+			storage.Database[string(dataEntry.Key)] = storage.Data{
+				Value: dataEntry.Value.([]byte),
+				Type:  storage.STRING,
+			}
+		case LIST:
+			items := dataEntry.Value.([][]byte)
+			
+			list := &storage.List{}
+			
+			for _, entry := range items {
+				list.PushBack(entry)
+			}
+			
+			storage.Database[string(dataEntry.Key)] = storage.Data{
+				Type:  storage.LIST,
+				Value: list,
+			}
+			
+		default:
+			panic("Unknown data type was stored in the rdb file")
+			
+		}
+		
+	}
+
+	return nil
+	
 }

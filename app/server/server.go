@@ -7,10 +7,8 @@ import (
 	"io"
 	"net"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
@@ -243,49 +241,15 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 	}
 	
 	//load rdb file from memory
-	dataEntries, err := rdb.ReadRDBFile(rdbConfig)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
+	err=rdb.LoadFileToMemory(rdbConfig)
+
+	if err!=nil{
+		  fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
+		  return
 	}
-	
-	for _, dataEntry := range dataEntries {
-		
-		if dataEntry.HasExpiry {
-			expiresAt := time.UnixMilli(int64(dataEntry.ExpiresAt))
-			if time.Now().After(expiresAt) {
-				continue
-			}
-			storage.Expiry[string(dataEntry.Key)] = expiresAt
-		}
-		
-		switch dataEntry.Type {
-		case rdb.STRING:
-			
-			storage.Database[string(dataEntry.Key)] = storage.Data{
-				Value: dataEntry.Value.([]byte),
-				Type:  storage.STRING,
-			}
-		case rdb.LIST:
-			items := dataEntry.Value.([][]byte)
-			
-			list := &storage.List{}
-			
-			for _, entry := range items {
-				list.PushBack(entry)
-			}
-			
-			storage.Database[string(dataEntry.Key)] = storage.Data{
-				Type:  storage.LIST,
-				Value: list,
-			}
-			
-		default:
-			panic("Unknown data type was stored in the rdb file")
-			
-		}
-		
-	}
-	
+  
+	//create append only file directory
+
 	err=aofFileConfig.CreateAOFDir()
 	 
 	 if err!=nil{
@@ -295,29 +259,10 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 	 }
 	
 
+	//replay the append only file if enabled
 	if aofFileConfig.AppendOnly=="yes"{
      
-		
-		     aofDir:=filepath.Join(aofFileConfig.Dir,aofFileConfig.AppendDirName)
-            
-			  manifestPath:=filepath.Join(aofDir,aof.BuildManifestFileName(aofFileConfig.AppendFilename))
-
-			  aoffilename,err:=aof.ReadManifest(manifestPath)
-
-			  if err!=nil{
-				   fmt.Fprintf(os.Stderr,"%s\r\n",err.Error())
-			  }
-
-			  aofPath:=filepath.Join(aofDir,aoffilename)
-
-			  replayFile,err:=os.Open(aofPath)
-
-			  if err!=nil{
-				  fmt.Fprintf(os.Stderr,"Error opening replay file: %s\r\n",err.Error())
-				  return
-			  }
-
-		  err=replayAOF(replayFile,replConfig,rdbConfig,aofFileConfig)
+		  err=replayAOF(replConfig,rdbConfig,aofFileConfig)
          
 		  if err!=nil{
 			    fmt.Fprintf(os.Stderr,"Error replaying AOF:%s\r\n",err.Error())
@@ -328,62 +273,8 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 	//sync with the master if this server is a replica
 
 	if replConfig.Role == "slave" {
-		address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
-		conn, err := net.Dial("tcp", address)
-
-		if err != nil {
-			panic(err)
-		}
-
-		replConfig.MASTERCONN = conn
-
-		message := "*1\r\n$4\r\nPING\r\n"
-		err = handShake(message, conn, ExpectPong)
-
-		if err != nil {
-			panic(err)
-		}
-
-		port := fmt.Sprintf("%d", replConfig.PORT)
-		message = fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n", len(port), port)
-		err = handShake(message, conn, ExpectOK)
-
-		if err != nil {
-			panic(err)
-		}
-
-		message = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
-
-		err = handShake(message, conn, ExpectOK)
-
-		if err != nil {
-			panic(err)
-		}
-
-		message = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
-		rdbBytes, err := receiveFullResync(message, conn)
-
-		if err != nil {
-			panic(err)
-		}
-
-		path := rdbConfig.Dir + "/" + rdbConfig.DbFileName
-
-		_, err = os.Stat(path)
-
-		if os.IsNotExist(err) {
-			err = os.WriteFile(path, rdbBytes, 0644)
-
-			if err != nil {
-
-				panic(err)
-			}
-
-		} else {
-
-			err = os.WriteFile(path, rdbBytes, 0644)
-
-		}
+		 
+		conn,err:=syncWithMaster(replConfig,rdbConfig)
 
 		if err != nil {
 			panic(err)
@@ -402,6 +293,9 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 	}
 
 }
+
+
+
 
 func handShake(message string, conn net.Conn, RES ExpectedResponse) error {
 	response := make([]byte, 128)
@@ -540,4 +434,70 @@ func receiveFullResync(message string, conn net.Conn) ([]byte, error) {
 
 	return rdbData, nil
 
+}
+
+
+func syncWithMaster(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) (net.Conn,error) {
+	   address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
+		conn, err := net.Dial("tcp", address)
+
+		if err != nil {
+			 return nil,err
+		}
+
+		replConfig.MASTERCONN = conn
+
+		message := "*1\r\n$4\r\nPING\r\n"
+		err = handShake(message, conn, ExpectPong)
+
+		if err != nil {
+			 return nil,err
+		}
+
+		port := fmt.Sprintf("%d", replConfig.PORT)
+		message = fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n", len(port), port)
+		err = handShake(message, conn, ExpectOK)
+
+		if err != nil {
+			 return nil,err
+		}
+
+		message = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
+
+		err = handShake(message, conn, ExpectOK)
+
+		if err != nil {
+			 return nil,err
+		}
+
+		message = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
+		rdbBytes, err := receiveFullResync(message, conn)
+
+		if err != nil {
+			return nil,err
+		}
+
+		path := rdbConfig.Dir + "/" + rdbConfig.DbFileName
+
+		_, err = os.Stat(path)
+
+		if os.IsNotExist(err) {
+			err = os.WriteFile(path, rdbBytes, 0644)
+
+			if err != nil {
+
+				return nil,err
+			}
+
+		} else {
+
+			err = os.WriteFile(path, rdbBytes, 0644)
+
+		}
+
+		if err != nil {
+			return nil,err
+		}
+
+		return conn,nil
 }

@@ -6,11 +6,32 @@ import (
 	"CacheDB/app/RESP"
 	"CacheDB/app/storage"
 	"errors"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
-func replayAOF(file *os.File,replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) error{
+func replayAOF(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) error{
+
+
+	      aofDir:=filepath.Join(aofFileConfig.Dir,aofFileConfig.AppendDirName)
+            
+			  manifestPath:=filepath.Join(aofDir,aof.BuildManifestFileName(aofFileConfig.AppendFilename))
+
+			  aoffilename,err:=aof.ReadManifest(manifestPath)
+
+			  if err!=nil{
+				   fmt.Fprintf(os.Stderr,"%s\r\n",err.Error())
+			  }
+
+			  aofPath:=filepath.Join(aofDir,aoffilename)
+
+			  file,err:=os.Open(aofPath)
+
+			  if err!=nil{
+				  return err
+			  }
      
 	     request:=make([]byte,0,1024)
 		  temp:=make([]byte,1024)
@@ -43,7 +64,7 @@ func replayAOF(file *os.File,replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConf
 								 return err
 						 }
 
-						 dispatchCommands(&storage.Client{},parsedRequest,replConfig,rdbConfig,aofConfig)
+						 dispatchCommands(&storage.Client{},parsedRequest,replConfig,rdbConfig,aofFileConfig)
 
 						 request=request[bytesConsumed:]
 					     
