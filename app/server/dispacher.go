@@ -129,6 +129,9 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 	case "SAVE":
 		return handleSave(args,rdbConfig)
 
+	case "SUBSCRIBE":
+		return sub(args)
+
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),
