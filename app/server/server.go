@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -233,29 +234,22 @@ func accept(listener net.Listener) net.Conn {
 
 func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) {
    
-	err:=aofFileConfig.CreateAOFDir()
-   
-	if err!=nil{
-		
-		  fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
-		  return 
-	}
-
+	
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d\n", replConfig.PORT)
 		os.Exit(1)
 	}
-
+	
 	//load rdb file from memory
 	dataEntries, err := rdb.ReadRDBFile(rdbConfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
 	}
-
+	
 	for _, dataEntry := range dataEntries {
-
+		
 		if dataEntry.HasExpiry {
 			expiresAt := time.UnixMilli(int64(dataEntry.ExpiresAt))
 			if time.Now().After(expiresAt) {
@@ -263,33 +257,72 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 			}
 			storage.Expiry[string(dataEntry.Key)] = expiresAt
 		}
-
+		
 		switch dataEntry.Type {
 		case rdb.STRING:
-
+			
 			storage.Database[string(dataEntry.Key)] = storage.Data{
 				Value: dataEntry.Value.([]byte),
 				Type:  storage.STRING,
 			}
 		case rdb.LIST:
 			items := dataEntry.Value.([][]byte)
-
+			
 			list := &storage.List{}
-
+			
 			for _, entry := range items {
 				list.PushBack(entry)
 			}
-
+			
 			storage.Database[string(dataEntry.Key)] = storage.Data{
 				Type:  storage.LIST,
 				Value: list,
 			}
-
+			
 		default:
 			panic("Unknown data type was stored in the rdb file")
-
+			
 		}
+		
+	}
+	
+	err=aofFileConfig.CreateAOFDir()
+	 
+	 if err!=nil{
 
+			fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+			return 
+	 }
+	
+
+	if aofFileConfig.AppendOnly=="yes"{
+     
+		
+		     aofDir:=filepath.Join(aofFileConfig.Dir,aofFileConfig.AppendDirName)
+            
+			  manifestPath:=filepath.Join(aofDir,aof.BuildManifestFileName(aofFileConfig.AppendFilename))
+
+			  aoffilename,err:=aof.ReadManifest(manifestPath)
+
+			  if err!=nil{
+				   fmt.Fprintf(os.Stderr,"%s\r\n",err.Error())
+			  }
+
+			  aofPath:=filepath.Join(aofDir,aoffilename)
+
+			  replayFile,err:=os.Open(aofPath)
+
+			  if err!=nil{
+				  fmt.Fprintf(os.Stderr,"Error opening replay file: %s\r\n",err.Error())
+				  return
+			  }
+
+		  err=replayAOF(replayFile,replConfig,rdbConfig,aofFileConfig)
+         
+		  if err!=nil{
+			    fmt.Fprintf(os.Stderr,"Error replaying AOF:%s\r\n",err.Error())
+				 return
+		  }
 	}
 
 	//sync with the master if this server is a replica

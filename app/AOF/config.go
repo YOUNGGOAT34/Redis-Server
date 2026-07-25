@@ -19,9 +19,6 @@ type AOF struct{
 }
 
 
-
-
-
 func (aofConfig *AOF) CreateAOFDir() error{
 
 	    if aofConfig.AppendOnly=="no"{
@@ -34,10 +31,10 @@ func (aofConfig *AOF) CreateAOFDir() error{
 			  return err
 		 }
 
-		 manifestPath:=filepath.Join(aofDir,buildManifestFileName(aofConfig.AppendFilename))
+		 manifestPath:=filepath.Join(aofDir,BuildManifestFileName(aofConfig.AppendFilename))
 
 		 if _,err:=os.Stat(manifestPath);err==nil{
-			 filename,err:=readManifest(manifestPath)
+			 filename,err:=ReadManifest(manifestPath)
 
 			 if err!=nil{
 				 return err
@@ -70,7 +67,7 @@ func (aofConfig *AOF) CreateAOFDir() error{
 
 		 aofConfig.File=aofFile
 
-		 return os.WriteFile(manifestPath,fmt.Appendf(nil, "file %s sequence %d type i\n",aofFileName,aofConfig.Sequence),0644)
+		 return os.WriteFile(manifestPath,fmt.Appendf(nil, "file %s type i sequence %d\n",aofFileName,aofConfig.Sequence),0644)
 }
 
 
@@ -78,15 +75,15 @@ func (aofConfig *AOF) buildAOFFileName(baseName string) string{
 	    return fmt.Sprintf("%s.%d.incr.aof",baseName,aofConfig.Sequence)
 }
 
-func buildManifestFileName(aofFilename string) string{
+func BuildManifestFileName(aofFilename string) string{
 	   return fmt.Sprintf("%s.manifest",aofFilename)
 }
 
 
-func readManifest(manifestPath string) (string,error){
+func ReadManifest(manifestPath string) (string,error){
 	  data,err:=os.ReadFile(manifestPath)
 			 if err!=nil{
-				 return "",nil
+				 return "",err
 			 }
 
 		parts:=strings.Fields(string(data))
