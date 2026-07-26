@@ -138,8 +138,9 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return handleSave(args,rdbConfig)
 
 	case "SUBSCRIBE":
-		return sub(replConfig,client,args)
-
+		return sub(replConfig,client,args[1:])
+   case "UNSUBSCRIBE":
+		return unSub(replConfig,client,args[1:])
 	case "PUBLISH":
 		 return pub(replConfig,args[1:])
 
