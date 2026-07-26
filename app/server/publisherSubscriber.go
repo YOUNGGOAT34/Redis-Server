@@ -2,8 +2,10 @@ package server
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
+	"net"
 )
 
 func encodePubSubResponse(channel []byte, count int) []byte {
@@ -15,16 +17,23 @@ func encodePubSubResponse(channel []byte, count int) []byte {
 	return resp
 }
 
-func sub(client *storage.Client, args [][]byte) RESP.Response {
+func sub(serverConfig *config.SERVER,client *storage.Client, args [][]byte) RESP.Response {
 	if len(args) < 2 {
 		return RESP.WrongNumberOfArguments("SUBSCRIBE")
 	}
 
+	serverConfig.PubSub.ChannelMutex.Lock()
 
 	for _,channel :=range args[1:]{
-		
+		  
+		   if _,exists:=serverConfig.PubSub.Channels[string(channel)];!exists{
+				       serverConfig.PubSub.Channels[string(channel)]=storage.NewSet[net.Conn]()
+			}
+			serverConfig.PubSub.Channels[string(channel)].Add(client.Conn)
 			client.SubscribedChannels.Add(string(channel))  
 	}
+
+	serverConfig.PubSub.ChannelMutex.RUnlock()
 
 	if !client.InSubscribeMode{
 
@@ -37,6 +46,8 @@ func sub(client *storage.Client, args [][]byte) RESP.Response {
 		Type: RESP.ARRAY,
 	}
 }
+
+
 
 
 //determines whether a command is legal in subscribe mode

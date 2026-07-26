@@ -4,6 +4,7 @@ import (
 	"CacheDB/app/AOF"
 	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"errors"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-func replayAOF(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) error{
+func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) error{
 
 
 	      aofDir:=filepath.Join(aofFileConfig.Dir,aofFileConfig.AppendDirName)

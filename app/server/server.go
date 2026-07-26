@@ -13,6 +13,7 @@ import (
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
 )
@@ -49,7 +50,7 @@ func isWrite(command []byte) bool {
 	return false
 }
 
-func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
+func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
 	var request []byte
 	var temp = make([]byte, 1024)
 
@@ -127,7 +128,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB, ao
 					return
 				}
 
-				replica := &RESP.REPLICA{
+				replica := &config.REPLICA{
 					Conn: conn,
 				}
 
@@ -157,7 +158,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB, ao
 }
 
 // for replicas
-func handleMaster(conn net.Conn, replConfig *RESP.SERVER, aofConfig *aof.AOF) {
+func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) {
 
 	var request []byte
 	temp := make([]byte, 1024)
@@ -231,7 +232,7 @@ func accept(listener net.Listener) net.Conn {
 
 }
 
-func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) {
+func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) {
 
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
@@ -432,7 +433,7 @@ func receiveFullResync(message string, conn net.Conn) ([]byte, error) {
 
 }
 
-func syncWithMaster(replConfig *RESP.SERVER, rdbConfig *rdb.RDB) (net.Conn, error) {
+func syncWithMaster(replConfig *config.SERVER, rdbConfig *rdb.RDB) (net.Conn, error) {
 	address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
 	conn, err := net.Dial("tcp", address)
 

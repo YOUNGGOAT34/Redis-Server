@@ -1,9 +1,10 @@
 package server
 
 import (
-	aof "CacheDB/app/AOF"
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
 )
@@ -32,7 +33,7 @@ func multiCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 //     |----------------------EXEC COMMAND----------------------|
 
-func execCommand(arguments [][]byte, client *storage.Client, replConfig *RESP.SERVER,aofConfig *aof.AOF) RESP.Response {
+func execCommand(arguments [][]byte, client *storage.Client, replConfig *config.SERVER,aofConfig *aof.AOF) RESP.Response {
 
 	if len(arguments) != 0 {
 		return RESP.WrongNumberOfArguments("EXEC")

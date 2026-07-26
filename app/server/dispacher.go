@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	aof "CacheDB/app/AOF"
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
 )
 
-func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Response {
+func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Response {
 
 	if len(args) < 1 {
 		return RESP.Response{
@@ -137,7 +138,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 		return handleSave(args,rdbConfig)
 
 	case "SUBSCRIBE":
-		return sub(client,args)
+		return sub(replConfig,client,args)
 
 	default:
 		return RESP.Response{
