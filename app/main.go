@@ -3,14 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strconv"
 	"strings"
 
 	"CacheDB/app/AOF"
 	"CacheDB/app/RDB"
-	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/server"
+	"CacheDB/app/storage"
 )
 
 func main() {
@@ -23,7 +25,7 @@ func main() {
 		return
 	}
     
-	replConfig := &RESP.SERVER{}
+	replConfig := &config.SERVER{}
 	rdbFileConfig:=&rdb.RDB{}
 	aofFileConfig:=&aof.AOF{}
 
@@ -73,6 +75,8 @@ func main() {
 
 	replConfig.MASTERREPLID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 	replConfig.MASTERREPLOFFSET.Store(0)
+
+	replConfig.PubSub.Channels=make(map[string]storage.Set[net.Conn])
 
 
 	//rdb file config

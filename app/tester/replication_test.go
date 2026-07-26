@@ -11,7 +11,7 @@ import (
 
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
-	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/server"
 )
 
@@ -789,14 +789,14 @@ func sendRawCommand(t *testing.T, port int, rawPayload string) string {
 	return resp
 }
 
-func startMaster(t *testing.T) (*RESP.SERVER, int) {
+func startMaster(t *testing.T) (*config.SERVER, int) {
 	t.Helper()
 	port := getFreePort(t)
-	cfg := &RESP.SERVER{
+	cfg := &config.SERVER{
 		Role:         "master",
 		PORT:         port,
 		MASTERREPLID: "8371b4fb115b71c4a0413b1db346e45071511224",
-		REPLICAS:     make([]*RESP.REPLICA, 0),
+		REPLICAS:     make([]*config.REPLICA, 0),
 	}
 
 	rdb:=&rdb.RDB{
@@ -808,10 +808,10 @@ func startMaster(t *testing.T) (*RESP.SERVER, int) {
 	return cfg, port
 }
 
-func startReplica(t *testing.T, masterPort int) (*RESP.SERVER, int) {
+func startReplica(t *testing.T, masterPort int) (*config.SERVER, int) {
 	t.Helper()
 	port := getFreePort(t)
-	cfg := &RESP.SERVER{
+	cfg := &config.SERVER{
 		Role:       "slave",
 		PORT:       port,
 		MasterHost: "127.0.0.1",
@@ -825,7 +825,7 @@ func startReplica(t *testing.T, masterPort int) (*RESP.SERVER, int) {
 	return cfg, port
 }
 
-func waitForReplicaCount(cfg *RESP.SERVER, n int, timeout time.Duration) bool {
+func waitForReplicaCount(cfg *config.SERVER, n int, timeout time.Duration) bool {
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		cfg.ReplicasMutex.RLock()

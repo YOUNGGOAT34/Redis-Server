@@ -2,11 +2,11 @@ package replication
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"fmt"
 	"net"
 	"strconv"
 )
-
 
 // func EncodeArray(body [][]byte) []byte{
 // 	   var res []byte
@@ -18,7 +18,7 @@ import (
 // 		return res
 // }
 
-func ReplConfig(args [][]byte,config *RESP.SERVER,conn net.Conn) RESP.Response{
+func ReplConfig(args [][]byte,config *config.SERVER,conn net.Conn) RESP.Response{
 	    
 	    if RESP.CompareBytes(args[0],[]byte("GETACK")){
 			   return RESP.Response{
@@ -53,7 +53,7 @@ func ReplConfig(args [][]byte,config *RESP.SERVER,conn net.Conn) RESP.Response{
 	   
 }
 
-func Psync(_args [][]byte,config *RESP.SERVER) RESP.Response{
+func Psync(_args [][]byte,config *config.SERVER) RESP.Response{
 	  
 		 message:=fmt.Sprintf("FULLRESYNC %s 0",config.MASTERREPLID)
 

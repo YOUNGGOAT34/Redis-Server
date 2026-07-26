@@ -2,11 +2,12 @@ package replication
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"strconv"
 	"time"
 )
 
-func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
+func WaitCommand(args [][]byte, serverConfig *config.SERVER) RESP.Response {
 
 	if len(args) < 2 {
 
@@ -16,7 +17,7 @@ func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
 		}
 	}
 
-	targetOffset := config.MASTERREPLOFFSET.Load()
+	targetOffset := serverConfig.MASTERREPLOFFSET.Load()
 	ack := RESP.EncodeResponse(RESP.Response{
 		Body: RESP.EncodeArray([][]byte{
 			[]byte("REPLCONF"),
@@ -26,11 +27,11 @@ func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
 		Type: RESP.ARRAY,
 	})
 
-	config.ReplicasMutex.RLock()
+	serverConfig.ReplicasMutex.RLock()
 
-	replicas := append([]*RESP.REPLICA(nil), config.REPLICAS...)
+	replicas := append([]*config.REPLICA(nil), serverConfig.REPLICAS...)
 
-	config.ReplicasMutex.RUnlock()
+	serverConfig.ReplicasMutex.RUnlock()
 
 	for _, replica := range replicas {
 		_, err := replica.Conn.Write(ack)
@@ -38,16 +39,16 @@ func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
 		if err != nil {
 			//if the write fails remove the replica
 
-			config.ReplicasMutex.Lock()
-			for j, r := range config.REPLICAS {
+			serverConfig.ReplicasMutex.Lock()
+			for j, r := range serverConfig.REPLICAS {
 				if r == replica {
-					config.REPLICAS[j].Conn.Close()
-					config.REPLICAS = append(config.REPLICAS[:j], config.REPLICAS[j+1:]...)
+					serverConfig.REPLICAS[j].Conn.Close()
+					serverConfig.REPLICAS = append(serverConfig.REPLICAS[:j], serverConfig.REPLICAS[j+1:]...)
 					break
 				}
 
 			}
-			config.ReplicasMutex.Unlock()
+			serverConfig.ReplicasMutex.Unlock()
 
 		}
 
@@ -62,20 +63,20 @@ func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
 		}
 	}
 
-	config.ReplicasMutex.RLock()
-	if requiredReplicas == 0 || len(config.REPLICAS) == 0 {
-		config.ReplicasMutex.RUnlock()
+	serverConfig.ReplicasMutex.RLock()
+	if requiredReplicas == 0 || len(serverConfig.REPLICAS) == 0 {
+		serverConfig.ReplicasMutex.RUnlock()
 		return RESP.Response{
 			Body: []byte("0"),
 			Type: RESP.INTEGER,
 		}
 	}
 
-	if requiredReplicas > len(config.REPLICAS) {
-		requiredReplicas = len(config.REPLICAS)
+	if requiredReplicas > len(serverConfig.REPLICAS) {
+		requiredReplicas = len(serverConfig.REPLICAS)
 	}
 
-	config.ReplicasMutex.RUnlock()
+	serverConfig.ReplicasMutex.RUnlock()
 
 	timeout, err := strconv.Atoi(string(args[1]))
 
@@ -92,11 +93,11 @@ func WaitCommand(args [][]byte, config *RESP.SERVER) RESP.Response {
 
 	for {
 
-		config.ReplicasMutex.RLock()
+		serverConfig.ReplicasMutex.RLock()
 
-		replicas := append([]*RESP.REPLICA(nil), config.REPLICAS...)
+		replicas := append([]*config.REPLICA(nil), serverConfig.REPLICAS...)
 
-		config.ReplicasMutex.RUnlock()
+		serverConfig.ReplicasMutex.RUnlock()
 
 		count := 0
 

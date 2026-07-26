@@ -1,15 +1,15 @@
 package replication
 
 import (
-	"CacheDB/app/RESP"
-	
+
+	"CacheDB/app/config"
 )
 
-func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
+func PropagateCommands(parsedRequest []byte,serverConfig *config.SERVER){
 	
-	  config.ReplicasMutex.RLock()
-	  replicas:=append([]*RESP.REPLICA(nil),config.REPLICAS...)
-	  config.ReplicasMutex.RUnlock()
+	  serverConfig.ReplicasMutex.RLock()
+	  replicas:=append([]*config.REPLICA(nil),serverConfig.REPLICAS...)
+	  serverConfig.ReplicasMutex.RUnlock()
 
 
 	  for _,replica:=range replicas{
@@ -18,18 +18,18 @@ func PropagateCommands(parsedRequest []byte,config *RESP.SERVER){
 
 				if err!=nil{
 					  //if the write fails remove the replica
-					  config.ReplicasMutex.Lock()
-					  for i,r:=range config.REPLICAS{
+					  serverConfig.ReplicasMutex.Lock()
+					  for i,r:=range serverConfig.REPLICAS{
 						    if r==replica{
 
 								 
-								 config.REPLICAS[i].Conn.Close()
-								 config.REPLICAS = append(config.REPLICAS[:i],config.REPLICAS[i+1:]...)
+								 serverConfig.REPLICAS[i].Conn.Close()
+								 serverConfig.REPLICAS = append(serverConfig.REPLICAS[:i],serverConfig.REPLICAS[i+1:]...)
 								 break
 							 }
 					  }
 
-					  config.ReplicasMutex.Unlock()
+					  serverConfig.ReplicasMutex.Unlock()
 					 
 				}
 
