@@ -140,6 +140,9 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	case "SUBSCRIBE":
 		return sub(replConfig,client,args)
 
+	case "PUBLISH":
+		 return pub(replConfig,args[1:])
+
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),
