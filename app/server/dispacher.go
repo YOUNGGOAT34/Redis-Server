@@ -130,7 +130,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 		return handleSave(args,rdbConfig)
 
 	case "SUBSCRIBE":
-		return sub(args)
+		return sub(client,args)
 
 	default:
 		return RESP.Response{

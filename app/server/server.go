@@ -49,15 +49,16 @@ func isWrite(command []byte) bool {
 	return false
 }
 
-func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) {
+func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
 	var request []byte
 	var temp = make([]byte, 1024)
 
 	defer conn.Close()
 
 	client := &storage.Client{
-		Conn:        conn,
-		KeysWatched: make(map[string]struct{}),
+		Conn:               conn,
+		KeysWatched:        make(map[string]struct{}),
+		SubscribedChannels: storage.NewSet(),
 	}
 
 	for {
@@ -95,7 +96,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aof
 
 			} else {
 
-				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig,aofConfig)
+				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig, aofConfig)
 			}
 
 			commandBytes := request[:bytesConsumed]
@@ -144,7 +145,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aof
 			if replConfig.Role == "master" {
 				//only propagate successful write commands
 				if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type != RESP.ERROR {
-                aofConfig.File.Write(commandBytes)
+					aofConfig.File.Write(commandBytes)
 					replication.PropagateCommands(commandBytes, replConfig)
 					replConfig.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}
@@ -156,7 +157,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aof
 }
 
 // for replicas
-func handleMaster(conn net.Conn, replConfig *RESP.SERVER,aofConfig *aof.AOF) {
+func handleMaster(conn net.Conn, replConfig *RESP.SERVER, aofConfig *aof.AOF) {
 
 	var request []byte
 	temp := make([]byte, 1024)
@@ -200,7 +201,7 @@ func handleMaster(conn net.Conn, replConfig *RESP.SERVER,aofConfig *aof.AOF) {
 
 			request = request[bytesConsumed:]
 
-			response := dispatchCommands(&storage.Client{}, parsedRequest, replConfig, &rdb.RDB{},aofConfig)
+			response := dispatchCommands(&storage.Client{}, parsedRequest, replConfig, &rdb.RDB{}, aofConfig)
 
 			if len(parsedRequest) > 0 && RESP.CompareBytes(parsedRequest[0], []byte("REPLCONF")) {
 
@@ -230,57 +231,55 @@ func accept(listener net.Listener) net.Conn {
 
 }
 
-func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) {
-   
-	
+func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) {
+
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Printf("Failed to bind to port %d\n", replConfig.PORT)
 		os.Exit(1)
 	}
-	
-	//load rdb file from memory
-	err=rdb.LoadFileToMemory(rdbConfig)
 
-	if err!=nil{
-		  fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
-		  return
+	//load rdb file from memory
+	err = rdb.LoadFileToMemory(rdbConfig)
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
+		return
 	}
-  
+
 	//create append only file directory
 
-	err=aofFileConfig.CreateAOFDir()
-	 
-	 if err!=nil{
+	err = aofFileConfig.CreateAOFDir()
 
-			fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
-			return 
-	 }
-	
+	if err != nil {
+
+		fmt.Fprintf(os.Stderr, "Error:%s\r\n", err.Error())
+		return
+	}
 
 	//replay the append only file if enabled
-	if aofFileConfig.AppendOnly=="yes"{
-     
-		  err=replayAOF(replConfig,rdbConfig,aofFileConfig)
-         
-		  if err!=nil{
-			    fmt.Fprintf(os.Stderr,"Error replaying AOF:%s\r\n",err.Error())
-				 return
-		  }
+	if aofFileConfig.AppendOnly == "yes" {
+
+		err = replayAOF(replConfig, rdbConfig, aofFileConfig)
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error replaying AOF:%s\r\n", err.Error())
+			return
+		}
 	}
 
 	//sync with the master if this server is a replica
 
 	if replConfig.Role == "slave" {
-		 
-		conn,err:=syncWithMaster(replConfig,rdbConfig)
+
+		conn, err := syncWithMaster(replConfig, rdbConfig)
 
 		if err != nil {
 			panic(err)
 		}
 
-		go handleMaster(conn, replConfig,aofFileConfig)
+		go handleMaster(conn, replConfig, aofFileConfig)
 
 	}
 
@@ -288,14 +287,11 @@ func StartServer(replConfig *RESP.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.
 
 		conn := accept(l)
 		if conn != nil {
-			go handleClient(conn, replConfig, rdbConfig,aofFileConfig)
+			go handleClient(conn, replConfig, rdbConfig, aofFileConfig)
 		}
 	}
 
 }
-
-
-
 
 func handShake(message string, conn net.Conn, RES ExpectedResponse) error {
 	response := make([]byte, 128)
@@ -366,7 +362,7 @@ func receiveFullResync(message string, conn net.Conn) ([]byte, error) {
 		}
 
 		buffer = buffer[firstNewLinePos+2:]
-      
+
 		break
 	}
 
@@ -436,68 +432,67 @@ func receiveFullResync(message string, conn net.Conn) ([]byte, error) {
 
 }
 
+func syncWithMaster(replConfig *RESP.SERVER, rdbConfig *rdb.RDB) (net.Conn, error) {
+	address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
+	conn, err := net.Dial("tcp", address)
 
-func syncWithMaster(replConfig *RESP.SERVER,rdbConfig *rdb.RDB) (net.Conn,error) {
-	   address := net.JoinHostPort(replConfig.MasterHost, fmt.Sprintf("%d", replConfig.MasterPort))
-		conn, err := net.Dial("tcp", address)
+	if err != nil {
+		return nil, err
+	}
 
-		if err != nil {
-			 return nil,err
-		}
+	replConfig.MASTERCONN = conn
 
-		replConfig.MASTERCONN = conn
+	message := "*1\r\n$4\r\nPING\r\n"
+	err = handShake(message, conn, ExpectPong)
 
-		message := "*1\r\n$4\r\nPING\r\n"
-		err = handShake(message, conn, ExpectPong)
+	if err != nil {
+		return nil, err
+	}
 
-		if err != nil {
-			 return nil,err
-		}
+	port := fmt.Sprintf("%d", replConfig.PORT)
+	message = fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n", len(port), port)
+	err = handShake(message, conn, ExpectOK)
 
-		port := fmt.Sprintf("%d", replConfig.PORT)
-		message = fmt.Sprintf("*3\r\n$8\r\nREPLCONF\r\n$14\r\nlistening-port\r\n$%d\r\n%s\r\n", len(port), port)
-		err = handShake(message, conn, ExpectOK)
+	if err != nil {
+		return nil, err
+	}
 
-		if err != nil {
-			 return nil,err
-		}
+	message = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
 
-		message = "*3\r\n$8\r\nREPLCONF\r\n$4\r\ncapa\r\n$6\r\npsync2\r\n"
+	err = handShake(message, conn, ExpectOK)
 
-		err = handShake(message, conn, ExpectOK)
+	if err != nil {
+		return nil, err
+	}
 
-		if err != nil {
-			 return nil,err
-		}
+	message = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
+	rdbBytes, err := receiveFullResync(message, conn)
 
-		message = "*3\r\n$5\r\nPSYNC\r\n$1\r\n?\r\n$2\r\n-1\r\n"
-		rdbBytes, err := receiveFullResync(message, conn)
+	if err != nil {
+		return nil, err
+	}
 
-		if err != nil {
-			return nil,err
-		}
+	path := rdbConfig.Dir + "/" + rdbConfig.DbFileName
 
-		path := rdbConfig.Dir + "/" + rdbConfig.DbFileName
+	_, err = os.Stat(path)
 
-		_, err = os.Stat(path)
-
-		if os.IsNotExist(err) {
-			err = os.WriteFile(path, rdbBytes, 0644)
-
-			if err != nil {
-
-				return nil,err
-			}
-
-		} else {
-
-			err = os.WriteFile(path, rdbBytes, 0644)
-
-		}
+	if os.IsNotExist(err) {
+		err = os.WriteFile(path, rdbBytes, 0644)
 
 		if err != nil {
-			return nil,err
+
+			return nil, err
 		}
 
-		return conn,nil
+	} else {
+
+		err = os.WriteFile(path, rdbBytes, 0644)
+
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"CacheDB/app/RESP"
-	
 )
 
 type Command struct {
@@ -18,12 +17,12 @@ type Command struct {
 }
 
 type Client struct {
-	Conn          net.Conn
-	InTransaction bool
-	Queue         []Command
-	Dirty         bool
-	KeysWatched   map[string]struct{}
-	SubsribedChannels Set
+	Conn               net.Conn
+	InTransaction      bool
+	Queue              []Command
+	Dirty              bool
+	KeysWatched        map[string]struct{}
+	SubscribedChannels Set
 }
 
 var (
@@ -343,37 +342,32 @@ func (stream *Stream) XRead(startId StreamID) []*StreamEntry {
 
 }
 
-
-
-
 type Set map[string]struct{}
 
-func NewSet() Set{
-	    return make(Set)
+func NewSet() Set {
+	return make(Set)
 }
 
-
-func (s Set) Add(element string){
-       s[element]=struct{}{}
+func (s Set) Add(element string) {
+	s[element] = struct{}{}
 }
 
-func (s Set) Remove(element string){
-	  delete(s,element)
+func (s Set) Remove(element string) {
+	delete(s, element)
 }
 
-func (s Set) Len() int{
-	    return len(s)
+func (s Set) Len() int {
+	return len(s)
 }
 
+func (s Set) Contains(element string) bool {
+	_, exists := s[element]
 
-func (s Set) Contains(element string) bool{
-	   _,exists:=s[element]
-
-		return exists
+	return exists
 }
 
-func (s Set) Clear(){
-	 clear(s)
+func (s Set) Clear() {
+	clear(s)
 }
 
 // //converts a string version of stream id into []bytes
