@@ -58,7 +58,7 @@ func handleClient(conn net.Conn, replConfig *RESP.SERVER, rdbConfig *rdb.RDB, ao
 	client := &storage.Client{
 		Conn:               conn,
 		KeysWatched:        make(map[string]struct{}),
-		SubscribedChannels: storage.NewSet(),
+		SubscribedChannels: storage.NewSet[string](),
 	}
 
 	for {

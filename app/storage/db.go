@@ -23,7 +23,7 @@ type Client struct {
 	Dirty              bool
 	KeysWatched        map[string]struct{}
 	InSubscribeMode bool
-	SubscribedChannels Set
+	SubscribedChannels Set[string]
 }
 
 var (
@@ -343,31 +343,33 @@ func (stream *Stream) XRead(startId StreamID) []*StreamEntry {
 
 }
 
-type Set map[string]struct{}
+//custom set
 
-func NewSet() Set {
-	return make(Set)
+type Set[T comparable] map[T]struct{}
+
+func NewSet[T comparable]() Set [T]{
+	return make(Set[T])
 }
 
-func (s Set) Add(element string) {
+func (s Set[T]) Add(element T){
 	s[element] = struct{}{}
 }
 
-func (s Set) Remove(element string) {
+func (s Set[T]) Remove(element T) {
 	delete(s, element)
 }
 
-func (s Set) Len() int {
+func (s Set[T]) Len() int {
 	return len(s)
 }
 
-func (s Set) Contains(element string) bool {
+func (s Set[T]) Contains(element T) bool {
 	_, exists := s[element]
 
 	return exists
 }
 
-func (s Set) Clear() {
+func (s Set[T]) Clear(){
 	clear(s)
 }
 
