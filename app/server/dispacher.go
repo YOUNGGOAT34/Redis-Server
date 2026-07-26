@@ -77,10 +77,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 
 	case "PING":
 
-		return RESP.Response{
-			Body: []byte("PONG"),
-			Type: RESP.SIMPLE_STRING,
-		}
+		return ping(client,args[1:])
 
 	case "SET":
 
