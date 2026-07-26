@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"strings"
 
 	aof "CacheDB/app/AOF"
@@ -23,6 +24,15 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *RESP.SE
 
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
+
+	if client.InSubscribeMode{
+		   if !isLegal(cmd){
+              return RESP.Response{
+					   Body: fmt.Appendf(nil,"ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context",cmd),
+						Type: RESP.ERROR,
+				  }
+			}
+	}
 
 	switch cmd {
 

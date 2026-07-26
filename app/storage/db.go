@@ -22,6 +22,7 @@ type Client struct {
 	Queue              []Command
 	Dirty              bool
 	KeysWatched        map[string]struct{}
+	InSubscribeMode bool
 	SubscribedChannels Set
 }
 

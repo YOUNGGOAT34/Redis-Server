@@ -23,12 +23,31 @@ func sub(client *storage.Client, args [][]byte) RESP.Response {
 
 	for _,channel :=range args[1:]{
 		
-			client.SubscribedChannels.Add(string(channel))
-		   
+			client.SubscribedChannels.Add(string(channel))  
 	}
+
+	if !client.InSubscribeMode{
+
+		client.InSubscribeMode=true
+	}
+
 
 	return RESP.Response{
 		Body: encodePubSubResponse(args[1], client.SubscribedChannels.Len()),
 		Type: RESP.ARRAY,
 	}
+}
+
+
+//determines whether a command is legal in subscribe mode
+
+ 
+func isLegal(command string) bool{
+
+	  switch command{
+	       case "SUBSCRIBE","UNSUBSCRIBE", "PSUBSCRIBE" ,"PUNSUBSCRIBE" , "PING" , "QUIT":
+				return true
+	  }
+	return false
+	 
 }
