@@ -366,7 +366,7 @@ func receiveFullResync(message string, conn net.Conn) ([]byte, error) {
 		}
 
 		buffer = buffer[firstNewLinePos+2:]
-
+      
 		break
 	}
 

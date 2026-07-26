@@ -23,6 +23,7 @@ type Client struct {
 	Queue         []Command
 	Dirty         bool
 	KeysWatched   map[string]struct{}
+	SubsribedChannels Set
 }
 
 var (
@@ -340,6 +341,39 @@ func (stream *Stream) XRead(startId StreamID) []*StreamEntry {
 
 	return entries
 
+}
+
+
+
+
+type Set map[string]struct{}
+
+func NewSet() Set{
+	    return make(Set)
+}
+
+
+func (s Set) Add(element string){
+       s[element]=struct{}{}
+}
+
+func (s Set) Remove(element string){
+	  delete(s,element)
+}
+
+func (s Set) Len() int{
+	    return len(s)
+}
+
+
+func (s Set) Contains(element string) bool{
+	   _,exists:=s[element]
+
+		return exists
+}
+
+func (s Set) Clear(){
+	 clear(s)
 }
 
 // //converts a string version of stream id into []bytes
