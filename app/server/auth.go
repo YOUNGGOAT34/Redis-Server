@@ -37,7 +37,9 @@ func getUser(args [][]byte) RESP.Response {
 
 					  {
 						   Type: RESP.ARRAY,
-							Array:[]RESP.Response{},
+							Array:[]RESP.Response{
+								  {Body:[]byte("nopass"),Type: RESP.BULK_STRING},
+							},
 					  },
 			},
 		}
