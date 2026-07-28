@@ -16,6 +16,18 @@ type Command struct {
 	Args [][]byte
 }
 
+type userFlags struct{
+	    NoPass bool
+}
+
+type User struct{
+
+	   Name string 
+		Passwords [][32]byte
+	   Flags userFlags
+
+}
+
 type Client struct {
 	Conn               net.Conn
 	InTransaction      bool
@@ -372,6 +384,23 @@ func (s Set[T]) Contains(element T) bool {
 func (s Set[T]) Clear(){
 	clear(s)
 }
+
+
+
+var (
+	
+	Users=map[string]*User{
+	    "default":{
+			 Name: "default",
+			 Flags: userFlags{
+				  NoPass: true,
+			 },
+		 },
+
+		}
+	UserMutex sync.RWMutex
+
+)
 
 // //converts a string version of stream id into []bytes
 // func(id storage.storage.StreamID) Bytes() []byte{

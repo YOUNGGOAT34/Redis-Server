@@ -145,6 +145,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return pub(replConfig, args[1:])
 	case "ACL":
 		return acl(args[1:])
+	case "AUTH":
+		return auth(args[1:])
 
 	default:
 		return RESP.Response{
