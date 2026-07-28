@@ -31,13 +31,3 @@ func WrongNumberOfArguments(command string) Response {
 }
 
 
-func EncodeArray(body [][]byte) []byte {
-	var respArray []byte
-	respArray = fmt.Appendf(respArray, "*%d\r\n", len(body))
-
-	for _, value := range body {
-		respArray = fmt.Appendf(respArray, "$%d\r\n%s\r\n", len(value), value)
-	}
-
-	return respArray
-}

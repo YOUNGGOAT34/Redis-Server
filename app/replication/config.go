@@ -22,9 +22,22 @@ func ReplConfig(args [][]byte,config *config.SERVER,conn net.Conn) RESP.Response
 	    
 	    if RESP.CompareBytes(args[0],[]byte("GETACK")){
 			   return RESP.Response{
-					     Body: RESP.EncodeArray([][]byte{[]byte("REPLCONF"),[]byte("ACK"),[]byte(strconv.Itoa(int(config.MASTERREPLOFFSET.Load())))}),
-						  Type: RESP.ARRAY,
-				}
+						Type: RESP.ARRAY,
+						Array: []RESP.Response{
+							{
+								Type: RESP.BULK_STRING,
+								Body: []byte("REPLCONF"),
+							},
+							{
+								Type: RESP.BULK_STRING,
+								Body: []byte("ACK"),
+							},
+							{
+								Type: RESP.BULK_STRING,
+								Body: []byte(strconv.Itoa(int(config.MASTERREPLOFFSET.Load()))),
+							},
+						},
+					}
 		 }
 
 

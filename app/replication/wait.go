@@ -19,11 +19,11 @@ func WaitCommand(args [][]byte, serverConfig *config.SERVER) RESP.Response {
 
 	targetOffset := serverConfig.MASTERREPLOFFSET.Load()
 	ack := RESP.EncodeResponse(RESP.Response{
-		Body: RESP.EncodeArray([][]byte{
-			[]byte("REPLCONF"),
-			[]byte("GETACK"),
-			[]byte("*"),
-		}),
+		Array: []RESP.Response{
+			{Type:RESP.BULK_STRING,Body:[]byte("REPLCONF")},
+			{Type:RESP.BULK_STRING,Body:[]byte("GETACK")},
+			{Type:RESP.BULK_STRING,Body:[]byte("*")},
+		},
 		Type: RESP.ARRAY,
 	})
 

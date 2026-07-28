@@ -16,36 +16,54 @@ func getConfig(args [][]byte,rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Respons
 				   switch string(args[1]){
 							case "dir":
 								return RESP.Response{
-											Body: RESP.EncodeArray([][]byte{args[1],[]byte(rdbConfig.Dir)}),
-												Type: RESP.ARRAY,
+											Array: []RESP.Response{
+												{Body:args[1],Type: RESP.BULK_STRING},
+												{Body:[]byte(rdbConfig.Dir),Type:RESP.BULK_STRING},
+											},
+											Type: RESP.ARRAY,
 									}
 							case "dbfilename":
 									return RESP.Response{
-								     Body: RESP.EncodeArray([][]byte{args[1],[]byte(rdbConfig.DbFileName)}),
+								     Array: []RESP.Response{
+										{Body:args[1],Type:RESP.BULK_STRING},
+										{Body:[]byte(rdbConfig.DbFileName),Type: RESP.BULK_STRING},
+									},
 									  Type: RESP.ARRAY,
 									 }
 							case "appendonly":
 								      
 										return RESP.Response{
-											Body: RESP.EncodeArray([][]byte{args[1],[]byte(aofConfig.AppendOnly)}),
+											Array: []RESP.Response{
+											     {Body:args[1],Type:RESP.BULK_STRING},
+												  {Body:[]byte(aofConfig.AppendOnly),Type: RESP.BULK_STRING},
+											},
 											Type: RESP.ARRAY,
 									 }
 
 							case "appenddirname":
 										return RESP.Response{
-											Body: RESP.EncodeArray([][]byte{args[1],[]byte(aofConfig.AppendDirName)}),
+											Array: []RESP.Response{
+												{Body:args[1],Type: RESP.BULK_STRING},
+												{Body:[]byte(aofConfig.AppendDirName),Type: RESP.BULK_STRING},
+												},
 											Type: RESP.ARRAY,
 									 }
 
 							case "appendfilename":
 											return RESP.Response{
-												Body: RESP.EncodeArray([][]byte{args[1],[]byte(aofConfig.AppendFilename)}),
+												Array: []RESP.Response{
+													{Body:args[1],Type: RESP.BULK_STRING},
+													{Body:[]byte(aofConfig.AppendFilename),Type: RESP.BULK_STRING},
+											},
 												Type: RESP.ARRAY,
 										}
 
 							case "appendfsync":
 										return RESP.Response{
-											Body: RESP.EncodeArray([][]byte{args[1],[]byte(aofConfig.AppendFsync)}),
+											Array: []RESP.Response{
+												{Body:args[1],Type:RESP.BULK_STRING},
+												{Body:[]byte(aofConfig.AppendFsync),Type: RESP.BULK_STRING},
+											},
 											Type: RESP.ARRAY,
 									 }
 
@@ -54,10 +72,6 @@ func getConfig(args [][]byte,rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Respons
 											Body:[]byte("Unknown configuration"),
 											Type: RESP.ERROR,
 									 }
-
-
-
-							
 
 					  }
 

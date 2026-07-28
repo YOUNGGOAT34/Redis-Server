@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"strings"
 
-	"CacheDB/app/AOF"
-	"CacheDB/app/RDB"
+	aof "CacheDB/app/AOF"
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/config"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
 )
 
-func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.SERVER, rdbConfig *rdb.RDB,aofConfig *aof.AOF) RESP.Response {
+func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) RESP.Response {
 
 	if len(args) < 1 {
 		return RESP.Response{
@@ -26,13 +26,13 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
-	if client.InSubscribeMode{
-		   if !isLegal(cmd){
-              return RESP.Response{
-					   Body: fmt.Appendf(nil,"ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context",cmd),
-						Type: RESP.ERROR,
-				  }
+	if client.InSubscribeMode {
+		if !isLegal(cmd) {
+			return RESP.Response{
+				Body: fmt.Appendf(nil, "ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", cmd),
+				Type: RESP.ERROR,
 			}
+		}
 	}
 
 	switch cmd {
@@ -40,7 +40,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	case "MULTI":
 		return multiCommand(args[1:], client)
 	case "EXEC":
-		return execCommand(args[1:], client, replConfig,aofConfig)
+		return execCommand(args[1:], client, replConfig, aofConfig)
 
 	case "DISCARD":
 		return discardCommand(args[1:], client)
@@ -78,7 +78,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 
 	case "PING":
 
-		return ping(client,args[1:])
+		return ping(client, args[1:])
 
 	case "SET":
 
@@ -131,18 +131,20 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return replication.WaitCommand(args[1:], replConfig)
 
 	case "CONFIG":
-		return getConfig(args[1:],rdbConfig,aofConfig)
+		return getConfig(args[1:], rdbConfig, aofConfig)
 	case "KEYS":
 		return keys(args[1:])
 	case "SAVE":
-		return handleSave(args,rdbConfig)
+		return handleSave(args, rdbConfig)
 
 	case "SUBSCRIBE":
-		return sub(replConfig,client,args[1:])
-   case "UNSUBSCRIBE":
-		return unSub(replConfig,client,args[1:])
+		return sub(replConfig, client, args[1:])
+	case "UNSUBSCRIBE":
+		return unSub(replConfig, client, args[1:])
 	case "PUBLISH":
-		 return pub(replConfig,args[1:])
+		return pub(replConfig, args[1:])
+	case "ACL":
+		return acl(args[1:])
 
 	default:
 		return RESP.Response{

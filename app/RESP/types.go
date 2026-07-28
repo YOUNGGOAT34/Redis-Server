@@ -18,5 +18,6 @@ const (
 
 type Response struct {
 	Body []byte
+	Array []Response
 	Type ResponseType
 }

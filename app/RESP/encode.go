@@ -6,29 +6,24 @@ import "fmt"
 
 func EncodeResponse(res Response) []byte {
 
-	body := res.Body
-
 	switch res.Type {
 
 	case ERROR:
-		return fmt.Appendf(nil, "-%s\r\n", body)
+		return encodeError(res.Body)
 	case SIMPLE_STRING:
-		return fmt.Appendf(nil, "+%s\r\n", body)
+		return encodeSimpleString(res.Body)
 
 	case NIL:
-
-		return fmt.Appendf(nil, "$-1\r\n")
-
+		return encodeNil()
 	case BULK_STRING:
-
-		return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(body), body)
+		return encodeBulkString(res.Body)
 	case INTEGER:
-		return fmt.Appendf(nil, ":%s\r\n", body)
+		return encodeInteger(res.Body)
 	case ARRAY:
 		//a resp array is already encoded from the parser
-		return res.Body
+		return encodeArray(res.Array)
 	case RDBFILE:
-		return fmt.Appendf(nil,"$%d\r\n%s",len(body),body)
+		return encodeRDB(res.Body)
 
 	default:
 
@@ -36,3 +31,41 @@ func EncodeResponse(res Response) []byte {
 	}
 
 }
+
+
+func encodeArray(values []Response) []byte {
+	var respArray []byte
+	respArray = fmt.Appendf(respArray, "*%d\r\n", len(values))
+
+	for _, value := range values {
+		respArray =append(respArray, EncodeResponse(value)...)
+	}
+
+	return respArray
+}
+
+
+func encodeBulkString(body []byte) []byte{
+	   return fmt.Appendf(nil, "$%d\r\n%s\r\n", len(body), body)
+}
+
+func encodeInteger(body []byte) []byte{
+	  return fmt.Appendf(nil, ":%s\r\n", body)
+}
+
+func encodeNil() []byte{
+	  return fmt.Appendf(nil, "$-1\r\n")
+}
+
+func encodeRDB(body []byte) []byte{
+	  return fmt.Appendf(nil,"$%d\r\n%s",len(body),body)
+}
+
+
+func encodeSimpleString(body []byte) []byte{
+	  return fmt.Appendf(nil, "+%s\r\n", body)
+}
+
+func encodeError(body []byte) []byte{
+    	return fmt.Appendf(nil, "-%s\r\n", body)
+  }

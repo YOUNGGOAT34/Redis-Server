@@ -11,15 +11,18 @@ func keys(args [][]byte) RESP.Response {
 	}
 
 	if RESP.CompareBytes(args[0], []byte("*")) {
-		keys := make([][]byte, 0, len(storage.Database))
+		responses := make([]RESP.Response, 0, len(storage.Database))
 		storage.DatabaseMutex.RLock()
 		for key := range storage.Database {
-			keys = append(keys, []byte(key))
+			responses = append(responses, RESP.Response{
+				      Body: []byte(key),
+						Type: RESP.BULK_STRING,
+			})
 		}
 
 		storage.DatabaseMutex.RUnlock()
 		return RESP.Response{
-			Body: RESP.EncodeArray(keys),
+		   Array:responses,
 			Type: RESP.ARRAY,
 		}
 	}
@@ -35,7 +38,7 @@ func keys(args [][]byte) RESP.Response {
 		})
 
 		return RESP.Response{
-			Body: RESP.EncodeArray(matchingKeys),
+			Array: matchingKeys,
 			Type: RESP.ARRAY,
 		}
 	}
@@ -51,7 +54,7 @@ func keys(args [][]byte) RESP.Response {
 		})
 
 		return RESP.Response{
-			Body: RESP.EncodeArray(matchingKeys),
+			Array:matchingKeys,
 			Type: RESP.ARRAY,
 		}
 	}
@@ -75,7 +78,7 @@ func startsWith(key string, pattern string) bool {
 	return true
 }
 
-func collectMatchingKeys(matches func(string) bool) [][]byte {
+func collectMatchingKeys(matches func(string) bool) []RESP.Response {
 	storage.DatabaseMutex.RLock()
 
 	count := 0
@@ -85,12 +88,15 @@ func collectMatchingKeys(matches func(string) bool) [][]byte {
 
 		}
 	}
-	matchingKeys := make([][]byte, 0, count)
+	matchingKeys := make([]RESP.Response, 0, count)
 
 	for key := range storage.Database {
 
 		if matches(key) {
-			matchingKeys = append(matchingKeys, []byte(key))
+			matchingKeys = append(matchingKeys,RESP.Response{
+				  Body: []byte(key),
+				  Type: RESP.BULK_STRING,
+			})
 		}
 	}
 

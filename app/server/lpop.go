@@ -48,7 +48,7 @@ func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 				}
 			}
 		} else {
-			res := make([][]byte, 0)
+			res := make([]RESP.Response, 0)
 			numberOfElements, err := strconv.Atoi(string(arguments[1]))
 
 			if err != nil {
@@ -74,7 +74,10 @@ func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 					break
 				}
 
-				res = append(res, poppedElement)
+				res = append(res, RESP.Response{
+					Body:poppedElement,
+					Type: RESP.BULK_STRING,
+				})
 
 			}
 
@@ -87,7 +90,7 @@ func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 			}
 
 			return RESP.Response{
-				Body: RESP.EncodeArray(res),
+				Array:res,
 				Type: RESP.ARRAY,
 			}
 

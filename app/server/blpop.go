@@ -37,7 +37,10 @@ func blockClient(arguments [][]byte) RESP.Response {
 		value := <-ch
 
 		return RESP.Response{
-			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
+			Array: []RESP.Response{
+				{Body:arguments[0],Type:RESP.BULK_STRING},
+				{Body:value,Type:RESP.BULK_STRING},
+			},
 			Type: RESP.ARRAY,
 		}
 
@@ -46,9 +49,13 @@ func blockClient(arguments [][]byte) RESP.Response {
 	select {
 	case value := <-ch:
 		return RESP.Response{
-			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
+
 			Type: RESP.ARRAY,
-		}
+
+			Array: []RESP.Response{
+				  {Body:arguments[0],Type:RESP.BULK_STRING},
+				   {Body:value,Type:RESP.BULK_STRING},
+		}}
 
 	case <-time.After(time.Duration(timeout) * time.Second):
 
@@ -93,7 +100,10 @@ func bLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 		markDirty(string(arguments[0]), client)
 
 		return RESP.Response{
-			Body: RESP.EncodeArray([][]byte{arguments[0], value}),
+			Array: []RESP.Response{
+				{Body:arguments[0],Type:RESP.BULK_STRING}, 
+				 {Body:value,Type: RESP.BULK_STRING},
+			},
 			Type: RESP.ARRAY,
 		}
 	}

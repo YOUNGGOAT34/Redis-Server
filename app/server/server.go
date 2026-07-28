@@ -30,20 +30,11 @@ const (
 //identify write commands
 
 func isWrite(command []byte) bool {
+	
 	cmd := strings.ToUpper(string(command))
 
 	switch cmd {
-	case "SET":
-		return true
-	case "INCR":
-		return true
-	case "LPUSH":
-		return true
-	case "LPOP":
-		return true
-	case "RPUSH":
-		return true
-	case "XADD":
+	case "SET","INCR","LPUSH","LPOP","RPUSH","XADD":
 		return true
 	}
 

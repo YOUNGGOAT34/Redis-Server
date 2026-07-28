@@ -4,24 +4,37 @@ import (
 	"CacheDB/app/RESP"
 	"CacheDB/app/config"
 	"CacheDB/app/storage"
-	"fmt"
 	"net"
 	"strconv"
 )
 
-func encodeSubResponse(channel []byte, count int,isSub bool) []byte {
-	var resp []byte
-	resp = fmt.Appendf(resp, "*3\r\n")
-	if isSub{
-		resp = fmt.Appendf(resp, "$%d\r\nsubscribe\r\n", len("subscribe"))
 
-	}else{
-		resp = fmt.Appendf(resp, "$%d\r\nunsubscribe\r\n", len("unsubscribe"))
-	}
-	resp = fmt.Appendf(resp, "$%d\r\n%s\r\n", len(channel), channel)
-	resp = fmt.Appendf(resp, ":%d\r\n", count)
-	return resp
+
+func buildSubResponse(channel []byte, count int, subscribe bool) RESP.Response {
+    action := "subscribe"
+    if !subscribe {
+        action = "unsubscribe"
+    }
+
+    return RESP.Response{
+        Type: RESP.ARRAY,
+        Array: []RESP.Response{
+            {
+                Type: RESP.BULK_STRING,
+                Body: []byte(action),
+            },
+            {
+                Type: RESP.BULK_STRING,
+                Body: channel,
+            },
+            {
+                Type: RESP.INTEGER,
+                Body: []byte(strconv.Itoa(count)),
+            },
+        },
+    }
 }
+
 
 func sub(replConfig *config.SERVER,client *storage.Client, args [][]byte) RESP.Response {
 	if len(args) < 1{
@@ -32,8 +45,8 @@ func sub(replConfig *config.SERVER,client *storage.Client, args [][]byte) RESP.R
 	defer replConfig.PubSub.ChannelMutex.Unlock()
    
 	client.InSubscribeMode=true
-  
-   var response []byte
+   
+   var response []RESP.Response
 
 	for _,channel :=range args{
 		    
@@ -45,13 +58,13 @@ func sub(replConfig *config.SERVER,client *storage.Client, args [][]byte) RESP.R
 			replConfig.PubSub.Channels[channelName].Add(client.Conn)
 			client.SubscribedChannels.Add(channelName)
 			
-			response = append(response, encodeSubResponse(channel,client.SubscribedChannels.Len(),true)...)
+			response = append(response, buildSubResponse(channel,client.SubscribedChannels.Len(),true))
 	}
 
 	
 
 	return RESP.Response{
-		Body: response,
+		Array: response,
 		Type: RESP.ARRAY,
 	}
 }
@@ -67,7 +80,7 @@ func unSub(replConfig *config.SERVER,client *storage.Client, args [][]byte) RESP
 	  replConfig.PubSub.ChannelMutex.Lock()
 	  defer replConfig.PubSub.ChannelMutex.Unlock()
 
-	  var response []byte 
+	  var response []RESP.Response
 
 	  for _,channel:=range args{
 		      channelName:=string(channel)
@@ -84,11 +97,11 @@ func unSub(replConfig *config.SERVER,client *storage.Client, args [][]byte) RESP
 							   delete(replConfig.PubSub.Channels,channelName)
 					}
        
-		     response = append(response, encodeSubResponse(channel,client.SubscribedChannels.Len(),false)...)		
+		     response = append(response, buildSubResponse(channel,client.SubscribedChannels.Len(),false))		
 	  }
 
 	  return  RESP.Response{
-		  Body: response,
+		  Array: response,
 		  Type: RESP.ARRAY,
 	  }
 }
@@ -112,7 +125,16 @@ func pub(replConfig *config.SERVER,args [][]byte,) RESP.Response{
 	replConfig.PubSub.ChannelMutex.RUnlock()
 
    
-	 response:=RESP.EncodeArray([][]byte{[]byte("message"),args[0],args[1]})
+	//  response:=RESP.EncodeResponse([][]byte{[]byte("message"),args[0],args[1]})
+
+	 response:=RESP.EncodeResponse(RESP.Response{
+		 Type:RESP.ARRAY,
+		 Array:[]RESP.Response{
+
+			 {Body:[]byte("message"),Type: RESP.BULK_STRING},
+			 {Body:args[0],Type: RESP.BULK_STRING},
+			 {Body:args[1],Type: RESP.BULK_STRING}},
+		 })
 
 	 //keep track of the subscribers who got messages
 
