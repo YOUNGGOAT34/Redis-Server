@@ -121,7 +121,6 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 
 	case "LPOP":
 		return lPopCommand(args[1:], client)
-
 	case "BLPOP":
 		return bLPopCommand(args[1:], client)
 	case "TYPE":

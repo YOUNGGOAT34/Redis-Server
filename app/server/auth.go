@@ -22,10 +22,14 @@ func acl(client *storage.Client,args [][]byte) RESP.Response {
 				return getUser(args[1:])
 			case "SETUSER":
 				return setUser(args[1:])
+			default:
+				return RESP.Response{
+					   Body: []byte("unknown acl subcommand"),
+						Type: RESP.ERROR,
+				}
 	}
 
-	return RESP.Response{}
-	
+
 }
 
 func getUser(args [][]byte) RESP.Response {
@@ -135,12 +139,15 @@ func setUser(args [][]byte) RESP.Response{
 					case rule=="off":
 						return disableOrEnableUser(string(args[0]),false)
 					default:
-						//syntax error
+						return RESP.Response{
+								Body: []byte("syntax error"),
+								Type: RESP.ERROR,
+							}
 			}
 		}
 
-	return RESP.Response{}
 
+		return RESP.Response{}
 }
 
 func disableOrEnableUser(username string,on bool) RESP.Response {

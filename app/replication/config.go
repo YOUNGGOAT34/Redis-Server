@@ -8,15 +8,6 @@ import (
 	"strconv"
 )
 
-// func EncodeArray(body [][]byte) []byte{
-// 	   var res []byte
-// 		res=fmt.Appendf(res,"*%d\r\n",len(body))
-
-// 		for _,element:=range body{
-//            res=fmt.Appendf(res,"$%d\r\n%s\r\n",len(element),element)
-// 		}
-// 		return res
-// }
 
 func ReplConfig(args [][]byte,config *config.SERVER,conn net.Conn) RESP.Response{
 	    
