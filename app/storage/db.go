@@ -16,7 +16,7 @@ type Command struct {
 	Args [][]byte
 }
 
-type userFlags struct{
+type UserFlags struct{
 	    NoPass bool
 }
 
@@ -24,7 +24,7 @@ type User struct{
 
 	   Name string 
 		Passwords [][32]byte
-	   Flags userFlags
+	   Flags UserFlags
 
 }
 
@@ -36,6 +36,7 @@ type Client struct {
 	KeysWatched        map[string]struct{}
 	InSubscribeMode bool
 	SubscribedChannels Set[string]
+	User *User
 }
 
 var (
@@ -389,15 +390,7 @@ func (s Set[T]) Clear(){
 
 var (
 	
-	Users=map[string]*User{
-	    "default":{
-			 Name: "default",
-			 Flags: userFlags{
-				  NoPass: true,
-			 },
-		 },
-
-		}
+	Users=make(map[string]*User)
 	UserMutex sync.RWMutex
 
 )

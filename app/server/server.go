@@ -41,6 +41,19 @@ func isWrite(command []byte) bool {
 	return false
 }
 
+
+func createUser(client *storage.Client){
+	   storage.UserMutex.RLock()
+	defaultUser:=storage.Users["default"]
+
+	if defaultUser.Flags.NoPass{
+		  client.User=defaultUser
+	}
+
+	storage.UserMutex.RUnlock()
+}
+
+
 func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
 	var request []byte
 	var temp = make([]byte, 1024)
@@ -53,6 +66,10 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 		SubscribedChannels: storage.NewSet[string](),
 	}
 
+
+	createUser(client)
+
+   
 	for {
 
 		bytesRead, err := conn.Read(temp)
@@ -225,6 +242,8 @@ func accept(listener net.Listener) net.Conn {
 
 func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) {
 
+
+
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
@@ -274,6 +293,16 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 		go handleMaster(conn, replConfig, aofFileConfig)
 
 	}
+
+	defaultUser:=storage.User{
+		    Name:"default",
+			 Passwords: make([][32]byte,0),
+			 Flags: storage.UserFlags{
+				     NoPass: true,
+			 },
+	}
+
+	storage.Users["default"]=&defaultUser
 
 	for {
 

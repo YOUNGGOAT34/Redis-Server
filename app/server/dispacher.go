@@ -26,6 +26,18 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
+	if cmd=="AUTH"{
+		 return auth(client,args[1:])
+	}
+
+	if client.User==nil{
+        return RESP.Response{
+            Type: RESP.ERROR,
+            Body: []byte("NOAUTH Authentication required."),
+        }
+    
+	}
+
 	if client.InSubscribeMode {
 		if !isLegal(cmd) {
 			return RESP.Response{
@@ -144,10 +156,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	case "PUBLISH":
 		return pub(replConfig, args[1:])
 	case "ACL":
-		return acl(args[1:])
-	case "AUTH":
-		return auth(args[1:])
-
+		return acl(client,args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),

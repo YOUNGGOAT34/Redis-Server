@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func acl(args [][]byte) RESP.Response {
+func acl(client *storage.Client,args [][]byte) RESP.Response {
 
 	if len(args)<1{
 		  return RESP.WrongNumberOfArguments("ACL")
@@ -16,7 +16,7 @@ func acl(args [][]byte) RESP.Response {
 
 	switch strings.ToUpper(string(args[0])){
 			case "WHOAMI":
-				return whoami(args[1:])
+				return whoami(client,args[1:])
 			case "GETUSER":
 				return getUser(args[1:])
 			case "SETUSER":
@@ -37,7 +37,7 @@ func getUser(args [][]byte) RESP.Response {
 		user,exists:=storage.Users[string(args[0])]
 		if !exists{
 			  return RESP.Response{
-			     Body: []byte("Err user not found"),
+			     Body: []byte("WRONGPASS invalid username-password pair or user is disabled"),
 				  Type: RESP.ERROR,
 		    }
 		}
@@ -82,7 +82,6 @@ func getUser(args [][]byte) RESP.Response {
 							Array:flags,
 					  },
 
-
 					    {
 						  Type: RESP.BULK_STRING,
 						  Body: []byte("passwords"),
@@ -96,17 +95,17 @@ func getUser(args [][]byte) RESP.Response {
 		}
 }
 
-func whoami(args [][]byte) RESP.Response {
+func whoami(client *storage.Client,args [][]byte) RESP.Response {
 	if len(args)!=0{
 		 return RESP.WrongNumberOfArguments("ACL WHOAMI")
 	}
+
 	return RESP.Response{
-		Body: []byte("default"),
+		Body: []byte(client.User.Name),
 		Type: RESP.BULK_STRING,
 	}
 
 }
-
 
 
 func setUser(args [][]byte) RESP.Response{
@@ -155,13 +154,13 @@ func  addPassword(username string,password []byte) RESP.Response{
 
 
 		 return RESP.Response{
-			     Body: []byte("Err user not found"),
+			     Body: []byte("WRONGPASS invalid username-password pair or user is disabled"),
 				  Type: RESP.ERROR,
 		 }
 
 }
 
-func auth(args [][]byte) RESP.Response{
+func auth(client *storage.Client,args [][]byte) RESP.Response{
 	      if len(args)!=2{
 				 return RESP.WrongNumberOfArguments("AUTH")
 			}
@@ -173,6 +172,7 @@ func auth(args [][]byte) RESP.Response{
 			if user,exists:=storage.Users[string(args[0])];exists{
 				      for _,password:=range user.Passwords{
 							   if password==sha256.Sum256(args[1]){
+									  client.User=user
 									   return RESP.Response{
 											  Body: []byte("OK"),
 											  Type: RESP.SIMPLE_STRING,
@@ -188,7 +188,7 @@ func auth(args [][]byte) RESP.Response{
 
 			
        return RESP.Response{
-			     Body: []byte("Err user not found"),
+			     Body: []byte("WRONGPASS invalid username-password pair or user is disabled"),
 				  Type: RESP.ERROR,
 		 }
 			
