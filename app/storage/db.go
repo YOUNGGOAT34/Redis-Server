@@ -18,6 +18,7 @@ type Command struct {
 
 type UserFlags struct{
 	    NoPass bool
+		 Enabled bool
 }
 
 type User struct{

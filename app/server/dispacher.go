@@ -38,6 +38,10 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
     
 	}
 
+	if !client.User.Flags.Enabled{
+       return invalid()
+	}
+
 	if client.InSubscribeMode {
 		if !isLegal(cmd) {
 			return RESP.Response{

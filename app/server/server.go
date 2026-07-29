@@ -299,6 +299,7 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 			 Passwords: make([][32]byte,0),
 			 Flags: storage.UserFlags{
 				     NoPass: true,
+					  Enabled: true,
 			 },
 	}
 
