@@ -133,7 +133,7 @@ func setUser(args [][]byte) RESP.Response{
 					case strings.HasPrefix(rule,"<"):
 						 return removePassword(string(args[0]),arg[1:])
 					case rule=="nopass":
-						//enable nopass
+						 return nopass(string(args[0]))
 					case rule=="on":
 						return disableOrEnableUser(string(args[0]),true)
 					case rule=="off":
@@ -147,6 +147,22 @@ func setUser(args [][]byte) RESP.Response{
 		}
 
 		return RESP.Response{}
+}
+
+func nopass(username string) RESP.Response {
+	    storage.UserMutex.Lock()
+		defer storage.UserMutex.Unlock()
+
+		if user,exists:=storage.Users[username];exists{
+			    user.Flags.NoPass=true
+
+				 return RESP.Response{
+								Body: []byte("OK"),
+								Type: RESP.SIMPLE_STRING,
+						}
+		}
+
+		return invalid()
 }
 
 func disableOrEnableUser(username string,on bool) RESP.Response {
