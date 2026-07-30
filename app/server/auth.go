@@ -131,7 +131,7 @@ func setUser(args [][]byte) RESP.Response{
 					case strings.HasPrefix(rule,">"):
 						return addPassword(string(args[0]),arg[1:])
 					case strings.HasPrefix(rule,"<"):
-						//remove password
+						 return removePassword(string(args[0]),arg[1:])
 					case rule=="nopass":
 						//enable nopass
 					case rule=="on":
@@ -145,7 +145,6 @@ func setUser(args [][]byte) RESP.Response{
 							}
 			}
 		}
-
 
 		return RESP.Response{}
 }
@@ -189,6 +188,31 @@ func  addPassword(username string,password []byte) RESP.Response{
 
 		 return invalid()
 
+}
+
+
+func removePassword(username string,password []byte) RESP.Response{
+	  hash:=sha256.Sum256(password)
+
+		 storage.UserMutex.Lock()
+		 defer storage.UserMutex.Unlock()
+
+		 if user,exists:=storage.Users[username];exists{
+			     for index,password:=range user.Passwords{
+					     if password==hash{
+							   
+							     user.Passwords = append(user.Passwords[:index],user.Passwords[index+1:]... )
+
+								  return RESP.Response{
+										Body: []byte("OK"),
+										Type: RESP.SIMPLE_STRING,
+								  }
+						  }
+				  }
+		 }
+
+
+		 return invalid()
 }
 
 func auth(client *storage.Client,args [][]byte) RESP.Response{
