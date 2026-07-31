@@ -188,8 +188,7 @@ func disableOrEnableUser(username string,on bool) RESP.Response {
 
 func  addPassword(username string,passwords [][]byte) RESP.Response{
 	   //  fmt.Printf(password)
-	  
-
+	
 		 storage.UserMutex.Lock()
 		 defer storage.UserMutex.Unlock()
 

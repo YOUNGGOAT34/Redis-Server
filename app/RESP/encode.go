@@ -20,18 +20,18 @@ func EncodeResponse(res Response) []byte {
 	case INTEGER:
 		return encodeInteger(res.Body)
 	case ARRAY:
-		//a resp array is already encoded from the parser
 		return encodeArray(res.Array)
 	case RDBFILE:
 		return encodeRDB(res.Body)
-
+	case LIST,STREAM,TRANSACTION:
+		//a lists,streams,transaction returns is already encoded as a resp array
+		return res.Body
 	default:
 
 		panic("Unknown Response type")
 	}
 
 }
-
 
 func encodeArray(values []Response) []byte {
 	var respArray []byte

@@ -61,7 +61,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 		if stream.Len == 0 {
 			return RESP.Response{
 				Body: encodeEntries(stream.Entries),
-				Type: RESP.ARRAY,
+				Type: RESP.STREAM,
 			}
 		}
 
@@ -90,7 +90,7 @@ func xRangeCommand(arguments [][]byte) RESP.Response {
 
 	return RESP.Response{
 		Body: encodeEntries(entries),
-		Type: RESP.ARRAY,
+		Type: RESP.STREAM,
 	}
 
 }

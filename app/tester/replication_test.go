@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -799,11 +800,20 @@ func startMaster(t *testing.T) (*config.SERVER, int) {
 		REPLICAS:     make([]*config.REPLICA, 0),
 	}
 
+	currentWorkingDir,err:=os.Getwd()
+	
+	if err!=nil{
+		t.Fatalf("Failed to get current working directory: %v", err)
+	}
+
 	rdb:=&rdb.RDB{
-		  Dir: ".",
+		  Dir:currentWorkingDir,
 		  DbFileName: "dump.rdb",
 	}
-	go server.StartServer(cfg,rdb,&aof.AOF{})
+	go server.StartServer(cfg,rdb, &aof.AOF{
+		    AppendDirName: "appendonly",
+			 AppendFilename: "appendonly.aof",
+	  },)
 	time.Sleep(100 * time.Millisecond)
 	return cfg, port
 }
@@ -817,11 +827,20 @@ func startReplica(t *testing.T, masterPort int) (*config.SERVER, int) {
 		MasterHost: "127.0.0.1",
 		MasterPort: masterPort,
 	}
+
+	currentWorkingDir,err:=os.Getwd()
+	
+	if err!=nil{
+		t.Fatalf("Failed to get current working directory: %v", err)
+	}
 	rdb:=&rdb.RDB{
-		  Dir: ".",
+		  Dir: currentWorkingDir,
 		  DbFileName: "dump.rdb",
 	}
-	go server.StartServer(cfg,rdb,&aof.AOF{})
+	go server.StartServer(cfg,rdb, &aof.AOF{
+		    AppendDirName: "appendonly",
+			 AppendFilename: "appendonly.aof",
+	  },)
 	return cfg, port
 }
 

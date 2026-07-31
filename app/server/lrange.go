@@ -8,8 +8,7 @@ import (
 	"strconv"
 )
 
-func encodeRespArray(list *storage.List, startIndex int, endIndex int) []byte {
-
+func encodeList(list *storage.List, startIndex int, endIndex int) []byte {
 	var respArray []byte
 
 	count := endIndex - startIndex + 1
@@ -102,9 +101,10 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		defer list.ListMutex.RUnlock()
 
 		if list == nil || list.Len == 0 {
+		
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
-				Type: RESP.ARRAY,
+				Type: RESP.LIST,
 			}
 		}
 
@@ -113,10 +113,9 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		}
 
 		if startIndex >= list.Len {
-
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
-				Type: RESP.ARRAY,
+				Type: RESP.LIST,
 			}
 
 		}
@@ -138,22 +137,23 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		}
 
 		if startIndex > endIndex {
+			
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
-				Type: RESP.ARRAY,
+				Type: RESP.LIST,
 			}
 		}
 
 		return RESP.Response{
 
-			Body: encodeRespArray(list, startIndex, endIndex),
-			Type: RESP.ARRAY,
+			Body: encodeList(list, startIndex, endIndex),
+			Type: RESP.LIST,
 		}
 
 	}
 
 	return RESP.Response{
 		Body: []byte("*0\r\n"),
-		Type: RESP.ARRAY,
+		Type: RESP.LIST,
 	}
 }

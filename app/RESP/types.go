@@ -13,7 +13,10 @@ const (
 	NIL
 	INTEGER
 	ARRAY
+	LIST
 	RDBFILE
+	STREAM
+	TRANSACTION
 )
 
 type Response struct {

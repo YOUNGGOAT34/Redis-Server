@@ -107,7 +107,7 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 
 	return RESP.Response{
 		Body: encodeStreams(streams),
-		Type: RESP.ARRAY,
+		Type: RESP.STREAM,
 	}
 
 }
@@ -212,7 +212,7 @@ func blockingXread(arguments [][]byte) RESP.Response {
 
 	return RESP.Response{
 		Body: encodeStreams(streams),
-		Type: RESP.ARRAY,
+		Type: RESP.STREAM,
 	}
 }
 

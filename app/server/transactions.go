@@ -57,7 +57,7 @@ func execCommand(arguments [][]byte, client *storage.Client, replConfig *config.
 
 		return RESP.Response{
 			Body: []byte("*-1\r\n"),
-			Type: RESP.ARRAY,
+			Type: RESP.TRANSACTION,
 		}
 	}
 
@@ -71,7 +71,7 @@ func execCommand(arguments [][]byte, client *storage.Client, replConfig *config.
 
 	return RESP.Response{
 		Body: resp,
-		Type: RESP.ARRAY,
+		Type: RESP.TRANSACTION,
 	}
 }
 
