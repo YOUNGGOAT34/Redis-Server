@@ -2,15 +2,16 @@ package tester
 
 import (
 	// "fmt"
+	"fmt"
 	"net"
 	"os"
 	"testing"
 	"time"
 
-	// "CacheDB/app/AOF"
-	// rdb "CacheDB/app/RDB"
-	// "CacheDB/app/RESP"
-	// "CacheDB/app/server"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
+	"CacheDB/app/config"
+	"CacheDB/app/server"
 )
 
 var (
@@ -42,22 +43,25 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-// 	currentWorkingDir,err:=os.Getwd()
+	currentWorkingDir,err:=os.Getwd()
 	
-// 	if err!=nil{
-// 		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
-// 		return
-// 	}
-// 	go server.StartServer(&RESP.SERVER{
-// 		PORT: 6379,
-// 	},&rdb.RDB{
-// 		Dir: currentWorkingDir,
-// 		DbFileName: "dump.rdb",
-// 	},
-// 	  &aof.AOF{},
-//   )
+	if err!=nil{
+		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
+		return
+	}
+	go server.StartServer(&config.SERVER{
+		PORT: 6379,
+	},&rdb.RDB{
+		Dir: currentWorkingDir,
+		DbFileName: "dump.rdb",
+	},
+	  &aof.AOF{
+		    AppendDirName: "appendonly",
+			 AppendFilename: "appendonly.aof",
+	  },
+  )
 
-	// waitForServer()
+	waitForServer()
 
 	// pingtest(t)
 	// echo_test(t)
@@ -81,6 +85,7 @@ func TestMain(t *testing.T) {
 	// list_watch_test(t)
 	// stream_xadd_watch_test(t)
 	// replication_test(t)
+	auth_test(t)
 
 }
 

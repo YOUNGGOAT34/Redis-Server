@@ -27,10 +27,6 @@ func TestReadRDB(t *testing.T) {
 }
 
 
-
-
-
-
 func TestReadRDBFileWithLists(t *testing.T) {
 	// Mock config pointing to directory/file
 	rdbConfig := &rdb.RDB{

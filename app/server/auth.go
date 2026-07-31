@@ -129,7 +129,7 @@ func setUser(args [][]byte) RESP.Response{
         
 			switch{
 					case strings.HasPrefix(rule,">"):
-						return addPassword(string(args[0]),arg[1:])
+						return addPassword(string(args[0]),args[1:])
 					case strings.HasPrefix(rule,"<"):
 						 return removePassword(string(args[0]),arg[1:])
 					case rule=="nopass":
@@ -186,15 +186,19 @@ func disableOrEnableUser(username string,on bool) RESP.Response {
     }
 }
 
-func  addPassword(username string,password []byte) RESP.Response{
-	    hash:=sha256.Sum256(password)
+func  addPassword(username string,passwords [][]byte) RESP.Response{
+	   //  fmt.Printf(password)
+	  
 
 		 storage.UserMutex.Lock()
 		 defer storage.UserMutex.Unlock()
 
 		 if user,exists:=storage.Users[username];exists{
-			     user.Passwords = append(user.Passwords, hash)
-				  user.Flags.NoPass=false
+			     for _,password:=range passwords{
+                  hash:=sha256.Sum256(password[1:])
+					  user.Passwords = append(user.Passwords, hash)
+					  user.Flags.NoPass=false
+				  }
 				  return RESP.Response{
 					   Body: []byte("OK"),
 						Type: RESP.SIMPLE_STRING,
@@ -225,6 +229,11 @@ func removePassword(username string,password []byte) RESP.Response{
 								  }
 						  }
 				  }
+
+				  return RESP.Response{
+							Body: []byte("OK"),
+							Type: RESP.SIMPLE_STRING,
+					}
 		 }
 
 
@@ -232,20 +241,32 @@ func removePassword(username string,password []byte) RESP.Response{
 }
 
 func auth(client *storage.Client,args [][]byte) RESP.Response{
-	      if len(args)!=2{
+	      if len(args)!=1 && len(args)!=2{
 				 return RESP.WrongNumberOfArguments("AUTH")
 			}
 
 
 			storage.UserMutex.RLock()
 			defer storage.UserMutex.RUnlock()
+         
+			var username string
+			var givenPassword []byte
 
-			if user,exists:=storage.Users[string(args[0])];exists{
+			if len(args)==1{
+				   givenPassword=args[0]
+					username="default"
+			}else{
+				   givenPassword=args[1]
+					username=string(args[0])
+			}
+
+			if user,exists:=storage.Users[username];exists{
 				      if !user.Flags.Enabled{
 							  return invalid()
 						}
+						hash:=sha256.Sum256(givenPassword)
 				      for _,password:=range user.Passwords{
-							   if password==sha256.Sum256(args[1]){
+							   if password==hash{
 									  client.User=user
 									   return RESP.Response{
 											  Body: []byte("OK"),
@@ -254,19 +275,20 @@ func auth(client *storage.Client,args [][]byte) RESP.Response{
 								}
 						}
 
+						
+
 						return invalid()
 			}
 
 			
        return invalid()
-			
 }
 
 
 
 func invalid() RESP.Response{
 	  return RESP.Response{
-							    Body: []byte(" WRONGPASS invalid username-password pair or user is disabled"),
+							    Body: []byte("WRONGPASS invalid username-password pair or user is disabled"),
 								 Type: RESP.ERROR,
 						}
 }
