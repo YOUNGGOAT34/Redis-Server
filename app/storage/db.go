@@ -439,7 +439,6 @@ func NewSkipList() *SkipList{
 }
 
 //search 
-
 func (sl *SkipList) Search(score float64) *SkipNode{
 	   current:=sl.Head
 
@@ -456,6 +455,47 @@ func (sl *SkipList) Search(score float64) *SkipNode{
 		}
 
 		return nil
+}
+
+//inseart
+
+func (sl *SkipList) Inseart(score float64,member string){
+	    //This will store the predecessor at each level
+	    update:=make([]*SkipNode,MaxLevel)
+
+		 current:=sl.Head
+
+		 //search the insertion position and mark the predecessors
+		 for i:=sl.Length-1;i>=0;i--{
+			   
+			    for current.Forward[i]!=nil && current.Forward[i].Score<score{
+					   current=current.Forward[i]
+				 }
+
+				 update[i]=current
+		 }
+
+		 //choose height
+
+		 level:=RandomLevel()
+
+		 //create the new node
+
+		 node:=&SkipNode{
+			    Member: member,
+				 Score: score,
+				 Forward: make([]*SkipNode,level),
+		 }
+
+	
+		 //reconnect the nodes
+
+		 for i:=0;i<level;i++{
+			  node.Forward[i]=update[i].Forward[i]
+			  update[i].Forward[i]=node
+		 }
+
+		 sl.Length++
 }
 
 // //converts a string version of stream id into []bytes
