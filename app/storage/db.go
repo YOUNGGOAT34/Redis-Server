@@ -439,11 +439,11 @@ func NewSkipList() *SkipList{
 }
 
 //search 
-func (sl *SkipList) Search(score float64) *SkipNode{
+func (sl *SkipList) Search(score float64,member string) *SkipNode{
 	   current:=sl.Head
 
 		for i:=sl.Level-1;i>=0;i--{
-			   for current.Forward[i]!=nil && current.Score<score{
+			   for current.Forward[i]!=nil && isLess(current.Score,current.Member,score,member){
 					 current=current.Forward[i]
 				}
 		}
@@ -467,8 +467,8 @@ func (sl *SkipList) Inseart(score float64,member string){
 
 		 //search the insertion position and mark the predecessors
 		 for i:=sl.Length-1;i>=0;i--{
-			   
-			    for current.Forward[i]!=nil && current.Forward[i].Score<score{
+			   //isLess function will compare two nodes in terms of both the score and lexicographically
+			    for current.Forward[i]!=nil && isLess(current.Forward[i].Score,current.Member,score,member){
 					   current=current.Forward[i]
 				 }
 
@@ -496,6 +496,20 @@ func (sl *SkipList) Inseart(score float64,member string){
 		 }
 
 		 sl.Length++
+}
+
+
+func isLess(score1 float64,member1 string,score2 float64,member2 string) bool{
+
+	if score1<score2{
+		   return true
+	}
+	  
+	if score1>score2{
+		 return true
+	}
+
+	return member1<member2
 }
 
 // //converts a string version of stream id into []bytes
