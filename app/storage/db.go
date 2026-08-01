@@ -3,6 +3,7 @@ package storage
 import (
 	"container/list"
 	"errors"
+	"math/rand"
 	"net"
 	"sort"
 	"strconv"
@@ -84,6 +85,20 @@ type List struct {
 	Tail      *Node
 	Len       int
 	ListMutex sync.RWMutex
+}
+
+//skip list
+
+type SkipNode struct{
+	  Member string
+	  Score float64
+	  Forward []*SkipNode
+}
+
+type SkipList struct{
+	  Head *SkipNode
+	  Level int
+	  Length int
 }
 
 // for blocking pops
@@ -395,6 +410,53 @@ var (
 	UserMutex sync.RWMutex
 
 )
+
+
+//skip list methods
+const MaxLevel=32
+
+func RandomLevel() int{
+	  level:=1
+
+	  for rand.Float64() <0.25 && level<MaxLevel{
+		 level++
+	  }
+
+	  return level
+}
+
+//constructor
+
+func NewSkipList() *SkipList{
+	  head:=&SkipNode{
+		    Forward: make([]*SkipNode,MaxLevel),
+	  }
+
+	  return &SkipList{
+		    Head: head,
+			 Level: 1,
+	  }
+}
+
+//search 
+
+func (sl *SkipList) Search(score float64) *SkipNode{
+	   current:=sl.Head
+
+		for i:=sl.Level-1;i>=0;i--{
+			   for current.Forward[i]!=nil && current.Score<score{
+					 current=current.Forward[i]
+				}
+		}
+
+		current=current.Forward[0]
+
+		if current!=nil && current.Score==score{
+			 return current
+		}
+
+		return nil
+}
 
 // //converts a string version of stream id into []bytes
 // func(id storage.storage.StreamID) Bytes() []byte{
