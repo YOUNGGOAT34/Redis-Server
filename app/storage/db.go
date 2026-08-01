@@ -101,12 +101,17 @@ type SkipList struct{
 	  Length int
 }
 
+type ZSet struct{
+	   Dict map[string]*SkipNode
+		List *SkipList
+		setMutex sync.RWMutex
+}
+
 // for blocking pops
 var (
 	BlockedClients      = make(map[string]*list.List)
 	BlockedClientsMutex sync.RWMutex
 )
-
 // for blocking reads(of streams)
 var (
 	WaitingClients      = make(map[string]*list.List)

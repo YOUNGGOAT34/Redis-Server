@@ -7,6 +7,7 @@ import (
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/commands"
 	"CacheDB/app/config"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
@@ -26,24 +27,24 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
-	if cmd=="AUTH"{
-		 return auth(client,args[1:])
+	if cmd == "AUTH" {
+		return commands.Auth(client, args[1:])
 	}
 
-	if client.User==nil{
-        return RESP.Response{
-            Type: RESP.ERROR,
-            Body: []byte("NOAUTH Authentication required."),
-        }
-    
+	if client.User == nil {
+		return RESP.Response{
+			Type: RESP.ERROR,
+			Body: []byte("NOAUTH Authentication required."),
+		}
+
 	}
 
-	if !client.User.Flags.Enabled{
-       return invalid()
+	if !client.User.Flags.Enabled {
+		return commands.Invalid()
 	}
 
 	if client.InSubscribeMode {
-		if !isLegal(cmd) {
+		if !commands.IsLegal(cmd) {
 			return RESP.Response{
 				Body: fmt.Appendf(nil, "ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", cmd),
 				Type: RESP.ERROR,
@@ -94,7 +95,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 
 	case "PING":
 
-		return ping(client, args[1:])
+		return commands.Ping(client, args[1:])
 
 	case "SET":
 
@@ -104,35 +105,35 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 				Type: RESP.NIL,
 			}
 		}
-		return setCommand(args[1:], client)
+		return commands.SetCommand(args[1:], client)
 
 	case "GET":
-		return getCommand(args[1:])
+		return commands.GetCommand(args[1:])
 	case "RPUSH":
-		return rPushCommand(args[1:], client)
+		return commands.RPushCommand(args[1:], client)
 
 	case "LRANGE":
-		return lRangeCommand(args[1:])
+		return commands.LRangeCommand(args[1:])
 	case "LPUSH":
-		return lPushCommand(args[1:], client)
+		return commands.LPushCommand(args[1:], client)
 
 	case "LLEN":
-		return llenCommand(args[1:])
+		return commands.LlenCommand(args[1:])
 
 	case "LPOP":
-		return lPopCommand(args[1:], client)
+		return commands.LPopCommand(args[1:], client)
 	case "BLPOP":
-		return bLPopCommand(args[1:], client)
+		return commands.BLPopCommand(args[1:], client)
 	case "TYPE":
-		return typeCommand(args[1:])
+		return commands.TypeCommand(args[1:])
 	case "XADD":
-		return xAddCommand(args[1:], client)
+		return commands.XAddCommand(args[1:], client)
 	case "XRANGE":
-		return xRangeCommand(args[1:])
+		return commands.XRangeCommand(args[1:])
 	case "XREAD":
-		return decideTypeOfRead(args[1:])
+		return commands.DecideTypeOfRead(args[1:])
 	case "INCR":
-		return incrCommand(args[1:], client)
+		return commands.IncrCommand(args[1:], client)
 
 	case "UNWATCH":
 		return unwatchCommand(args[1:], client)
@@ -146,20 +147,20 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return replication.WaitCommand(args[1:], replConfig)
 
 	case "CONFIG":
-		return getConfig(args[1:], rdbConfig, aofConfig)
+		return commands.GetConfig(args[1:], rdbConfig, aofConfig)
 	case "KEYS":
-		return keys(args[1:])
+		return commands.Keys(args[1:])
 	case "SAVE":
-		return handleSave(args, rdbConfig)
+		return commands.HandleSave(args, rdbConfig)
 
 	case "SUBSCRIBE":
-		return sub(replConfig, client, args[1:])
+		return commands.Sub(replConfig, client, args[1:])
 	case "UNSUBSCRIBE":
-		return unSub(replConfig, client, args[1:])
+		return commands.UnSub(replConfig, client, args[1:])
 	case "PUBLISH":
-		return pub(replConfig, args[1:])
+		return commands.Pub(replConfig, args[1:])
 	case "ACL":
-		return acl(client,args[1:])
+		return commands.Acl(client, args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),

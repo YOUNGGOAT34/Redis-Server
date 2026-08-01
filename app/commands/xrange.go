@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -32,7 +32,7 @@ func encodeEntries(entries []*storage.StreamEntry) []byte {
 	return respArray
 }
 
-func xRangeCommand(arguments [][]byte) RESP.Response {
+func XRangeCommand(arguments [][]byte) RESP.Response {
 
 	if len(arguments) != 3 {
 		return RESP.WrongNumberOfArguments("XRANGE")

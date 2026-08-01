@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func lPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func LPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 2 {
 		return RESP.WrongNumberOfArguments("LPUSH")
 	}

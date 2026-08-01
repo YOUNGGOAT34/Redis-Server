@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func getCommand(arguments [][]byte) RESP.Response {
+func GetCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) < 1 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'GET' command"),
@@ -56,7 +56,7 @@ func getCommand(arguments [][]byte) RESP.Response {
 	}
 }
 
-func setCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 2 {
 		return RESP.WrongNumberOfArguments("SET")
 	}
@@ -126,7 +126,7 @@ func setCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	}
 
 	storage.DatabaseMutex.Lock()
-	storage.Database[string(arguments[0])] =storage. Data{
+	storage.Database[string(arguments[0])] = storage.Data{
 		Type:  storage.STRING,
 		Value: arguments[1],
 	}

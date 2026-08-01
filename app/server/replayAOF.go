@@ -1,8 +1,8 @@
 package server
 
 import (
-	"CacheDB/app/AOF"
-	"CacheDB/app/RDB"
+	aof "CacheDB/app/AOF"
+	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/config"
 	"CacheDB/app/storage"
@@ -13,77 +13,70 @@ import (
 	"path/filepath"
 )
 
-func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB,aofFileConfig *aof.AOF) error{
+func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) error {
 
+	aofDir := filepath.Join(aofFileConfig.Dir, aofFileConfig.AppendDirName)
 
-	      aofDir:=filepath.Join(aofFileConfig.Dir,aofFileConfig.AppendDirName)
-            
-			  manifestPath:=filepath.Join(aofDir,aof.BuildManifestFileName(aofFileConfig.AppendFilename))
+	manifestPath := filepath.Join(aofDir, aof.BuildManifestFileName(aofFileConfig.AppendFilename))
 
-			  aoffilename,err:=aof.ReadManifest(manifestPath)
+	aoffilename, err := aof.ReadManifest(manifestPath)
 
-			  if err!=nil{
-				   fmt.Fprintf(os.Stderr,"%s\r\n",err.Error())
-			  }
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\r\n", err.Error())
+	}
 
-			  aofPath:=filepath.Join(aofDir,aoffilename)
+	aofPath := filepath.Join(aofDir, aoffilename)
 
-			  file,err:=os.Open(aofPath)
+	file, err := os.Open(aofPath)
 
-			  if err!=nil{
-				  return err
-			  }
-     
-	     request:=make([]byte,0,1024)
-		  temp:=make([]byte,1024)
+	if err != nil {
+		return err
+	}
 
+	request := make([]byte, 0, 1024)
+	temp := make([]byte, 1024)
 
-		  for{
+	for {
 
-			    bytesRead,err:=file.Read(temp)
+		bytesRead, err := file.Read(temp)
 
-				 if err!=nil && err!=io.EOF{
-						return err
-				 }
+		if err != nil && err != io.EOF {
+			return err
+		}
 
-              if bytesRead>0{
+		if bytesRead > 0 {
 
-					  request = append(request, temp[:bytesRead]...)
-				  }
+			request = append(request, temp[:bytesRead]...)
+		}
 
-				
+		for len(request) > 0 {
 
-				 for len(request)>0{
-      
-					    parsedRequest,bytesConsumed,err:=RESP.ParseRequest(request)
+			parsedRequest, bytesConsumed, err := RESP.ParseRequest(request)
 
-						 if err!=nil{
-							    if errors.Is(err,RESP.ErrIncomplete){
-									  break
-								 }
+			if err != nil {
+				if errors.Is(err, RESP.ErrIncomplete) {
+					break
+				}
 
-								 return err
-						 }
+				return err
+			}
 
-						 dispatchCommands(&storage.Client{},parsedRequest,replConfig,rdbConfig,aofFileConfig)
+			dispatchCommands(&storage.Client{}, parsedRequest, replConfig, rdbConfig, aofFileConfig)
 
-						 request=request[bytesConsumed:]
-					     
-				 }
+			request = request[bytesConsumed:]
 
+		}
 
-				 if err==io.EOF{
+		if err == io.EOF {
 
-					   if len(request)>0{
-							  return errors.New("Incomplete command at the end of AOF")
-						}
-					   break
-				 }
+			if len(request) > 0 {
+				return errors.New("Incomplete command at the end of AOF")
+			}
+			break
+		}
 
+	}
 
-		  }
-
-
-		  return nil
+	return nil
 
 }

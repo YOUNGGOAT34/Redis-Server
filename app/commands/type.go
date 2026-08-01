@@ -1,11 +1,11 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
 	"CacheDB/app/storage"
 )
 
-func typeCommand(arguments [][]byte) RESP.Response {
+func TypeCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) != 1 {
 
 		return RESP.WrongNumberOfArguments("TYPE")

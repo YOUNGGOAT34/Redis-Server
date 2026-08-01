@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func incrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func IncrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	if len(arguments) != 1 {
 		return RESP.WrongNumberOfArguments("INCR")

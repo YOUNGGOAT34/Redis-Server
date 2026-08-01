@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -38,7 +38,7 @@ func createStreamID(id []byte) (storage.StreamID, error) {
 	}, err
 }
 
-func xAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func XAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) < 4 {
 
 		return RESP.WrongNumberOfArguments("XADD")
@@ -160,7 +160,7 @@ func xAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 		Fields: fields,
 	}
 
-	entry.Stream= key
+	entry.Stream = key
 
 	stream.LastID = Id
 	stream.Entries = append(stream.Entries, entry)

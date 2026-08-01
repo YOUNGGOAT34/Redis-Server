@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func llenCommand(arguments [][]byte) RESP.Response {
+func LlenCommand(arguments [][]byte) RESP.Response {
 	if len(arguments) != 1 {
 		return RESP.WrongNumberOfArguments("LLEN")
 	}

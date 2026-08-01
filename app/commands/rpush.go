@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -41,7 +41,7 @@ func wakeUpWaitingClients(key string, values *[][]byte) {
 	storage.BlockedClientsMutex.Unlock()
 }
 
-func rPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func RPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) == 0 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'RPUSH' command"),

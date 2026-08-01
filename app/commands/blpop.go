@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -38,8 +38,8 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 		return RESP.Response{
 			Array: []RESP.Response{
-				{Body:arguments[0],Type:RESP.BULK_STRING},
-				{Body:value,Type:RESP.BULK_STRING},
+				{Body: arguments[0], Type: RESP.BULK_STRING},
+				{Body: value, Type: RESP.BULK_STRING},
 			},
 			Type: RESP.ARRAY,
 		}
@@ -53,9 +53,9 @@ func blockClient(arguments [][]byte) RESP.Response {
 			Type: RESP.ARRAY,
 
 			Array: []RESP.Response{
-				  {Body:arguments[0],Type:RESP.BULK_STRING},
-				   {Body:value,Type:RESP.BULK_STRING},
-		}}
+				{Body: arguments[0], Type: RESP.BULK_STRING},
+				{Body: value, Type: RESP.BULK_STRING},
+			}}
 
 	case <-time.After(time.Duration(timeout) * time.Second):
 
@@ -71,7 +71,7 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 }
 
-func bLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func BLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 	if len(arguments) != 2 {
 		return RESP.WrongNumberOfArguments("BLOP")
 	}
@@ -101,8 +101,8 @@ func bLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 		return RESP.Response{
 			Array: []RESP.Response{
-				{Body:arguments[0],Type:RESP.BULK_STRING}, 
-				 {Body:value,Type: RESP.BULK_STRING},
+				{Body: arguments[0], Type: RESP.BULK_STRING},
+				{Body: value, Type: RESP.BULK_STRING},
 			},
 			Type: RESP.ARRAY,
 		}

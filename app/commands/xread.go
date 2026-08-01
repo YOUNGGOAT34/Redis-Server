@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -112,7 +112,7 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 
 }
 
-func decideTypeOfRead(arguments [][]byte) RESP.Response {
+func DecideTypeOfRead(arguments [][]byte) RESP.Response {
 
 	if len(arguments) < 2 || (len(arguments)-1)%2 != 0 {
 		return RESP.WrongNumberOfArguments("XREAD")

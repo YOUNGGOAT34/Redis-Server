@@ -30,29 +30,27 @@ const (
 //identify write commands
 
 func isWrite(command []byte) bool {
-	
+
 	cmd := strings.ToUpper(string(command))
 
 	switch cmd {
-	case "SET","INCR","LPUSH","LPOP","RPUSH","XADD":
+	case "SET", "INCR", "LPUSH", "LPOP", "RPUSH", "XADD":
 		return true
 	}
 
 	return false
 }
 
+func createUser(client *storage.Client) {
+	storage.UserMutex.RLock()
+	defaultUser := storage.Users["default"]
 
-func createUser(client *storage.Client){
-	   storage.UserMutex.RLock()
-	defaultUser:=storage.Users["default"]
-
-	if defaultUser.Flags.NoPass{
-		  client.User=defaultUser
+	if defaultUser.Flags.NoPass {
+		client.User = defaultUser
 	}
 
 	storage.UserMutex.RUnlock()
 }
-
 
 func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
 	var request []byte
@@ -66,10 +64,8 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 		SubscribedChannels: storage.NewSet[string](),
 	}
 
-
 	createUser(client)
 
-   
 	for {
 
 		bytesRead, err := conn.Read(temp)
@@ -242,8 +238,6 @@ func accept(listener net.Listener) net.Conn {
 
 func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) {
 
-
-
 	address := fmt.Sprintf("0.0.0.0:%d", replConfig.PORT)
 	l, err := net.Listen("tcp", address)
 	if err != nil {
@@ -294,16 +288,16 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 
 	}
 
-	defaultUser:=storage.User{
-		    Name:"default",
-			 Passwords: make([][32]byte,0),
-			 Flags: storage.UserFlags{
-				     NoPass: true,
-					  Enabled: true,
-			 },
+	defaultUser := storage.User{
+		Name:      "default",
+		Passwords: make([][32]byte, 0),
+		Flags: storage.UserFlags{
+			NoPass:  true,
+			Enabled: true,
+		},
 	}
 
-	storage.Users["default"]=&defaultUser
+	storage.Users["default"] = &defaultUser
 
 	for {
 

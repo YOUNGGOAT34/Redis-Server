@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -8,7 +8,7 @@ import (
 	"strconv"
 )
 
-func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func LPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	if len(arguments) < 1 {
 		return RESP.WrongNumberOfArguments("LPOP")
@@ -75,7 +75,7 @@ func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 				}
 
 				res = append(res, RESP.Response{
-					Body:poppedElement,
+					Body: poppedElement,
 					Type: RESP.BULK_STRING,
 				})
 
@@ -90,8 +90,8 @@ func lPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 			}
 
 			return RESP.Response{
-				Array:res,
-				Type: RESP.ARRAY,
+				Array: res,
+				Type:  RESP.ARRAY,
 			}
 
 		}

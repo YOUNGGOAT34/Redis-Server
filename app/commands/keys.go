@@ -1,11 +1,11 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
 	"CacheDB/app/storage"
 )
 
-func keys(args [][]byte) RESP.Response {
+func Keys(args [][]byte) RESP.Response {
 	if len(args) != 1 {
 		return RESP.WrongNumberOfArguments("KEYS")
 	}
@@ -15,15 +15,15 @@ func keys(args [][]byte) RESP.Response {
 		storage.DatabaseMutex.RLock()
 		for key := range storage.Database {
 			responses = append(responses, RESP.Response{
-				      Body: []byte(key),
-						Type: RESP.BULK_STRING,
+				Body: []byte(key),
+				Type: RESP.BULK_STRING,
 			})
 		}
 
 		storage.DatabaseMutex.RUnlock()
 		return RESP.Response{
-		   Array:responses,
-			Type: RESP.ARRAY,
+			Array: responses,
+			Type:  RESP.ARRAY,
 		}
 	}
 
@@ -39,7 +39,7 @@ func keys(args [][]byte) RESP.Response {
 
 		return RESP.Response{
 			Array: matchingKeys,
-			Type: RESP.ARRAY,
+			Type:  RESP.ARRAY,
 		}
 	}
 
@@ -54,8 +54,8 @@ func keys(args [][]byte) RESP.Response {
 		})
 
 		return RESP.Response{
-			Array:matchingKeys,
-			Type: RESP.ARRAY,
+			Array: matchingKeys,
+			Type:  RESP.ARRAY,
 		}
 	}
 
@@ -93,9 +93,9 @@ func collectMatchingKeys(matches func(string) bool) []RESP.Response {
 	for key := range storage.Database {
 
 		if matches(key) {
-			matchingKeys = append(matchingKeys,RESP.Response{
-				  Body: []byte(key),
-				  Type: RESP.BULK_STRING,
+			matchingKeys = append(matchingKeys, RESP.Response{
+				Body: []byte(key),
+				Type: RESP.BULK_STRING,
 			})
 		}
 	}

@@ -1,4 +1,4 @@
-package server
+package commands
 
 import (
 	"CacheDB/app/RESP"
@@ -54,7 +54,7 @@ func encodeList(list *storage.List, startIndex int, endIndex int) []byte {
 	return respArray
 }
 
-func lRangeCommand(arguments [][]byte) RESP.Response {
+func LRangeCommand(arguments [][]byte) RESP.Response {
 
 	if len(arguments) != 3 {
 		return RESP.WrongNumberOfArguments("LRANGE")
@@ -101,7 +101,7 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		defer list.ListMutex.RUnlock()
 
 		if list == nil || list.Len == 0 {
-		
+
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
 				Type: RESP.LIST,
@@ -137,7 +137,7 @@ func lRangeCommand(arguments [][]byte) RESP.Response {
 		}
 
 		if startIndex > endIndex {
-			
+
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
 				Type: RESP.LIST,
