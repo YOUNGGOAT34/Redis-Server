@@ -111,15 +111,12 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.GetCommand(args[1:])
 	case "RPUSH":
 		return commands.RPushCommand(args[1:], client)
-
 	case "LRANGE":
 		return commands.LRangeCommand(args[1:])
 	case "LPUSH":
 		return commands.LPushCommand(args[1:], client)
-
 	case "LLEN":
 		return commands.LlenCommand(args[1:])
-
 	case "LPOP":
 		return commands.LPopCommand(args[1:], client)
 	case "BLPOP":
@@ -134,7 +131,6 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.DecideTypeOfRead(args[1:])
 	case "INCR":
 		return commands.IncrCommand(args[1:], client)
-
 	case "UNWATCH":
 		return unwatchCommand(args[1:], client)
 	case "INFO":
@@ -145,14 +141,12 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return replication.Psync(args[:], replConfig)
 	case "WAIT":
 		return replication.WaitCommand(args[1:], replConfig)
-
 	case "CONFIG":
 		return commands.GetConfig(args[1:], rdbConfig, aofConfig)
 	case "KEYS":
 		return commands.Keys(args[1:])
 	case "SAVE":
 		return commands.HandleSave(args, rdbConfig)
-
 	case "SUBSCRIBE":
 		return commands.Sub(replConfig, client, args[1:])
 	case "UNSUBSCRIBE":
@@ -165,6 +159,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.ZaddCommand(args[1:])
 	case "ZSCORE":
 		return commands.ZScore(args[1:])
+	case "ZCARD":
+		return commands.Zcard(args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),
