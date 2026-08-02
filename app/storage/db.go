@@ -514,11 +514,11 @@ func (sl *SkipList) update(node *SkipNode) ([]*SkipNode,*SkipNode){
 
 //Delete
 
-func (sl *SkipList) Delete(node *SkipNode){
+func (sl *SkipList) Delete(node *SkipNode) bool{
 	 update,target:=sl.update(node)
     
 	 if target==nil || target.Score!=node.Score || target.Member!=node.Member{
-		 return
+		 return false
 	 }
 
 
@@ -535,6 +535,7 @@ func (sl *SkipList) Delete(node *SkipNode){
 	 }
 
 	 sl.Length--
+	 return true
 }
 
 //comparison
@@ -552,14 +553,16 @@ func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 }
 
 //adding
-func (zs *ZSet) Add(node *SkipNode,){
- 
+func (zs *ZSet) Add(node *SkipNode) bool{
+      deleted:=false
 	   if _,exists:=zs.Dict[node.Member];exists{
-			  zs.List.Delete(node)
+			  deleted=zs.List.Delete(node)
 		}
 	   
 	   zs.List.Insert(node)
 		zs.Dict[node.Member]=node
+
+		return deleted
 }
 
 // //converts a string version of stream id into []bytes

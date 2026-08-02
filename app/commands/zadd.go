@@ -35,11 +35,19 @@ func ZaddCommand(args [][]byte) RESP.Response{
 			  }
 
 			  sortedSet:=data.Value.(*storage.ZSet)
+         
 
-			  sortedSet.Add(node)
+			  //if deleted is true it means an existing member was updated
+			  deleted:=sortedSet.Add(node)
+			  count:=1
+
+			  if deleted{
+				  fmt.Printf("Here\r\n")
+				  count=0
+			  }
 
 			  return RESP.Response{
-				      Body: fmt.Appendf([]byte{},"%d",1),
+				      Body: fmt.Appendf([]byte{},"%d",count),
 						Type: RESP.INTEGER,
 			  }
 		}
