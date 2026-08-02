@@ -161,6 +161,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.ZScore(args[1:])
 	case "ZCARD":
 		return commands.Zcard(args[1:])
+	case "ZREM":
+		return commands.ZRem(args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),

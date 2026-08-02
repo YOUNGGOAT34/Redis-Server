@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"CacheDB/app/RESP"
+	
 )
 
 type Command struct {
@@ -535,6 +536,7 @@ func (sl *SkipList) Delete(node *SkipNode) bool{
 	 }
 
 	 sl.Length--
+	 
 	 return true
 }
 
@@ -555,13 +557,12 @@ func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 //ZADD
 func (zs *ZSet) Add(node *SkipNode) bool{
       deleted:=false
-	   if _,exists:=zs.Dict[node.Member];exists{
-			  deleted=zs.List.Delete(node)
+	   if existing,exists:=zs.Dict[node.Member];exists{
+			  deleted=zs.List.Delete(existing)
 		}
 	   
 	   zs.List.Insert(node)
 		zs.Dict[node.Member]=node
-
 		return deleted
 }
 //ZScore
@@ -572,6 +573,18 @@ func (zs *ZSet) ZScore(member string) *SkipNode{
 		}
 
 		return nil
+}
+
+func (zs *ZSet) ZRem(member string) bool{
+	  node,exists:=zs.Dict[member]
+      
+	  deleted:=false
+
+	  if exists{
+		    deleted=zs.List.Delete(node)
+			 delete(zs.Dict,member)
+	  }
+	  return deleted
 }
 
 // //converts a string version of stream id into []bytes
