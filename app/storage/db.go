@@ -452,7 +452,7 @@ func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 	   current:=sl.Head
 
 		for i:=sl.Level-1;i>=0;i--{
-			   for current.Forward[i]!=nil && isLess(current,node){
+			   for current.Forward[i]!=nil && isLess(current.Forward[i],node){
 					 current=current.Forward[i]
 				}
 		}
@@ -487,6 +487,14 @@ func (sl *SkipList) Insert(node *SkipNode){
 		 //choose height
 
 		 level:=RandomLevel()
+
+		 if level>sl.Level{
+			  for i:=sl.Level;i<level;i++{
+				  update[i]=sl.Head
+			  }
+
+			  sl.Level=level
+		 }
 
 		 //create the new node
 
