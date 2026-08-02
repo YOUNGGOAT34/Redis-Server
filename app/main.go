@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
 	"CacheDB/app/AOF"
 	"CacheDB/app/RDB"
 	"CacheDB/app/config"
@@ -17,9 +16,7 @@ import (
 
 func main() {
 
-
 	currentWorkingDir,err:=os.Getwd()
-	
 	if err!=nil{
 		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
 		return

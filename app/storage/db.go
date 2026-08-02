@@ -52,22 +52,9 @@ const (
 	STRING TYPE = iota
 	LIST
 	STREAM
+	ZSET
 )
 
-// for debugging
-func typeToString(t TYPE) string {
-	switch t {
-	case STRING:
-		return "STRING"
-	case LIST:
-		return "LIST"
-	case STREAM:
-		return "STREAM"
-
-	default:
-		return "UNKNOWN"
-	}
-}
 
 type Data struct {
 	Type  TYPE
@@ -90,21 +77,21 @@ type List struct {
 //skip list
 
 type SkipNode struct{
-	  Member string
-	  Score float64
-	  Forward []*SkipNode
+	Member string
+	Score float64
+	Forward []*SkipNode
 }
 
 type SkipList struct{
-	  Head *SkipNode
-	  Level int
-	  Length int
+	Head *SkipNode
+	Level int
+	Length int
 }
 
 type ZSet struct{
-	   Dict map[string]*SkipNode
-		List *SkipList
-		setMutex sync.RWMutex
+	Dict map[string]*SkipNode
+	List *SkipList
+	setMutex sync.RWMutex
 }
 
 // for blocking pops
@@ -127,6 +114,21 @@ var (
 	Expiry      = make(map[string]time.Time)
 	ExpiryMutex sync.RWMutex
 )
+// for debugging
+func typeToString(t TYPE) string {
+	switch t {
+	case STRING:
+		return "STRING"
+	case LIST:
+		return "LIST"
+	case STREAM:
+		return "STREAM"
+	case ZSET:
+		return "ZSET"
+	default:
+		return "UNKNOWN"
+	}
+}
 
 func (list *List) PushFront(value []byte) {
 
@@ -443,19 +445,21 @@ func NewSkipList() *SkipList{
 	  }
 }
 
+
+
 //search 
-func (sl *SkipList) Search(score float64,member string) *SkipNode{
+func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 	   current:=sl.Head
 
 		for i:=sl.Level-1;i>=0;i--{
-			   for current.Forward[i]!=nil && isLess(current.Score,current.Member,score,member){
+			   for current.Forward[i]!=nil && isLess(current,node){
 					 current=current.Forward[i]
 				}
 		}
 
 		current=current.Forward[0]
 
-		if current!=nil && current.Score==score{
+		if current!=nil && current.Score==node.Score && current.Member==node.Member{
 			 return current
 		}
 
@@ -464,16 +468,16 @@ func (sl *SkipList) Search(score float64,member string) *SkipNode{
 
 //inseart
 
-func (sl *SkipList) Inseart(score float64,member string){
+func (sl *SkipList) Insert(node *SkipNode){
 	    //This will store the predecessor at each level
 	    update:=make([]*SkipNode,MaxLevel)
 
 		 current:=sl.Head
 
 		 //search the insertion position and mark the predecessors
-		 for i:=sl.Length-1;i>=0;i--{
+		 for i:=sl.Level-1;i>=0;i--{
 			   //isLess function will compare two nodes in terms of both the score and lexicographically
-			    for current.Forward[i]!=nil && isLess(current.Forward[i].Score,current.Member,score,member){
+			    for current.Forward[i]!=nil && isLess(current.Forward[i],node){
 					   current=current.Forward[i]
 				 }
 
@@ -486,15 +490,8 @@ func (sl *SkipList) Inseart(score float64,member string){
 
 		 //create the new node
 
-		 node:=&SkipNode{
-			    Member: member,
-				 Score: score,
-				 Forward: make([]*SkipNode,level),
-		 }
-
-	
+		 node.Forward=make([]*SkipNode,level)
 		 //reconnect the nodes
-
 		 for i:=0;i<level;i++{
 			  node.Forward[i]=update[i].Forward[i]
 			  update[i].Forward[i]=node
@@ -503,18 +500,29 @@ func (sl *SkipList) Inseart(score float64,member string){
 		 sl.Length++
 }
 
+//comparison
+func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 
-func isLess(score1 float64,member1 string,score2 float64,member2 string) bool{
-
-	if score1<score2{
+	if node1.Score<node2.Score{
 		   return true
 	}
 	  
-	if score1>score2{
-		 return true
+	if node1.Score>node2.Score{
+		 return false
 	}
 
-	return member1<member2
+	return node1.Member<node2.Member
+}
+
+//adding
+func (zs *ZSet) Add(node *SkipNode,){
+ 
+	   if _,exists:=zs.Dict[node.Member];exists{
+			  //delete the existing node
+		}
+	   
+	   zs.List.Insert(node)
+		zs.Dict[node.Member]=node
 }
 
 // //converts a string version of stream id into []bytes

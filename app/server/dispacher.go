@@ -161,6 +161,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.Pub(replConfig, args[1:])
 	case "ACL":
 		return commands.Acl(client, args[1:])
+	case "ZADD":
+		return commands.ZaddCommand(args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),
