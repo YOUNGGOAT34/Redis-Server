@@ -8,9 +8,11 @@ import (
 
 func ZRem(args [][]byte) RESP.Response{
 
-	  if len(args)!=2{
+	  if len(args)<2{
 		   return RESP.WrongNumberOfArguments("ZREM")
 	  }
+     
+	  var count int64=0
 
 	  if data,exists:=storage.Database[string(args[0])];exists{
 		    if data.Type!=storage.ZSET{
@@ -18,20 +20,22 @@ func ZRem(args [][]byte) RESP.Response{
 			 }
 
 			 zs:=data.Value.(*storage.ZSet)
+          
+			 for _,member:=range args[1:]{
+				  
+				 deleted:=zs.ZRem(string(member))
+	         
+				 if deleted{
+					 count++
+				 }
 
-			 deleted:=zs.ZRem(string(args[0]))
-
-			 if deleted{
-				  return RESP.Response{
-						Body: []byte(strconv.FormatInt(1,10)),
-						Type: RESP.INTEGER,
-					}
 			 }
+
 
 	  }
 
 	  return RESP.Response{
-		 Body: []byte(strconv.FormatInt(0,10)),
+		 Body: []byte(strconv.FormatInt(count,10)),
 		 Type: RESP.INTEGER,
 	  }
 

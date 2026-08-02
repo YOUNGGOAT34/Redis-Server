@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"CacheDB/app/RESP"
-	
 )
 
 type Command struct {
@@ -536,7 +535,7 @@ func (sl *SkipList) Delete(node *SkipNode) bool{
 	 }
 
 	 sl.Length--
-	 
+	
 	 return true
 }
 
@@ -579,10 +578,11 @@ func (zs *ZSet) ZRem(member string) bool{
 	  node,exists:=zs.Dict[member]
       
 	  deleted:=false
-
+     
 	  if exists{
-		    deleted=zs.List.Delete(node)
-			 delete(zs.Dict,member)
+		  deleted=zs.List.Delete(node)
+		  delete(zs.Dict,member)
+		  
 	  }
 	  return deleted
 }
