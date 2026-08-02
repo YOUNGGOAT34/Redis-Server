@@ -469,7 +469,7 @@ func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 //insert
 func (sl *SkipList) Insert(node *SkipNode){
 	    
-	    update,_:=sl.update(node)
+	    update,_:=sl.findUpdatePath(node)
 		 //choose height
 		 level:=RandomLevel()
 
@@ -494,7 +494,7 @@ func (sl *SkipList) Insert(node *SkipNode){
 
 //update :for deletion and insertion
 
-func (sl *SkipList) update(node *SkipNode) ([]*SkipNode,*SkipNode){
+func (sl *SkipList) findUpdatePath(node *SkipNode) ([]*SkipNode,*SkipNode){
 	     //This will store the predecessor at each level
 	    update:=make([]*SkipNode,MaxLevel)
 
@@ -515,7 +515,7 @@ func (sl *SkipList) update(node *SkipNode) ([]*SkipNode,*SkipNode){
 //Delete
 
 func (sl *SkipList) Delete(node *SkipNode) bool{
-	 update,target:=sl.update(node)
+	 update,target:=sl.findUpdatePath(node)
     
 	 if target==nil || target.Score!=node.Score || target.Member!=node.Member{
 		 return false
@@ -552,7 +552,7 @@ func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 	return node1.Member<node2.Member
 }
 
-//adding
+//ZADD
 func (zs *ZSet) Add(node *SkipNode) bool{
       deleted:=false
 	   if _,exists:=zs.Dict[node.Member];exists{
@@ -563,6 +563,15 @@ func (zs *ZSet) Add(node *SkipNode) bool{
 		zs.Dict[node.Member]=node
 
 		return deleted
+}
+//ZScore
+
+func (zs *ZSet) ZScore(member string) *SkipNode{
+	   if node,exists:=zs.Dict[member];exists{
+			   return node
+		}
+
+		return nil
 }
 
 // //converts a string version of stream id into []bytes

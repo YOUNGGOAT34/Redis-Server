@@ -42,7 +42,6 @@ func ZaddCommand(args [][]byte) RESP.Response{
 			  count:=1
 
 			  if deleted{
-				  fmt.Printf("Here\r\n")
 				  count=0
 			  }
 
