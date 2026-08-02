@@ -466,26 +466,11 @@ func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 		return nil
 }
 
-//inseart
-
+//insert
 func (sl *SkipList) Insert(node *SkipNode){
-	    //This will store the predecessor at each level
-	    update:=make([]*SkipNode,MaxLevel)
-
-		 current:=sl.Head
-
-		 //search the insertion position and mark the predecessors
-		 for i:=sl.Level-1;i>=0;i--{
-			   //isLess function will compare two nodes in terms of both the score and lexicographically
-			    for current.Forward[i]!=nil && isLess(current.Forward[i],node){
-					   current=current.Forward[i]
-				 }
-
-				 update[i]=current
-		 }
-
+	    
+	    update,_:=sl.update(node)
 		 //choose height
-
 		 level:=RandomLevel()
 
 		 if level>sl.Level{
@@ -497,7 +482,6 @@ func (sl *SkipList) Insert(node *SkipNode){
 		 }
 
 		 //create the new node
-
 		 node.Forward=make([]*SkipNode,level)
 		 //reconnect the nodes
 		 for i:=0;i<level;i++{
@@ -506,6 +490,51 @@ func (sl *SkipList) Insert(node *SkipNode){
 		 }
 
 		 sl.Length++
+}
+
+//update :for deletion and insertion
+
+func (sl *SkipList) update(node *SkipNode) ([]*SkipNode,*SkipNode){
+	     //This will store the predecessor at each level
+	    update:=make([]*SkipNode,MaxLevel)
+
+		 current:=sl.Head
+		 //search the insertion/deletion position and mark the predecessors
+		 for i:=sl.Level-1;i>=0;i--{
+			   //isLess function will compare two nodes in terms of both the score and lexicographically
+			    for current.Forward[i]!=nil && isLess(current.Forward[i],node){
+					   current=current.Forward[i]
+				 }
+
+				 update[i]=current
+		 }
+
+		 return update,current.Forward[0]
+}
+
+//Delete
+
+func (sl *SkipList) Delete(node *SkipNode){
+	 update,target:=sl.update(node)
+    
+	 if target==nil || target.Score!=node.Score || target.Member!=node.Member{
+		 return
+	 }
+
+
+
+	 for i:=sl.Level-1;i>=0;i--{
+		   if update[i].Forward[i]!=target{
+				 continue
+			}
+		   update[i].Forward[i]=target.Forward[i]
+	 }
+
+	 for sl.Level>1 && sl.Head.Forward[sl.Level-1]==nil{
+		   sl.Level--
+	 }
+
+	 sl.Length--
 }
 
 //comparison
@@ -526,7 +555,7 @@ func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 func (zs *ZSet) Add(node *SkipNode,){
  
 	   if _,exists:=zs.Dict[node.Member];exists{
-			  //delete the existing node
+			  zs.List.Delete(node)
 		}
 	   
 	   zs.List.Insert(node)
