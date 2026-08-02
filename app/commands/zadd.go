@@ -9,64 +9,86 @@ import (
 
 
 func ZaddCommand(args [][]byte) RESP.Response{
-	    if len(args)<3{
+	    if len(args)<3 || (len(args)-1)%2!=0{
 			  return RESP.WrongNumberOfArguments("ZADD")
 		 }
 
 		 key:=string(args[0])
-		 score,err:=strconv.ParseFloat(string(args[1]),64)
 
-
-		 if err!=nil{
-			  return RESP.Response{
-				   Body: []byte(err.Error()),
-					Type: RESP.ERROR,
-			  }
-		 }
-
-		 node:=&storage.SkipNode{
-			     Member: string(args[2]),
-              Score: score,
-		 }
-
+		 var totalCount int=0
+	
 		if data,exists:=storage.Database[key];exists{
 			  if data.Type!=storage.ZSET{
 				  return RESP.WrongType()
 			  }
 
-			  sortedSet:=data.Value.(*storage.ZSet)
+			  zs:=data.Value.(*storage.ZSet)
          
+		     count,err:=add(args[1:],zs)
 
-			  //if deleted is true it means an existing member was updated
-			  deleted:=sortedSet.Add(node)
-			  count:=1
+			  if err!=nil{
+						return RESP.Response{
+								Body: []byte(err.Error()),
+								Type: RESP.ERROR,
+						}
+				}
 
-			  if deleted{
-				  count=0
-			  }
+				totalCount=count
 
-			  return RESP.Response{
-				      Body: fmt.Appendf([]byte{},"%d",count),
-						Type: RESP.INTEGER,
-			  }
-		}
+		}else{
+			  
+			zs:=&storage.ZSet{
+					Dict: make(map[string]*storage.SkipNode),
+					List: storage.NewSkipList(),
+			}
+			
+			count,err:=add(args[1:],zs)
 
+			if err!=nil{
+						return RESP.Response{
+								Body: []byte(err.Error()),
+								Type: RESP.ERROR,
+						}
+			}
 
-		zs:=&storage.ZSet{
-			   Dict: make(map[string]*storage.SkipNode),
-				List: storage.NewSkipList(),
-		}
-		
-		zs.Add(node)
-
-		storage.Database[key]=storage.Data{
-			    Value: zs,
-				 Type: storage.ZSET,
+			totalCount=count
+	
+			storage.Database[key]=storage.Data{
+					 Value: zs,
+					 Type: storage.ZSET,
+			}
 		}
 
 		return RESP.Response{
-				      Body: fmt.Appendf([]byte{},"%d",1),
+				      Body: fmt.Appendf([]byte{},"%d",totalCount),
 						Type: RESP.INTEGER,
 			  }
 
+}
+
+
+func add(args [][]byte,zs *storage.ZSet) (int,error){
+
+         var count int=0
+	      for i:=0;i<len(args);i+=2{
+				   
+				   score,err:=strconv.ParseFloat(string(args[i]),64)
+
+					if err!=nil{
+					     return 0,err
+					}
+				  
+					node:=&storage.SkipNode{
+							Member: string(args[i+1]),
+							Score: score,
+		          }
+
+					//if deleted is true it means an existing member was updated
+					deleted:=zs.Add(node)
+					if !deleted{
+						count++
+					}
+			  }
+
+			  return count,nil
 }

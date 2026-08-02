@@ -557,6 +557,9 @@ func isLess(node1 *SkipNode,node2 *SkipNode) bool{
 func (zs *ZSet) Add(node *SkipNode) bool{
       deleted:=false
 	   if existing,exists:=zs.Dict[node.Member];exists{
+			  if existing.Score==node.Score{
+				   return false
+			  }
 			  deleted=zs.List.Delete(existing)
 		}
 	   
