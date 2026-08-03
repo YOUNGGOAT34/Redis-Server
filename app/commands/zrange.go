@@ -3,7 +3,6 @@ package commands
 import (
 	"CacheDB/app/RESP"
 	"CacheDB/app/storage"
-	"fmt"
 	"strconv"
 )
 
@@ -47,8 +46,12 @@ func Zrange(args [][]byte) RESP.Response{
 			  stopIndex=zs.List.Length+stopIndex
 		}
 
-		fmt.Printf("start: %d ,end:%d\r\n",startIndex,stopIndex)
-		
+
+		if startIndex<0{
+			  startIndex=0
+		}
+
+	
 		if startIndex>=zs.List.Length || startIndex>stopIndex{
 			  return RESP.Response{
 				  Body: []byte{},
@@ -84,13 +87,14 @@ func getElementsInRange(zs *storage.ZSet, startIndex, stopIndex int) []RESP.Resp
 
 		res:=make([]RESP.Response,0,stopIndex-startIndex+1)
 
-		for i:=startIndex;i<=stopIndex;i++{
+		for current!=nil && currentIndex<=stopIndex{
 			   res = append(res, RESP.Response{
 					  Body: []byte(current.Member),
 					  Type: RESP.BULK_STRING,
 				})
 
 				current=current.Forward[0]
+				currentIndex++
 		}
 
 		return res
