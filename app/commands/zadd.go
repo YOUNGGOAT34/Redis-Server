@@ -90,5 +90,8 @@ func add(args [][]byte,zs *storage.ZSet) (int,error){
 					}
 			  }
 
+			  zs.List.Print()
+			  
+
 			  return count,nil
 }

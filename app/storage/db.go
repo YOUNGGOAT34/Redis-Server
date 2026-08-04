@@ -3,6 +3,7 @@ package storage
 import (
 	"container/list"
 	"errors"
+	"fmt"
 	"math/rand"
 	"net"
 	"sort"
@@ -80,6 +81,7 @@ type SkipNode struct{
 	Member string
 	Score float64
 	Forward []*SkipNode
+	Span    []int
 }
 
 type SkipList struct{
@@ -437,6 +439,7 @@ func RandomLevel() int{
 func NewSkipList() *SkipList{
 	  head:=&SkipNode{
 		    Forward: make([]*SkipNode,MaxLevel),
+			 Span: make([]int,MaxLevel),
 	  }
 
 	  return &SkipList{
@@ -446,12 +449,12 @@ func NewSkipList() *SkipList{
 }
 
 
-
 //search 
 func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 	   current:=sl.Head
 
 		for i:=sl.Level-1;i>=0;i--{
+			   
 			   for current.Forward[i]!=nil && isLess(current.Forward[i],node){
 					 current=current.Forward[i]
 				}
@@ -469,13 +472,18 @@ func (sl *SkipList) Search(node *SkipNode) *SkipNode{
 //insert
 func (sl *SkipList) Insert(node *SkipNode){
 	    
-	    update,_:=sl.findUpdatePath(node)
+	    update,rank,_:=sl.searchPath(node)
+		 
 		 //choose height
 		 level:=RandomLevel()
-
+		 
+      
 		 if level>sl.Level{
 			  for i:=sl.Level;i<level;i++{
+				  
 				  update[i]=sl.Head
+				  
+				  sl.Head.Span[i]=sl.Length
 			  }
 
 			  sl.Level=level
@@ -483,10 +491,19 @@ func (sl *SkipList) Insert(node *SkipNode){
 
 		 //create the new node
 		 node.Forward=make([]*SkipNode,level)
+		 node.Span=make([]int,level)
 		 //reconnect the nodes
 		 for i:=0;i<level;i++{
+			  oldSpan:=update[i].Span[i]
+			  node.Span[i]=oldSpan-(rank[0]-rank[i])
+			  update[i].Span[i]=(rank[0]-rank[i])+1
 			  node.Forward[i]=update[i].Forward[i]
 			  update[i].Forward[i]=node
+		 }
+
+		 //update levels above the new node
+		 for i:=level;i<sl.Level;i++{
+			   update[i].Span[i]++
 		 }
 
 		 sl.Length++
@@ -494,28 +511,38 @@ func (sl *SkipList) Insert(node *SkipNode){
 
 //update :for deletion and insertion
 
-func (sl *SkipList) findUpdatePath(node *SkipNode) ([]*SkipNode,*SkipNode){
+func (sl *SkipList) searchPath(node *SkipNode) ([]*SkipNode,[]int,*SkipNode){
 	     //This will store the predecessor at each level
 	    update:=make([]*SkipNode,MaxLevel)
-
+       rank:=make([]int,MaxLevel)
 		 current:=sl.Head
 		 //search the insertion/deletion position and mark the predecessors
 		 for i:=sl.Level-1;i>=0;i--{
+              
+			   //if it is the top most level ,the rank is 0,otherwise inherit the upper rank
+
+				if i==sl.Level-1{
+					 rank[i]=0
+				}else{
+					 rank[i]=rank[i+1]
+				}
+
 			   //isLess function will compare two nodes in terms of both the score and lexicographically
 			    for current.Forward[i]!=nil && isLess(current.Forward[i],node){
+					   rank[i]+=current.Span[i]
 					   current=current.Forward[i]
 				 }
 
 				 update[i]=current
 		 }
 
-		 return update,current.Forward[0]
+		 return update,rank,current.Forward[0]
 }
 
 //Delete
 
 func (sl *SkipList) Delete(node *SkipNode) bool{
-	 update,target:=sl.findUpdatePath(node)
+	 update,_,target:=sl.searchPath(node)
     
 	 if target==nil || target.Score!=node.Score || target.Member!=node.Member{
 		 return false
@@ -588,6 +615,24 @@ func (zs *ZSet) ZRem(member string) bool{
 		  
 	  }
 	  return deleted
+}
+
+
+func (sl *SkipList) Print() {
+    for level := sl.Level - 1; level >= 0; level-- {
+        fmt.Printf("Level %d: HEAD", level)
+
+        current := sl.Head
+        for current.Forward[level] != nil {
+            fmt.Printf(" --(%d)--> %s",
+                current.Span[level],
+                current.Forward[level].Member,
+            )
+            current = current.Forward[level]
+        }
+
+        fmt.Println()
+    }
 }
 
 // //converts a string version of stream id into []bytes
