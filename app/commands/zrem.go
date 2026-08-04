@@ -30,8 +30,6 @@ func ZRem(args [][]byte) RESP.Response{
 				 }
 
 			 }
-
-
 	  }
 
 	  return RESP.Response{

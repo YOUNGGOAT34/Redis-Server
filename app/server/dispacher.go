@@ -165,6 +165,8 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.ZRem(args[1:])
 	case "ZRANGE":
 		return commands.Zrange(args[1:])
+	case "ZRANK":
+		return commands.Zrank(args[1:])
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),

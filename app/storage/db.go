@@ -450,30 +450,16 @@ func NewSkipList() *SkipList{
 
 
 //search 
-func (sl *SkipList) Search(node *SkipNode) *SkipNode{
-	   current:=sl.Head
-
-		for i:=sl.Level-1;i>=0;i--{
-			   
-			   for current.Forward[i]!=nil && isLess(current.Forward[i],node){
-					 current=current.Forward[i]
-				}
-		}
-
-		current=current.Forward[0]
-
-		if current!=nil && current.Score==node.Score && current.Member==node.Member{
-			 return current
-		}
-
-		return nil
+func (sl *SkipList) Search(node *SkipNode) (*SkipNode,int){
+	    
+	   _,rank,target:=sl.searchPath(node)
+		return target,rank[0]
 }
 
 //insert
 func (sl *SkipList) Insert(node *SkipNode){
 	    
 	    update,rank,_:=sl.searchPath(node)
-		 
 		 //choose height
 		 level:=RandomLevel()
 		 
@@ -548,12 +534,12 @@ func (sl *SkipList) Delete(node *SkipNode) bool{
 		 return false
 	 }
 
-
-
 	 for i:=sl.Level-1;i>=0;i--{
 		   if update[i].Forward[i]!=target{
+				 update[i].Span[i]--
 				 continue
 			}
+			update[i].Span[i]+=target.Span[i]-1
 		   update[i].Forward[i]=target.Forward[i]
 	 }
 
