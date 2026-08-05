@@ -12,7 +12,9 @@ func Zrank(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ZRANK")
 	}
 
+	storage.DatabaseMutex.RLock()
 	data, exists := storage.Database[string(args[0])]
+	storage.DatabaseMutex.RUnlock()
 
 	if exists {
 		if data.Type != storage.ZSET {
@@ -20,7 +22,8 @@ func Zrank(args [][]byte) RESP.Response {
 		}
 
 		zs := data.Value.(*zset.ZSet)
-       
+      zs.ZSMutex.RLock()
+		defer zs.ZSMutex.RUnlock()
 		node, exists := zs.Dict[string(args[1])]
 		if exists {
 			target, rank := zs.List.Search(node)
