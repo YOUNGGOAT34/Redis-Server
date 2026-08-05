@@ -13,15 +13,19 @@ func ZRem(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ZREM")
 	}
 
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(args[0])]
+	storage.DatabaseMutex.RUnlock()
 	var count int64 = 0
-
-	if data, exists := storage.Database[string(args[0])]; exists {
+   
+	if exists {
 		if data.Type != storage.ZSET {
 			return RESP.WrongType()
 		}
 
 		zs := data.Value.(*zset.ZSet)
-
+      zs.ZSMutex.Lock()
+		defer zs.ZSMutex.Unlock()
 		for _, member := range args[1:] {
 
 			deleted := zs.ZRem(string(member))
