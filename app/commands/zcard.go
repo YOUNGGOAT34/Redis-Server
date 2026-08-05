@@ -12,13 +12,17 @@ func Zcard(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ZCARD")
 	}
 
-	if data, exists := storage.Database[string(args[0])]; exists {
+	storage.DatabaseMutex.RLock()
+   data, exists := storage.Database[string(args[0])]; 
+	storage.DatabaseMutex.RUnlock()
+	if exists {
 		if data.Type != storage.ZSET {
 			return RESP.WrongType()
 		}
 
 		zs := data.Value.(*zset.ZSet)
-
+		zs.ZSMutex.RLock()
+		defer zs.ZSMutex.RUnlock()
 		return RESP.Response{
 			Body: []byte(strconv.FormatInt(int64(zs.List.Length), 10)),
 			Type: RESP.INTEGER,
