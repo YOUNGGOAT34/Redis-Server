@@ -2,7 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
-	zset "CacheDB/app/ZSET"
+	"CacheDB/app/ZSET"
 	"CacheDB/app/storage"
 	"fmt"
 	"strconv"
@@ -15,43 +15,25 @@ func ZaddCommand(args [][]byte) RESP.Response {
 
 	key := string(args[0])
 
-	var totalCount int = 0
+	var zs *zset.ZSet
 
-	if data, exists := storage.Database[key]; exists {
+   storage.DatabaseMutex.Lock()
+   data, exists := storage.Database[key]; 
+	
+	if exists {
+
 		if data.Type != storage.ZSET {
+			storage.DatabaseMutex.Unlock()
 			return RESP.WrongType()
 		}
 
-		zs := data.Value.(*zset.ZSet)
-
-		count, err := add(args[1:], zs)
-
-		if err != nil {
-			return RESP.Response{
-				Body: []byte(err.Error()),
-				Type: RESP.ERROR,
-			}
-		}
-
-		totalCount = count
-
+		zs= data.Value.(*zset.ZSet)
 	} else {
 
-		zs := &zset.ZSet{
+		zs= &zset.ZSet{
 			Dict: make(map[string]*zset.SkipNode),
 			List: zset.NewSkipList(),
 		}
-
-		count, err := add(args[1:], zs)
-
-		if err != nil {
-			return RESP.Response{
-				Body: []byte(err.Error()),
-				Type: RESP.ERROR,
-			}
-		}
-
-		totalCount = count
 
 		storage.Database[key] = storage.Data{
 			Value: zs,
@@ -59,8 +41,20 @@ func ZaddCommand(args [][]byte) RESP.Response {
 		}
 	}
 
+	storage.DatabaseMutex.Unlock()
+    
+	zs.ZSMutex.Lock()
+	defer zs.ZSMutex.Unlock()
+	count, err := add(args[1:], zs)
+	if err != nil {
+		return RESP.Response{
+			Body: []byte(err.Error()),
+			Type: RESP.ERROR,
+		}
+	}
+
 	return RESP.Response{
-		Body: fmt.Appendf([]byte{}, "%d", totalCount),
+		Body: fmt.Appendf([]byte{}, "%d",count),
 		Type: RESP.INTEGER,
 	}
 

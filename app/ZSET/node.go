@@ -20,5 +20,5 @@ type SkipList struct{
 type ZSet struct{
 	Dict map[string]*SkipNode
 	List *SkipList
-	setMutex sync.RWMutex
+	ZSMutex sync.RWMutex
 }
