@@ -13,7 +13,9 @@ func Zrange(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ZRANGE")
 	}
 
+	storage.DatabaseMutex.RLock()
 	data, exists := storage.Database[string(args[0])]
+	storage.DatabaseMutex.RUnlock()
 
 	if !exists {
 		return RESP.Response{
@@ -38,7 +40,8 @@ func Zrange(args [][]byte) RESP.Response {
 	}
 
 	zs := data.Value.(*zset.ZSet)
-
+   zs.ZSMutex.RLock()
+	defer zs.ZSMutex.RUnlock()
 	if startIndex < 0 {
 		startIndex = zs.List.Length + startIndex
 	}
