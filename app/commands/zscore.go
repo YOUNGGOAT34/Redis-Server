@@ -12,15 +12,20 @@ func ZScore(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ZSCORE")
 	}
 
-	if data, exists := storage.Database[string(args[0])]; exists {
+	storage.DatabaseMutex.RLock()
+	data, exists := storage.Database[string(args[0])]
+	storage.DatabaseMutex.RUnlock()
+	
+	if exists {
 		if data.Type != storage.ZSET {
 			return RESP.WrongType()
 		}
 
 		zs := data.Value.(*zset.ZSet)
-
+      zs.ZSMutex.RLock()
+		defer zs.ZSMutex.RUnlock()
+		
 		node := zs.ZScore(string(args[1]))
-
 		if node != nil {
 			return RESP.Response{
 				Body: []byte(strconv.FormatFloat(node.Score, 'g', -1, 64)),
