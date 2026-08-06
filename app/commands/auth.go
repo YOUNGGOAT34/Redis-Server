@@ -216,9 +216,7 @@ func removePassword(username string, password []byte) RESP.Response {
 	if user, exists := storage.Users[username]; exists {
 		for index, password := range user.Passwords {
 			if password == hash {
-
 				user.Passwords = append(user.Passwords[:index], user.Passwords[index+1:]...)
-
 				return RESP.Response{
 					Body: []byte("OK"),
 					Type: RESP.SIMPLE_STRING,
