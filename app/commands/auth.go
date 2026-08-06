@@ -133,7 +133,9 @@ func setUser(args [][]byte) RESP.Response {
 		case rule == "off":
 			return disableOrEnableUser(string(args[0]), false)
 		case rule=="resetpass":
-			return resetPass(string(args[0]))
+			return reset(string(args[0]),false)
+		case rule=="reset":
+			return reset(string(args[0]),true)
 		default:
 			return RESP.Response{
 				Body: []byte("syntax error"),
@@ -145,12 +147,23 @@ func setUser(args [][]byte) RESP.Response {
 	return RESP.Response{}
 }
 
-func resetPass(username string) RESP.Response {
+
+/*
+   resetUser will help in determining whether user flags need to be disabled (if true)
+	if the call is from reset-->this flag will be true 
+	if the call is from resetpass -->this flag will be false
+
+*/
+func reset(username string,resetUser bool) RESP.Response {
 	   storage.UserMutex.Lock()
 		defer storage.UserMutex.Unlock()
 
 		if user,exists:=storage.Users[username];exists{
 			    user.Passwords=nil
+				 if resetUser{
+					 user.Flags.Enabled=false
+				    user.Flags.NoPass=false
+				 }
 				 return RESP.Response{
 					      Body:[]byte("OK"),
 							Type: RESP.SIMPLE_STRING,
