@@ -2,7 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
-	zset "CacheDB/app/ZSET"
+	"CacheDB/app/ZSET"
 	"CacheDB/app/storage"
 	"strconv"
 )

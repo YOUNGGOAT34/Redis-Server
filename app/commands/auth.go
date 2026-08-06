@@ -180,17 +180,23 @@ func disableOrEnableUser(username string, on bool) RESP.Response {
 }
 
 func addPassword(username string, passwords [][]byte) RESP.Response {
-	//  fmt.Printf(password)
-
 	storage.UserMutex.Lock()
 	defer storage.UserMutex.Unlock()
 
 	if user, exists := storage.Users[username]; exists {
-		for _, password := range passwords {
-			hash := sha256.Sum256(password[1:])
-			user.Passwords = append(user.Passwords, hash)
-			user.Flags.NoPass = false
-		}
+	   outerLoop:
+				for _, password := range passwords {
+					hash := sha256.Sum256(password[1:])
+					//don't store the same hash twice
+					for _,passwordHash:=range user.Passwords{
+						if passwordHash==hash{
+								continue outerLoop
+						}
+					}
+					user.Passwords = append(user.Passwords, hash)
+					user.Flags.NoPass = false
+				
+				}
 		return RESP.Response{
 			Body: []byte("OK"),
 			Type: RESP.SIMPLE_STRING,
