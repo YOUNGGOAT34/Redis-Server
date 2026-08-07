@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"CacheDB/app/RESP"
 	"container/list"
 	"errors"
 	"net"
@@ -8,64 +9,62 @@ import (
 	"strconv"
 	"sync"
 	"time"
-	"CacheDB/app/RESP"
 )
 
 type Command struct {
 	Args [][]byte
 }
 
-type UserFlags struct{
-	    NoPass bool
-		 Enabled bool
+type UserFlags struct {
+	NoPass  bool
+	Enabled bool
 }
 
-type User struct{
-
-	   Name string 
-		Passwords [][32]byte
-	   Flags UserFlags
-		CommandPermissions uint64
-
+type User struct {
+	Name               string
+	Passwords          [][32]byte
+	Flags              UserFlags
+	CommandPermissions uint64
+	UserMutex          sync.RWMutex
 }
 
-//acl bitmap
+// acl bitmap
 const (
-	 //strings
-    GET uint64 = 1 << iota
-    SET
-    DEL
-	 INCR
-	 //connection
-    PING
-    AUTH
-    ACL
-	 //generics
-    KEYS
-	 TYPECMD
-	 SAVE
-	 //lists
-    RPUSH
-	 LRANGE
-	 LPUSH
-	 LLEN
-	 BLPOP
-	 LPOP
-	 //streams
-	 XADD
-	 XRANGE
-	 XREAD
-	 //streams
-    ZADD
-	 ZREM
-	 ZRANGE
-	 ZSCORE
-	 ZRANK
-	 ZCARD 
+	//strings
+	GET uint64 = 1 << iota
+	SET
+	DEL
+	INCR
+	//connection
+	PING
+	AUTH
+	ACL
+	//generics
+	KEYS
+	TYPECMD
+	SAVE
+	//lists
+	RPUSH
+	LRANGE
+	LPUSH
+	LLEN
+	BLPOP
+	LPOP
+	//streams
+	XADD
+	XRANGE
+	XREAD
+	//streams
+	ZADD
+	ZREM
+	ZRANGE
+	ZSCORE
+	ZRANK
+	ZCARD
 )
 
-var AllCommands uint64 =GET |SET |DEL |INCR |PING |AUTH |ACL |KEYS |TYPECMD |SAVE |RPUSH |LRANGE |LPUSH |
-                        LLEN |BLPOP |LPOP |XADD |XRANGE |XREAD | ZADD |ZREM |ZRANGE |ZSCORE |ZRANK
+var AllCommands uint64 = GET | SET | DEL | INCR | PING | AUTH | ACL | KEYS | TYPECMD | SAVE | RPUSH | LRANGE | LPUSH |
+	LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK
 
 var CommandToPermission = map[string]uint64{
 	// Strings
@@ -105,18 +104,15 @@ var CommandToPermission = map[string]uint64{
 	"ZRANK":  ZRANK,
 }
 
-
-
-
 type Client struct {
 	Conn               net.Conn
 	InTransaction      bool
 	Queue              []Command
 	Dirty              bool
 	KeysWatched        map[string]struct{}
-	InSubscribeMode bool
+	InSubscribeMode    bool
 	SubscribedChannels Set[string]
-	User *User
+	User               *User
 }
 
 var (
@@ -132,7 +128,6 @@ const (
 	STREAM
 	ZSET
 )
-
 
 type Data struct {
 	Type  TYPE
@@ -152,13 +147,12 @@ type List struct {
 	ListMutex sync.RWMutex
 }
 
-
-
 // for blocking pops
 var (
 	BlockedClients      = make(map[string]*list.List)
 	BlockedClientsMutex sync.RWMutex
 )
+
 // for blocking reads(of streams)
 var (
 	WaitingClients      = make(map[string]*list.List)
@@ -174,6 +168,7 @@ var (
 	Expiry      = make(map[string]time.Time)
 	ExpiryMutex sync.RWMutex
 )
+
 // for debugging
 func typeToString(t TYPE) string {
 	switch t {
@@ -443,11 +438,11 @@ func (stream *Stream) XRead(startId StreamID) []*StreamEntry {
 
 type Set[T comparable] map[T]struct{}
 
-func NewSet[T comparable]() Set [T]{
+func NewSet[T comparable]() Set[T] {
 	return make(Set[T])
 }
 
-func (s Set[T]) Add(element T){
+func (s Set[T]) Add(element T) {
 	s[element] = struct{}{}
 }
 
@@ -465,21 +460,14 @@ func (s Set[T]) Contains(element T) bool {
 	return exists
 }
 
-func (s Set[T]) Clear(){
+func (s Set[T]) Clear() {
 	clear(s)
 }
 
-
-
 var (
-	
-	Users=make(map[string]*User)
-	UserMutex sync.RWMutex
-
+	Users      = make(map[string]*User)
+	UsersMutex sync.RWMutex
 )
-
-
-
 
 // //converts a string version of stream id into []bytes
 // func(id storage.storage.StreamID) Bytes() []byte{

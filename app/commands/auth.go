@@ -36,7 +36,7 @@ func getUser(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ACL GETUSER")
 	}
 
-	storage.UserMutex.Lock()
+	storage.UsersMutex.Lock()
 	user, exists := storage.Users[string(args[0])]
 	if !exists {
 		return Invalid()
@@ -44,7 +44,7 @@ func getUser(args [][]byte) RESP.Response {
 	passwordHashes := make([][32]byte, len(user.Passwords))
 	copy(passwordHashes, user.Passwords)
 	userFlags := user.Flags
-	storage.UserMutex.Unlock()
+	storage.UsersMutex.Unlock()
 
 	//build flags array
 
@@ -117,47 +117,72 @@ func setUser(args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("ACL SETUSER")
 	}
 
+	
+	storage.UsersMutex.RLock()
+	createUser(string(args[0]))
+	storage.UsersMutex.RUnlock()
+
 	for _, arg := range args[1:] {
 
 		rule := string(arg)
 
 		switch {
 		case strings.HasPrefix(rule, ">"):
-			res:=addPassword(string(args[0]), arg[1:])
-			if res.Type==RESP.ERROR{
-				   return res
+			res := addPassword(string(args[0]), arg[1:])
+			if res.Type == RESP.ERROR {
+				return res
 			}
 		case strings.HasPrefix(rule, "<"):
-			res:=removePassword(string(args[0]), arg[1:])
-			if res.Type==RESP.ERROR{
-				   return res
+			res := removePassword(string(args[0]), arg[1:])
+			if res.Type == RESP.ERROR {
+				return res
 			}
-		case strings.HasPrefix(rule,"+"):
-			res:=grantPermission(string(args[0]),arg[1:])
-			if res.Type==RESP.ERROR{
-				   return res
+		case strings.HasPrefix(rule, "+"):
+			res := grantPermission(string(args[0]), arg[1:])
+			if res.Type == RESP.ERROR {
+				return res
 			}
-		case strings.HasPrefix(rule,"-"):
-			  res:=revokePermission(string(args[0]),arg[1:])
-			   if res.Type==RESP.ERROR{
-						return res
-				}
+		case strings.HasPrefix(rule, "-"):
+			res := revokePermission(string(args[0]), arg[1:])
+			if res.Type == RESP.ERROR {
+				return res
+			}
 		case rule == "nopass":
-			res:=nopass(string(args[0]))
-			if res.Type==RESP.ERROR{
-				   return res
+			res := nopass(string(args[0]))
+			if res.Type == RESP.ERROR {
+				return res
 			}
 		case rule == "on":
-			res:=disableOrEnableUser(string(args[0]), true)
-			if res.Type==RESP.ERROR{
-				   return res
+			res := disableOrEnableUser(string(args[0]), true)
+			if res.Type == RESP.ERROR {
+				return res
 			}
 		case rule == "off":
-			return disableOrEnableUser(string(args[0]), false)
-		case rule=="resetpass":
-			return reset(string(args[0]),false)
-		case rule=="reset":
-			return reset(string(args[0]),true)
+			res := disableOrEnableUser(string(args[0]), false)
+			if res.Type == RESP.ERROR {
+				return res
+			}
+		case rule == "resetpass":
+			res := reset(string(args[0]), false)
+			if res.Type == RESP.ERROR {
+				return res
+			}
+		case rule == "reset":
+			res := reset(string(args[0]), true)
+			if res.Type == RESP.ERROR {
+				return res
+			}
+		case rule == "nocommands":
+			res := revokeOrGrantAllPermissions(string(args[0]), false)
+			if res.Type == RESP.ERROR {
+				return res
+			}
+		case rule == "allcommands":
+			res := revokeOrGrantAllPermissions(string(args[0]), true)
+			if res.Type == RESP.ERROR {
+				return res
+			}
+
 		default:
 			return RESP.Response{
 				Body: []byte("syntax error"),
@@ -167,39 +192,57 @@ func setUser(args [][]byte) RESP.Response {
 	}
 
 	return RESP.Response{
-		 Body: []byte("OK"),
-		 Type: RESP.SIMPLE_STRING,
+		Body: []byte("OK"),
+		Type: RESP.SIMPLE_STRING,
 	}
 }
 
+func createUser(username string) *storage.User{
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
+	if user, exists := storage.Users[username]; exists{
+		  return user
+	}
+
+	user:=&storage.User{
+		Name: username, 
+		Passwords: make([][32]byte, 0),
+		Flags: storage.UserFlags{
+			NoPass:  false,
+			Enabled: false,
+		},
+	}
+
+    storage.Users[username]=user
+	 return user
+}
 
 /*
-   resetUser will help in determining whether user flags need to be disabled (if true)
-	if the call is from reset-->this flag will be true 
-	if the call is from resetpass -->this flag will be false
-
+	   resetUser will help in determining whether user flags need to be disabled (if true)
+		if the call is from reset-->this flag will be true
+		if the call is from resetpass -->this flag will be false
 */
-func reset(username string,resetUser bool) RESP.Response {
-	   storage.UserMutex.Lock()
-		defer storage.UserMutex.Unlock()
-      
-		if user,exists:=storage.Users[username];exists{
-			    user.Passwords=nil
-				 if resetUser{
-					 user.Flags.Enabled=false
-				    user.Flags.NoPass=false
-				 }
-				 return RESP.Response{
-					      Body:[]byte("OK"),
-							Type: RESP.SIMPLE_STRING,
-				 }
+func reset(username string, resetUser bool) RESP.Response {
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
+
+	if user, exists := storage.Users[username]; exists {
+		user.Passwords = nil
+		if resetUser {
+			user.Flags.Enabled = false
+			user.Flags.NoPass = false
 		}
-		return Invalid()
+		return RESP.Response{
+			Body: []byte("OK"),
+			Type: RESP.SIMPLE_STRING,
+		}
+	}
+	return Invalid()
 }
 
 func nopass(username string) RESP.Response {
-	storage.UserMutex.Lock()
-	defer storage.UserMutex.Unlock()
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
 
 	if user, exists := storage.Users[username]; exists {
 		user.Flags.NoPass = true
@@ -214,8 +257,8 @@ func nopass(username string) RESP.Response {
 }
 
 func disableOrEnableUser(username string, on bool) RESP.Response {
-	storage.UserMutex.Lock()
-	defer storage.UserMutex.Unlock()
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
 
 	user, exists := storage.Users[username]
 
@@ -234,24 +277,24 @@ func disableOrEnableUser(username string, on bool) RESP.Response {
 }
 
 func addPassword(username string, password []byte) RESP.Response {
-	storage.UserMutex.Lock()
-	defer storage.UserMutex.Unlock()
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
 
 	if user, exists := storage.Users[username]; exists {
 
 		hash := sha256.Sum256(password[1:])
 		//don't store the same hash twice
-		for _,passwordHash:=range user.Passwords{
-			if passwordHash==hash{
-					return RESP.Response{
-						Body: []byte("OK"),
-						Type: RESP.SIMPLE_STRING,
-					}
+		for _, passwordHash := range user.Passwords {
+			if passwordHash == hash {
+				return RESP.Response{
+					Body: []byte("OK"),
+					Type: RESP.SIMPLE_STRING,
+				}
 			}
 		}
 		user.Passwords = append(user.Passwords, hash)
 		user.Flags.NoPass = false
-				
+
 		return RESP.Response{
 			Body: []byte("OK"),
 			Type: RESP.SIMPLE_STRING,
@@ -265,8 +308,8 @@ func addPassword(username string, password []byte) RESP.Response {
 func removePassword(username string, password []byte) RESP.Response {
 	hash := sha256.Sum256(password)
 
-	storage.UserMutex.Lock()
-	defer storage.UserMutex.Unlock()
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
 
 	if user, exists := storage.Users[username]; exists {
 		for index, password := range user.Passwords {
@@ -293,8 +336,8 @@ func Auth(client *storage.Client, args [][]byte) RESP.Response {
 		return RESP.WrongNumberOfArguments("AUTH")
 	}
 
-	storage.UserMutex.RLock()
-	defer storage.UserMutex.RUnlock()
+	storage.UsersMutex.RLock()
+	defer storage.UsersMutex.RUnlock()
 
 	var username string
 	var givenPassword []byte
@@ -335,32 +378,51 @@ func Invalid() RESP.Response {
 	}
 }
 
-func grantPermission(username string,command []byte) RESP.Response{
-	  storage.UserMutex.Lock()
-	  defer storage.UserMutex.Unlock()
-     CMD:=storage.CommandToPermission[strings.ToUpper(string(command))]
-	  if user,exists:=storage.Users[username];exists{
-		    user.CommandPermissions |=CMD
-			 return RESP.Response{
-					Body: []byte("OK"),
-					Type: RESP.SIMPLE_STRING,
-				} 
-	  }
+func grantPermission(username string, command []byte) RESP.Response {
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
+	CMD := storage.CommandToPermission[strings.ToUpper(string(command))]
+	if user, exists := storage.Users[username]; exists {
+		user.CommandPermissions |= CMD
+		return RESP.Response{
+			Body: []byte("OK"),
+			Type: RESP.SIMPLE_STRING,
+		}
+	}
 
-	  return Invalid()
+	return Invalid()
 }
 
-func revokePermission(username string,command []byte) RESP.Response{
-	  storage.UserMutex.Lock()
-	  defer storage.UserMutex.Unlock()
-     CMD:=storage.CommandToPermission[strings.ToUpper(string(command))]
-	  if user,exists:=storage.Users[username];exists{
-		    user.CommandPermissions &^=CMD
-			 return RESP.Response{
-					Body: []byte("OK"),
-					Type: RESP.SIMPLE_STRING,
-				} 
-	  }
+func revokePermission(username string, command []byte) RESP.Response {
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
+	CMD := storage.CommandToPermission[strings.ToUpper(string(command))]
+	if user, exists := storage.Users[username]; exists {
+		user.CommandPermissions &^= CMD
+		return RESP.Response{
+			Body: []byte("OK"),
+			Type: RESP.SIMPLE_STRING,
+		}
+	}
 
-	  return Invalid()
+	return Invalid()
+}
+
+func revokeOrGrantAllPermissions(username string, grant bool) RESP.Response {
+	storage.UsersMutex.Lock()
+	defer storage.UsersMutex.Unlock()
+
+	if user, exists := storage.Users[username]; exists {
+		if grant {
+			user.CommandPermissions = storage.AllCommands
+		} else {
+			user.CommandPermissions = 0
+		}
+		return RESP.Response{
+			Body: []byte("OK"),
+			Type: RESP.SIMPLE_STRING,
+		}
+	}
+
+	return Invalid()
 }
