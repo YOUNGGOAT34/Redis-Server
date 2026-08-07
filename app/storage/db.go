@@ -25,8 +25,88 @@ type User struct{
 	   Name string 
 		Passwords [][32]byte
 	   Flags UserFlags
+		CommandPermissions uint64
 
 }
+
+//acl bitmap
+const (
+	 //strings
+    GET uint64 = 1 << iota
+    SET
+    DEL
+	 INCR
+	 //connection
+    PING
+    AUTH
+    ACL
+	 //generics
+    KEYS
+	 TYPECMD
+	 SAVE
+	 //lists
+    RPUSH
+	 LRANGE
+	 LPUSH
+	 LLEN
+	 BLPOP
+	 LPOP
+	 //streams
+	 XADD
+	 XRANGE
+	 XREAD
+	 //streams
+    ZADD
+	 ZREM
+	 ZRANGE
+	 ZSCORE
+	 ZRANK
+	 ZCARD 
+)
+
+var AllCommands uint64 =GET |SET |DEL |INCR |PING |AUTH |ACL |KEYS |TYPECMD |SAVE |RPUSH |LRANGE |LPUSH |
+                        LLEN |BLPOP |LPOP |XADD |XRANGE |XREAD | ZADD |ZREM |ZRANGE |ZSCORE |ZRANK
+
+var CommandToPermission = map[string]uint64{
+	// Strings
+	"GET":  GET,
+	"SET":  SET,
+	"DEL":  DEL,
+	"INCR": INCR,
+
+	// Connection
+	"PING": PING,
+	"AUTH": AUTH,
+	"ACL":  ACL,
+
+	// Generic
+	"KEYS": KEYS,
+	"TYPE": TYPECMD,
+	"SAVE": SAVE,
+
+	// Lists
+	"RPUSH":  RPUSH,
+	"LRANGE": LRANGE,
+	"LPUSH":  LPUSH,
+	"LLEN":   LLEN,
+	"BLPOP":  BLPOP,
+	"LPOP":   LPOP,
+
+	// Streams
+	"XADD":   XADD,
+	"XRANGE": XRANGE,
+	"XREAD":  XREAD,
+
+	// Sorted Sets
+	"ZADD":   ZADD,
+	"ZREM":   ZREM,
+	"ZRANGE": ZRANGE,
+	"ZSCORE": ZSCORE,
+	"ZRANK":  ZRANK,
+}
+
+
+
 
 type Client struct {
 	Conn               net.Conn

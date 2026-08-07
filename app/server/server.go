@@ -44,6 +44,7 @@ func isWrite(command []byte) bool {
 func createUser(client *storage.Client) {
 	storage.UserMutex.RLock()
 	defaultUser := storage.Users["default"]
+	defaultUser.CommandPermissions=storage.AllCommands
 
 	if defaultUser.Flags.NoPass {
 		client.User = defaultUser
@@ -295,6 +296,7 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 			NoPass:  true,
 			Enabled: true,
 		},
+		
 	}
 
 	storage.Users["default"] = &defaultUser

@@ -43,6 +43,15 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 		return commands.Invalid()
 	}
 
+	CMD:=storage.CommandToPermission[cmd]
+
+	if client.User.CommandPermissions&CMD==0{
+		   return RESP.Response{
+				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the '%s' command", cmd),
+				Type: RESP.ERROR,
+			}
+	}
+
 	if client.InSubscribeMode {
 		if !commands.IsLegal(cmd) {
 			return RESP.Response{
