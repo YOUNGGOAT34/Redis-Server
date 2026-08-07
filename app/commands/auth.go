@@ -351,27 +351,32 @@ func Invalid() RESP.Response {
 }
 
 func grantOrRevokePermission(user *storage.User, command []byte,grant bool) RESP.Response {
+	
+   flag:=strings.ToUpper(string(command))
 
-	CMD,exists:= storage.CommandToPermission[strings.ToUpper(string(command))]
-	if !exists{
-		  return RESP.Response{
-			    Body:[]byte("ERR trying to set an unknown command"),
-				 Type: RESP.ERROR,
-		  }
-	}
-	if grant{
-
-		user.CommandPermissions |= CMD
-	}else{
-
-		user.CommandPermissions &^= CMD
+	switch flag{
+	       case "@ALL":
+				 revokeOrGrantAllPermissions(user,grant)
+			 default:
+				CMD,exists:= storage.CommandToPermission[flag]
+				if !exists{
+					  return RESP.Response{
+							 Body:[]byte("ERR trying to set an unknown command"),
+							 Type: RESP.ERROR,
+					  }
+				}
+			
+				if grant{
+					user.CommandPermissions |= CMD
+				}else{
+					user.CommandPermissions &^= CMD
+				}
 	}
 
 	return RESP.Response{
 		Body: []byte("OK"),
 		Type: RESP.SIMPLE_STRING,
 	}
-	
 }
 
 func revokeOrGrantAllPermissions(user *storage.User, grant bool) RESP.Response {

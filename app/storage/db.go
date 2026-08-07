@@ -63,8 +63,22 @@ const (
 	ZCARD
 )
 
-var AllCommands uint64 = GET | SET | DEL | INCR | PING | AUTH | ACL | KEYS | TYPECMD | SAVE | RPUSH | LRANGE | LPUSH |
-	LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK
+
+
+
+var (
+
+	
+	AllCommands uint64 = GET | SET | DEL | INCR | PING | AUTH | ACL | KEYS | TYPECMD | SAVE | RPUSH | LRANGE | LPUSH |
+	                     LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK
+   
+	CategoryToPermissions=map[string]uint64{
+			"READ": GET | KEYS | TYPECMD | LRANGE | ZRANGE | ZSCORE | ZRANK | XRANGE | XREAD | LLEN,
+			"WRITE": SET | DEL | INCR | RPUSH | LPUSH | LPOP | BLPOP | XADD | ZADD | ZREM,
+			"ADMIN": ACL | SAVE,
+	}
+
+)
 
 var CommandToPermission = map[string]uint64{
 	// Strings
