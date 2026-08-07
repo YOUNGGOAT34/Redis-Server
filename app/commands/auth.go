@@ -351,12 +351,22 @@ func Invalid() RESP.Response {
 }
 
 func grantOrRevokePermission(user *storage.User, command []byte,grant bool) RESP.Response {
-	
+
    flag:=strings.ToUpper(string(command))
 
 	switch flag{
-	       case "@ALL":
-				 revokeOrGrantAllPermissions(user,grant)
+	      case "@ALL":
+				revokeOrGrantAllPermissions(user,grant)
+	       case "@WRITE","@READ":
+
+				 if perms, ok := storage.CategoryToPermissions[flag[1:]]; ok {
+						if grant {
+							user.CommandPermissions |= perms
+						} else {
+							user.CommandPermissions &^= perms
+						}
+						
+					}
 			 default:
 				CMD,exists:= storage.CommandToPermission[flag]
 				if !exists{
@@ -379,17 +389,16 @@ func grantOrRevokePermission(user *storage.User, command []byte,grant bool) RESP
 	}
 }
 
-func revokeOrGrantAllPermissions(user *storage.User, grant bool) RESP.Response {
+func revokeOrGrantAllPermissions(user *storage.User, grant bool) RESP.Response{
 
 	if grant {
 		user.CommandPermissions = storage.AllCommands
 	} else {
 		user.CommandPermissions = 0
 	}
-
 	return RESP.Response{
 		Body: []byte("OK"),
 		Type: RESP.SIMPLE_STRING,
 	}
-	
 }
+
