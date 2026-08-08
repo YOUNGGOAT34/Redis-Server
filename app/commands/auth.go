@@ -5,6 +5,7 @@ import (
 	"CacheDB/app/storage"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"strings"
 )
 
@@ -18,8 +19,20 @@ func Acl(client *storage.Client, args [][]byte) RESP.Response {
 	case "WHOAMI":
 		return whoami(client, args[1:])
 	case "GETUSER":
+		if client.User.CommandPermissions & storage.GETUSER==0{
+			  return RESP.Response{
+				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the GETUSER command"),
+				Type: RESP.ERROR,
+			}
+		}
 		return getUser(args[1:])
 	case "SETUSER":
+		if client.User.CommandPermissions & storage.SETUSER==0{
+			  return RESP.Response{
+				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the SETUSER command"),
+				Type: RESP.ERROR,
+			}
+		}
 		return setUser(args[1:])
 	default:
 		return RESP.Response{
@@ -140,12 +153,12 @@ func setUser(args [][]byte) RESP.Response {
 				return res
 			}
 		case strings.HasPrefix(rule, "+"):
-			res := grantOrRevokePermission(user, arg[1:],true)
+			res := GrantOrRevokePermission(user, arg[1:],true)
 			if res.Type == RESP.ERROR {
 				return res
 			}
 		case strings.HasPrefix(rule, "-"):
-			res := grantOrRevokePermission(user, arg[1:],false)
+			res := GrantOrRevokePermission(user, arg[1:],false)
 			if res.Type == RESP.ERROR {
 				return res
 			}
@@ -350,15 +363,15 @@ func Invalid() RESP.Response {
 	}
 }
 
-func grantOrRevokePermission(user *storage.User, command []byte,grant bool) RESP.Response {
+func GrantOrRevokePermission(user *storage.User, command []byte,grant bool) RESP.Response {
 
    flag:=strings.ToUpper(string(command))
 
 	switch flag{
 	      case "@ALL":
 				revokeOrGrantAllPermissions(user,grant)
-	       case "@WRITE","@READ":
-
+	       case "@WRITE","@READ","@ADMIN":
+            
 				 if perms, ok := storage.CategoryToPermissions[flag[1:]]; ok {
 						if grant {
 							user.CommandPermissions |= perms

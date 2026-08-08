@@ -39,6 +39,9 @@ const (
 	PING
 	AUTH
 	ACL
+	//admin
+	SETUSER
+	GETUSER
 	//generics
 	KEYS
 	TYPECMD
@@ -70,12 +73,12 @@ var (
 
 	
 	AllCommands uint64 = GET | SET | DEL | INCR | PING | AUTH | ACL | KEYS | TYPECMD | SAVE | RPUSH | LRANGE | LPUSH |
-	                     LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK
+	                     LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK | SETUSER
    
 	CategoryToPermissions=map[string]uint64{
 			"READ": GET | KEYS | TYPECMD | LRANGE | ZRANGE | ZSCORE | ZRANK | XRANGE | XREAD | LLEN,
 			"WRITE": SET | DEL | INCR | RPUSH | LPUSH | LPOP | BLPOP | XADD | ZADD | ZREM,
-			"ADMIN": ACL | SAVE,
+			"ADMIN": ACL | SAVE | GETUSER | SETUSER,
 	}
 
 )

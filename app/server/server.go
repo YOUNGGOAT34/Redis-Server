@@ -13,6 +13,7 @@ import (
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
 	"CacheDB/app/RESP"
+	"CacheDB/app/commands"
 	"CacheDB/app/config"
 	"CacheDB/app/replication"
 	"CacheDB/app/storage"
@@ -298,6 +299,7 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 		},
 	}
 
+	commands.GrantOrRevokePermission(&defaultUser,[]byte("@ADMIN"),true)
 	storage.Users["default"] = &defaultUser
 
 	for {
