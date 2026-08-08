@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
 	"os"
@@ -54,7 +55,7 @@ func encodeList(list *storage.List, startIndex int, endIndex int) []byte {
 	return respArray
 }
 
-func LRangeCommand(arguments [][]byte) RESP.Response {
+func LRangeCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	if len(arguments) != 3 {
 		return RESP.WrongNumberOfArguments("LRANGE")
@@ -85,9 +86,9 @@ func LRangeCommand(arguments [][]byte) RESP.Response {
 		}
 	}
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[key]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[key]
+	replconfig.DatabaseMutex.RUnlock()
 
 	if exists {
 

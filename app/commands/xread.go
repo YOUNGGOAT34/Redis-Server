@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"container/list"
 	"fmt"
@@ -46,7 +47,7 @@ func encodeStreams(streams [][]*storage.StreamEntry) []byte {
 
 }
 
-func xReadCommand(arguments [][]byte) RESP.Response {
+func xReadCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	//map to store key-starting id, incase it is a query of a multiple streams
 
@@ -62,9 +63,9 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 
 	for key, startingId := range keys {
 
-		storage.DatabaseMutex.RLock()
-		data, exists := storage.Database[string(key)]
-		storage.DatabaseMutex.RUnlock()
+		replconfig.DatabaseMutex.RLock()
+		data, exists := replconfig.Database[string(key)]
+		replconfig.DatabaseMutex.RUnlock()
 
 		if exists {
 
@@ -112,21 +113,21 @@ func xReadCommand(arguments [][]byte) RESP.Response {
 
 }
 
-func DecideTypeOfRead(arguments [][]byte) RESP.Response {
+func DecideTypeOfRead(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	if len(arguments) < 2 || (len(arguments)-1)%2 != 0 {
 		return RESP.WrongNumberOfArguments("XREAD")
 	}
 
 	if RESP.CompareBytes(arguments[0], []byte("BLOCK")) {
-		return blockingXread(arguments[1:])
+		return blockingXread(arguments[1:],replconfig)
 	} else {
-		return xReadCommand(arguments[1:])
+		return xReadCommand(arguments[1:],replconfig)
 	}
 
 }
 
-func blockingXread(arguments [][]byte) RESP.Response {
+func blockingXread(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	timeout, err := strconv.Atoi(string(arguments[0]))
 	if err != nil {
@@ -147,9 +148,9 @@ func blockingXread(arguments [][]byte) RESP.Response {
 
 	var streams [][]*storage.StreamEntry
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.RUnlock()
 	if exists {
 		if data.Type != storage.STREAM {
 
@@ -182,13 +183,13 @@ func blockingXread(arguments [][]byte) RESP.Response {
 		}
 	} else {
 
-		storage.DatabaseMutex.Lock()
+		replconfig.DatabaseMutex.Lock()
 		stream := &storage.Stream{}
-		storage.Database[string(arguments[0])] = storage.Data{
+		replconfig.Database[string(arguments[0])] = storage.Data{
 			Type:  storage.STREAM,
 			Value: stream,
 		}
-		storage.DatabaseMutex.Unlock()
+		replconfig.DatabaseMutex.Unlock()
 
 		startId, err := stream.CreateStreamID(arguments[1])
 

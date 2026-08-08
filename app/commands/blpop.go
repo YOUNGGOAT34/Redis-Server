@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"container/list"
 	"strconv"
@@ -71,14 +72,14 @@ func blockClient(arguments [][]byte) RESP.Response {
 
 }
 
-func BLPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func BLPopCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) != 2 {
 		return RESP.WrongNumberOfArguments("BLOP")
 	}
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.RUnlock()
 
 	if exists {
 

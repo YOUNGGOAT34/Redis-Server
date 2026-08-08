@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
 )
@@ -32,7 +33,7 @@ func encodeEntries(entries []*storage.StreamEntry) []byte {
 	return respArray
 }
 
-func XRangeCommand(arguments [][]byte) RESP.Response {
+func XRangeCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	if len(arguments) != 3 {
 		return RESP.WrongNumberOfArguments("XRANGE")
@@ -40,9 +41,9 @@ func XRangeCommand(arguments [][]byte) RESP.Response {
 
 	var entries []*storage.StreamEntry
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.RUnlock()
 	if exists {
 
 		if data.Type != storage.STREAM {

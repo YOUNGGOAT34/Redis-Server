@@ -2,20 +2,21 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 )
 
-func LPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func LPushCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 2 {
 		return RESP.WrongNumberOfArguments("LPUSH")
 	}
 
 	key := string(arguments[0])
 
-	storage.DatabaseMutex.Lock()
-	data, exists := storage.Database[key]
-	storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Lock()
+	data, exists := replconfig.Database[key]
+	replconfig.DatabaseMutex.Unlock()
 
 	if exists {
 
@@ -55,7 +56,7 @@ func LPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 		list.PushFront(argument)
 	}
 
-	storage.Database[key] = storage.Data{
+	replconfig.Database[key] = storage.Data{
 		Type:  storage.LIST,
 		Value: list,
 	}

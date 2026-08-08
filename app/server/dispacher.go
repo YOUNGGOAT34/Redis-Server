@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	aof "CacheDB/app/AOF"
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
 	"CacheDB/app/RESP"
 	"CacheDB/app/commands"
 	"CacheDB/app/config"
@@ -46,6 +46,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	CMD:=storage.CommandToPermission[cmd]
 
 	if client.User.CommandPermissions&CMD==0{
+		   fmt.Printf("%s\r\n",cmd)
 		   return RESP.Response{
 				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the '%s' command", cmd),
 				Type: RESP.ERROR,
@@ -114,32 +115,32 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 				Type: RESP.NIL,
 			}
 		}
-		return commands.SetCommand(args[1:], client)
+		return commands.SetCommand(args[1:], client,replConfig)
 
 	case "GET":
-		return commands.GetCommand(args[1:])
+		return commands.GetCommand(args[1:],replConfig)
 	case "RPUSH":
-		return commands.RPushCommand(args[1:], client)
+		return commands.RPushCommand(args[1:], client,replConfig)
 	case "LRANGE":
-		return commands.LRangeCommand(args[1:])
+		return commands.LRangeCommand(args[1:],replConfig)
 	case "LPUSH":
-		return commands.LPushCommand(args[1:], client)
+		return commands.LPushCommand(args[1:], client,replConfig)
 	case "LLEN":
-		return commands.LlenCommand(args[1:])
+		return commands.LlenCommand(args[1:],replConfig)
 	case "LPOP":
-		return commands.LPopCommand(args[1:], client)
+		return commands.LPopCommand(args[1:], client,replConfig)
 	case "BLPOP":
-		return commands.BLPopCommand(args[1:], client)
+		return commands.BLPopCommand(args[1:], client,replConfig)
 	case "TYPE":
-		return commands.TypeCommand(args[1:])
+		return commands.TypeCommand(args[1:],replConfig)
 	case "XADD":
-		return commands.XAddCommand(args[1:], client)
+		return commands.XAddCommand(args[1:], client,replConfig)
 	case "XRANGE":
-		return commands.XRangeCommand(args[1:])
+		return commands.XRangeCommand(args[1:],replConfig)
 	case "XREAD":
-		return commands.DecideTypeOfRead(args[1:])
+		return commands.DecideTypeOfRead(args[1:],replConfig)
 	case "INCR":
-		return commands.IncrCommand(args[1:], client)
+		return commands.IncrCommand(args[1:], client,replConfig)
 	case "UNWATCH":
 		return unwatchCommand(args[1:], client)
 	case "INFO":
@@ -153,9 +154,9 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	case "CONFIG":
 		return commands.GetConfig(args[1:], rdbConfig, aofConfig)
 	case "KEYS":
-		return commands.Keys(args[1:])
+		return commands.Keys(args[1:],replConfig)
 	case "SAVE":
-		return commands.HandleSave(args, rdbConfig)
+		return commands.HandleSave(args, rdbConfig,replConfig)
 	case "SUBSCRIBE":
 		return commands.Sub(replConfig, client, args[1:])
 	case "UNSUBSCRIBE":
@@ -165,17 +166,17 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	case "ACL":
 		return commands.Acl(client, args[1:])
 	case "ZADD":
-		return commands.ZaddCommand(args[1:])
+		return commands.ZaddCommand(args[1:],replConfig)
 	case "ZSCORE":
-		return commands.ZScore(args[1:])
+		return commands.ZScore(args[1:],replConfig)
 	case "ZCARD":
-		return commands.Zcard(args[1:])
+		return commands.Zcard(args[1:],replConfig)
 	case "ZREM":
-		return commands.ZRem(args[1:])
+		return commands.ZRem(args[1:],replConfig)
 	case "ZRANGE":
-		return commands.Zrange(args[1:])
+		return commands.Zrange(args[1:],replConfig)
 	case "ZRANK":
-		return commands.Zrank(args[1:])
+		return commands.Zrank(args[1:],replConfig)
 	default:
 		return RESP.Response{
 			Body: []byte("Error: Unknown command"),

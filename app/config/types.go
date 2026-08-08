@@ -5,7 +5,9 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"time"
 )
+
 
 
 type REPLICA struct{
@@ -31,6 +33,12 @@ type SERVER struct {
 
 	REPLICAS []*REPLICA
 	ReplicasMutex sync.RWMutex
+
+	Database map[string]storage.Data
+	DatabaseMutex sync.RWMutex
+
+	Expiry     map[string]time.Time
+	ExpiryMutex sync.RWMutex
 
 	PubSub PubSub
 }

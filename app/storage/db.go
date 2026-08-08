@@ -42,6 +42,10 @@ const (
 	//admin
 	SETUSER
 	GETUSER
+	REPLCONF
+	PSYNC
+	INFO
+	WAIT
 	//generics
 	KEYS
 	TYPECMD
@@ -78,7 +82,7 @@ var (
 	CategoryToPermissions=map[string]uint64{
 			"READ": GET | KEYS | TYPECMD | LRANGE | ZRANGE | ZSCORE | ZRANK | XRANGE | XREAD | LLEN,
 			"WRITE": SET | DEL | INCR | RPUSH | LPUSH | LPOP | BLPOP | XADD | ZADD | ZREM,
-			"ADMIN": ACL | SAVE | GETUSER | SETUSER,
+			"ADMIN": ACL | SAVE | GETUSER | SETUSER | PSYNC | REPLCONF| INFO | WAIT,
 	}
 
 )
@@ -89,11 +93,15 @@ var CommandToPermission = map[string]uint64{
 	"SET":  SET,
 	"DEL":  DEL,
 	"INCR": INCR,
-
+	"WAIT":WAIT,
+    
 	// Connection
 	"PING": PING,
 	"AUTH": AUTH,
 	"ACL":  ACL,
+	"PSYNC":    PSYNC,
+	"REPLCONF": REPLCONF,
+	"INFO":INFO,
 
 	// Generic
 	"KEYS": KEYS,
@@ -176,15 +184,7 @@ var (
 	WaitingClientsMutex sync.RWMutex
 )
 
-var (
-	Database      = make(map[string]Data)
-	DatabaseMutex sync.RWMutex
-)
 
-var (
-	Expiry      = make(map[string]time.Time)
-	ExpiryMutex sync.RWMutex
-)
 
 // for debugging
 func typeToString(t TYPE) string {

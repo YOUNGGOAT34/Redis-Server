@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"errors"
 	"strconv"
@@ -38,7 +39,7 @@ func createStreamID(id []byte) (storage.StreamID, error) {
 	}, err
 }
 
-func XAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func XAddCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 4 {
 
 		return RESP.WrongNumberOfArguments("XADD")
@@ -55,9 +56,9 @@ func XAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	key := string(arguments[0])
 
-	storage.DatabaseMutex.Lock()
-	data, exists := storage.Database[key]
-	storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Lock()
+	data, exists := replconfig.Database[key]
+	replconfig.DatabaseMutex.Unlock()
 
 	if exists {
 		if data.Type != storage.STREAM {
@@ -74,7 +75,7 @@ func XAddCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 			// Tree:NewRadix(),
 		}
 
-		storage.Database[string(arguments[0])] = storage.Data{
+		replconfig.Database[string(arguments[0])] = storage.Data{
 			Type:  storage.STREAM,
 			Value: stream,
 		}

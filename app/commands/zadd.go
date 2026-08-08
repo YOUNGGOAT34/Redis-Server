@@ -2,13 +2,14 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
-	"CacheDB/app/ZSET"
+	zset "CacheDB/app/ZSET"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
 	"strconv"
 )
 
-func ZaddCommand(args [][]byte) RESP.Response {
+func ZaddCommand(args [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(args) < 3 || (len(args)-1)%2 != 0 {
 		return RESP.WrongNumberOfArguments("ZADD")
 	}
@@ -17,32 +18,32 @@ func ZaddCommand(args [][]byte) RESP.Response {
 
 	var zs *zset.ZSet
 
-   storage.DatabaseMutex.Lock()
-   data, exists := storage.Database[key]; 
-	
+	replconfig.DatabaseMutex.Lock()
+	data, exists := replconfig.Database[key]
+
 	if exists {
 
 		if data.Type != storage.ZSET {
-			storage.DatabaseMutex.Unlock()
+			replconfig.DatabaseMutex.Unlock()
 			return RESP.WrongType()
 		}
 
-		zs= data.Value.(*zset.ZSet)
+		zs = data.Value.(*zset.ZSet)
 	} else {
 
-		zs= &zset.ZSet{
+		zs = &zset.ZSet{
 			Dict: make(map[string]*zset.SkipNode),
 			List: zset.NewSkipList(),
 		}
 
-		storage.Database[key] = storage.Data{
+		replconfig.Database[key] = storage.Data{
 			Value: zs,
 			Type:  storage.ZSET,
 		}
 	}
 
-	storage.DatabaseMutex.Unlock()
-    
+	replconfig.DatabaseMutex.Unlock()
+
 	zs.ZSMutex.Lock()
 	defer zs.ZSMutex.Unlock()
 	count, err := add(args[1:], zs)
@@ -54,7 +55,7 @@ func ZaddCommand(args [][]byte) RESP.Response {
 	}
 
 	return RESP.Response{
-		Body: fmt.Appendf([]byte{}, "%d",count),
+		Body: fmt.Appendf([]byte{}, "%d", count),
 		Type: RESP.INTEGER,
 	}
 

@@ -2,21 +2,22 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"fmt"
 	"os"
 	"strconv"
 )
 
-func LPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func LPopCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 
 	if len(arguments) < 1 {
 		return RESP.WrongNumberOfArguments("LPOP")
 	}
 
-	storage.DatabaseMutex.Lock()
-	data, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Lock()
+	data, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.Unlock()
 
 	if exists {
 
@@ -36,7 +37,7 @@ func LPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 			if body != nil {
 
 				if list.Len == 0 {
-					delete(storage.Database, string(arguments[0]))
+					delete(replconfig.Database, string(arguments[0]))
 
 				}
 
@@ -82,7 +83,7 @@ func LPopCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 			}
 
 			if list.Len == 0 {
-				delete(storage.Database, string(arguments[0]))
+				delete(replconfig.Database, string(arguments[0]))
 			}
 
 			if len(res) > 0 {

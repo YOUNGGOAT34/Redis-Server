@@ -3,18 +3,19 @@ package commands
 import (
 	"CacheDB/app/RESP"
 	zset "CacheDB/app/ZSET"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 )
 
-func Zcard(args [][]byte) RESP.Response {
+func Zcard(args [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(args) != 1 {
 		return RESP.WrongNumberOfArguments("ZCARD")
 	}
 
-	storage.DatabaseMutex.RLock()
-   data, exists := storage.Database[string(args[0])]; 
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(args[0])]
+	replconfig.DatabaseMutex.RUnlock()
 	if exists {
 		if data.Type != storage.ZSET {
 			return RESP.WrongType()

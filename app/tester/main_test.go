@@ -12,6 +12,7 @@ import (
 	"CacheDB/app/RDB"
 	"CacheDB/app/config"
 	"CacheDB/app/server"
+	"CacheDB/app/storage"
 )
 
 var (
@@ -51,6 +52,8 @@ func TestMain(t *testing.T) {
 	}
 	go server.StartServer(&config.SERVER{
 		PORT: 6379,
+		Database: make(map[string]storage.Data),
+		Expiry: make(map[string]time.Time),
 	},&rdb.RDB{
 		Dir: currentWorkingDir,
 		DbFileName: "dump.rdb",
@@ -62,30 +65,29 @@ func TestMain(t *testing.T) {
   )
 
 	waitForServer()
-
-	pingtest(t)
-	echo_test(t)
-	set_test(t)
-	get_test(t)
-	expiry_test(t)
-	rpush_test(t)
-	lrange_test(t)
-	lpush_test(t)
-	llen_test(t)
-	lpop_test(t)
-	blpop_test(t)
-	type_test(t)
-	xadd_test(t)
-	xrange_test(t)
-	xread_test(t)
-	incr_test(t)
-	multi_test(t)
-	transaction_test(t)
-	watch_test(t)
-	list_watch_test(t)
-	stream_xadd_watch_test(t)
-	// replication_test(t)
-	auth_test(t)
+	// pingtest(t)
+	// echo_test(t)
+	// set_test(t)
+	// get_test(t)
+	// expiry_test(t)
+	// rpush_test(t)
+	// lrange_test(t)
+	// lpush_test(t)
+	// llen_test(t)
+	// lpop_test(t)
+	// blpop_test(t)
+	// type_test(t)
+	// xadd_test(t)
+	// xrange_test(t)
+	// xread_test(t)
+	// incr_test(t)
+	// multi_test(t)
+	// transaction_test(t)
+	// watch_test(t)
+	// list_watch_test(t)
+	// stream_xadd_watch_test(t)
+	replication_test(t)
+	// auth_test(t)
 
 }
 

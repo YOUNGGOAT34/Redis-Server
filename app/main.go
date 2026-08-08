@@ -1,17 +1,18 @@
 package main
 
 import (
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
+	"CacheDB/app/config"
+	"CacheDB/app/server"
+	"CacheDB/app/storage"
 	"flag"
 	"fmt"
 	"net"
 	"os"
 	"strconv"
 	"strings"
-	"CacheDB/app/AOF"
-	"CacheDB/app/RDB"
-	"CacheDB/app/config"
-	"CacheDB/app/server"
-	"CacheDB/app/storage"
+	"time"
 )
 
 func main() {
@@ -21,8 +22,11 @@ func main() {
 		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
 		return
 	}
-    
-	replConfig := &config.SERVER{}
+   
+	replConfig := &config.SERVER{
+		 Database: make(map[string]storage.Data),
+		 Expiry: make(map[string]time.Time),
+	}
 	rdbFileConfig:=&rdb.RDB{}
 	aofFileConfig:=&aof.AOF{}
 
@@ -89,6 +93,8 @@ func main() {
 	aofFileConfig.AppendOnly=*appendonly
 	aofFileConfig.AppendDirName=*appenddirname
 	aofFileConfig.AppendFsync=*appendfsync
+
+	
 
 	server.StartServer(replConfig,rdbFileConfig,aofFileConfig)
 

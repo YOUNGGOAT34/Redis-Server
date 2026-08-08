@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	aof "CacheDB/app/AOF"
-	rdb "CacheDB/app/RDB"
+	"CacheDB/app/AOF"
+	"CacheDB/app/RDB"
 	"CacheDB/app/config"
 	"CacheDB/app/server"
+	"CacheDB/app/storage"
 )
 
 // Runner & Stages
@@ -54,23 +55,31 @@ func stageXX_ReplicaHandshake(t *testing.T) {
 
 	pass("replica handshake completed successfully")
 }
-
 func stageXX_WritePropagation(t *testing.T) {
-	stage("REPLICATION: WRITE PROPAGATION")
+    stage("REPLICATION: WRITE PROPAGATION")
 
-	_, masterPort := startMaster(t)
-	_, replicaPort := startReplica(t, masterPort)
+    masterConfig, masterPort := startMaster(t)
+    _, replicaPort := startReplica(t, masterPort)
 
-	setResp := sendRawCommand(t, masterPort, encodeCommand("SET", "key", "value"))
-	if !strings.Contains(setResp, "OK") {
-		failf(t, "SET failed on master: %q", setResp)
-	}
+    if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
+        failf(t, "replica never registered with master")
+    }
 
-	if !waitForValue(t, replicaPort, "key", "value", 2*time.Second) {
-		failf(t, "replica failed to receive and store the propagated command from master")
-	}
+    setResp := sendRawCommand(
+        t,
+        masterPort,
+        encodeCommand("SET", "key", "value"),
+    )
 
-	pass("writes propagated to replica correctly")
+    if !strings.Contains(setResp, "OK") {
+        failf(t, "SET failed on master: %q", setResp)
+    }
+
+    if !waitForValue(t, replicaPort, "key", "value", 2*time.Second) {
+        failf(t, "replica failed to receive and store the propagated command from master")
+    }
+
+    pass("writes propagated to replica correctly")
 }
 
 func stageXX_WaitCommandLogic(t *testing.T) {
@@ -175,8 +184,12 @@ func stageXX_MultipleReplicas(t *testing.T) {
 func stageXX_OrderedPropagation(t *testing.T) {
 	stage("REPLICATION: ORDERED PROPAGATION")
 
-	_, masterPort := startMaster(t)
-	_, replicaPort := startReplica(t, masterPort)
+	masterConfig, masterPort := startMaster(t)
+	_,replicaPort := startReplica(t, masterPort)
+
+		if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
+			failf(t, "replica did not finish handshake")
+		}
 
 	master := dialWithReader(t, masterPort)
 	defer master.close()
@@ -272,33 +285,33 @@ func stageXX_PipelineReplication(t *testing.T) {
 	stage("REPLICATION: PIPELINE REPLICATION")
 
 	master, masterPort := startMaster(t)
-	_ = master
 
 	_, replicaPort := startReplica(t, masterPort)
 
-	waitForReplicaCount(master, 1, time.Second)
+	if !waitForReplicaCount(master, 1, 1*time.Second) {
+		failf(t, "replica never registered with master")
+	}
 
 	conn := dialPort(t, masterPort)
 	defer conn.Close()
 
+	// Send three writes in a single pipeline.
 	send(conn,
 		encodeCommand("SET", "a", "1")+
 			encodeCommand("SET", "b", "2")+
 			encodeCommand("SET", "c", "3"))
 
-	replicaConn := dialPort(t, replicaPort)
-	defer replicaConn.Close()
-
-	if resp := send(replicaConn, encodeCommand("GET", "a")); resp != "$1\r\n1\r\n" {
-		failf(t, "expected a=1 got %q", resp)
+	// Wait until each write has actually reached the replica.
+	if !waitForValue(t, replicaPort, "a", "1", 2*time.Second) {
+		failf(t, "expected a=1 to be replicated")
 	}
 
-	if resp := send(replicaConn, encodeCommand("GET", "b")); resp != "$1\r\n2\r\n" {
-		failf(t, "expected b=2 got %q", resp)
+	if !waitForValue(t, replicaPort, "b", "2", 2*time.Second) {
+		failf(t, "expected b=2 to be replicated")
 	}
 
-	if resp := send(replicaConn, encodeCommand("GET", "c")); resp != "$1\r\n3\r\n" {
-		failf(t, "expected c=3 got %q", resp)
+	if !waitForValue(t, replicaPort, "c", "3", 2*time.Second) {
+		failf(t, "expected c=3 to be replicated")
 	}
 
 	pass("multiple pipelined writes replicated")
@@ -798,6 +811,8 @@ func startMaster(t *testing.T) (*config.SERVER, int) {
 		PORT:         port,
 		MASTERREPLID: "8371b4fb115b71c4a0413b1db346e45071511224",
 		REPLICAS:     make([]*config.REPLICA, 0),
+		Database: make(map[string]storage.Data),
+		Expiry: make(map[string]time.Time),
 	}
 
 	currentWorkingDir,err:=os.Getwd()
@@ -810,6 +825,8 @@ func startMaster(t *testing.T) (*config.SERVER, int) {
 		  Dir:currentWorkingDir,
 		  DbFileName: "dump.rdb",
 	}
+
+
 	go server.StartServer(cfg,rdb, &aof.AOF{
 		    AppendDirName: "appendonly",
 			 AppendFilename: "appendonly.aof",
@@ -826,6 +843,8 @@ func startReplica(t *testing.T, masterPort int) (*config.SERVER, int) {
 		PORT:       port,
 		MasterHost: "127.0.0.1",
 		MasterPort: masterPort,
+		Database: make(map[string]storage.Data),
+		Expiry: make(map[string]time.Time),
 	}
 
 	currentWorkingDir,err:=os.Getwd()
@@ -863,6 +882,7 @@ func waitForValue(t *testing.T, port int, key, expected string, timeout time.Dur
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		resp := sendRawCommand(t, port, encodeCommand("GET", key))
+		
 		if strings.Contains(resp, expected) {
 			return true
 		}

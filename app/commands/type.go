@@ -2,19 +2,20 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 )
 
-func TypeCommand(arguments [][]byte) RESP.Response {
+func TypeCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) != 1 {
 
 		return RESP.WrongNumberOfArguments("TYPE")
 	}
 
-	storage.DatabaseMutex.Lock()
-	defer storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.RLock()
+	defer replconfig.DatabaseMutex.RUnlock()
 
-	data, exists := storage.Database[string(arguments[0])]
+	data, exists := replconfig.Database[string(arguments[0])]
 
 	if exists {
 		_type := typeToByte(data.Type)

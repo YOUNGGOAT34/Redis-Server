@@ -2,12 +2,13 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"math"
 	"strconv"
 )
 
-func IncrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func IncrCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 
 	if len(arguments) != 1 {
 		return RESP.WrongNumberOfArguments("INCR")
@@ -15,13 +16,13 @@ func IncrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	key := string(arguments[0])
 
-	storage.DatabaseMutex.Lock()
-	defer storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Lock()
+	defer replconfig.DatabaseMutex.Unlock()
 
 	var intValue int64
 	var err error
 
-	data, exists := storage.Database[key]
+	data, exists := replconfig.Database[key]
 	if exists {
 		if data.Type != storage.STRING {
 			return RESP.WrongType()
@@ -56,7 +57,7 @@ func IncrCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	strValue := strconv.FormatInt(intValue, 10)
 
-	storage.Database[key] = storage.Data{
+	replconfig.Database[key] = storage.Data{
 		Type:  storage.STRING,
 		Value: []byte(strValue),
 	}

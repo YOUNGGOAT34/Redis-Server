@@ -4,8 +4,11 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"CacheDB/app/RDB"
+	"CacheDB/app/config"
+	"CacheDB/app/storage"
 )
 
 func TestReadRDB(t *testing.T) {
@@ -18,12 +21,19 @@ func TestReadRDB(t *testing.T) {
 
     defer os.Remove(filename)
 
+	 replconfig:=&config.SERVER{
+		   Database: make(map[string]storage.Data),
+			Expiry: make(map[string]time.Time),
+	 }
+
     config := rdb.RDB{
         Dir:         ".",
         DbFileName:  filename,
     }
 
-    rdb.ReadRDBFile(&config)
+	 
+
+    rdb.ReadRDBFile(&config,replconfig)
 }
 
 
@@ -34,8 +44,12 @@ func TestReadRDBFileWithLists(t *testing.T) {
 		DbFileName: "test_dump.rdb",
 	}
 
+	replconfig:=&config.SERVER{
+		   Database: make(map[string]storage.Data),
+			Expiry: make(map[string]time.Time),
+	 }
 	// Read entries
-	entries, err := rdb.ReadRDBFile(rdbConfig)
+	entries, err := rdb.ReadRDBFile(rdbConfig,replconfig)
 	if err != nil {
 		t.Fatalf("Failed to parse test RDB file: %v", err)
 	}

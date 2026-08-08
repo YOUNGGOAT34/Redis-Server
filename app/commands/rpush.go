@@ -2,6 +2,7 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 )
@@ -41,7 +42,7 @@ func wakeUpWaitingClients(key string, values *[][]byte) {
 	storage.BlockedClientsMutex.Unlock()
 }
 
-func RPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func RPushCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) == 0 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'RPUSH' command"),
@@ -65,9 +66,9 @@ func RPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	values := arguments[1:]
 
-	storage.DatabaseMutex.Lock()
-	data, exists := storage.Database[string(key)]
-	storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Lock()
+	data, exists := replconfig.Database[string(key)]
+	replconfig.DatabaseMutex.Unlock()
 
 	if exists {
 
@@ -126,7 +127,7 @@ func RPushCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 		list.PushBack(value)
 	}
 
-	storage.Database[string(key)] = storage.Data{
+	replconfig.Database[string(key)] = storage.Data{
 		Type:  storage.LIST,
 		Value: list,
 	}

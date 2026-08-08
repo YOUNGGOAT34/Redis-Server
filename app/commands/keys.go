@@ -2,25 +2,25 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
-	"CacheDB/app/storage"
+	"CacheDB/app/config"
 )
 
-func Keys(args [][]byte) RESP.Response {
+func Keys(args [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(args) != 1 {
 		return RESP.WrongNumberOfArguments("KEYS")
 	}
 
 	if RESP.CompareBytes(args[0], []byte("*")) {
-		responses := make([]RESP.Response, 0, len(storage.Database))
-		storage.DatabaseMutex.RLock()
-		for key := range storage.Database {
+		responses := make([]RESP.Response, 0, len(replconfig.Database))
+		replconfig.DatabaseMutex.RLock()
+		for key := range replconfig.Database {
 			responses = append(responses, RESP.Response{
 				Body: []byte(key),
 				Type: RESP.BULK_STRING,
 			})
 		}
 
-		storage.DatabaseMutex.RUnlock()
+		replconfig.DatabaseMutex.RUnlock()
 		return RESP.Response{
 			Array: responses,
 			Type:  RESP.ARRAY,
@@ -35,7 +35,7 @@ func Keys(args [][]byte) RESP.Response {
 
 		matchingKeys := collectMatchingKeys(func(key string) bool {
 			return startsWith(key, prefix)
-		})
+		},replconfig)
 
 		return RESP.Response{
 			Array: matchingKeys,
@@ -51,7 +51,7 @@ func Keys(args [][]byte) RESP.Response {
 
 		matchingKeys := collectMatchingKeys(func(key string) bool {
 			return startsWith(key, prefix) && len(prefix)+1 == len(key)
-		})
+		},replconfig)
 
 		return RESP.Response{
 			Array: matchingKeys,
@@ -78,11 +78,11 @@ func startsWith(key string, pattern string) bool {
 	return true
 }
 
-func collectMatchingKeys(matches func(string) bool) []RESP.Response {
-	storage.DatabaseMutex.RLock()
+func collectMatchingKeys(matches func(string) bool,replconfig *config.SERVER) []RESP.Response {
+	replconfig.DatabaseMutex.RLock()
 
 	count := 0
-	for key := range storage.Database {
+	for key := range replconfig.Database {
 		if matches(key) {
 			count++
 
@@ -90,7 +90,7 @@ func collectMatchingKeys(matches func(string) bool) []RESP.Response {
 	}
 	matchingKeys := make([]RESP.Response, 0, count)
 
-	for key := range storage.Database {
+	for key := range replconfig.Database {
 
 		if matches(key) {
 			matchingKeys = append(matchingKeys, RESP.Response{
@@ -100,7 +100,7 @@ func collectMatchingKeys(matches func(string) bool) []RESP.Response {
 		}
 	}
 
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RUnlock()
 
 	return matchingKeys
 }

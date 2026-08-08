@@ -2,12 +2,13 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 	"time"
 )
 
-func GetCommand(arguments [][]byte) RESP.Response {
+func GetCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 1 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'GET' command"),
@@ -15,24 +16,24 @@ func GetCommand(arguments [][]byte) RESP.Response {
 		}
 	}
 
-	storage.ExpiryMutex.Lock()
+	replconfig.ExpiryMutex.Lock()
 
-	expires, exists := storage.Expiry[string(arguments[0])]
+	expires, exists := replconfig.Expiry[string(arguments[0])]
 
 	if exists {
 		if time.Now().After(expires) {
-			storage.DatabaseMutex.Lock()
-			delete(storage.Database, string(arguments[0]))
-			storage.DatabaseMutex.Unlock()
-			delete(storage.Expiry, string(arguments[0]))
+			replconfig.DatabaseMutex.Lock()
+			delete(replconfig.Database, string(arguments[0]))
+			replconfig.DatabaseMutex.Unlock()
+			delete(replconfig.Expiry, string(arguments[0]))
 		}
 	}
 
-	storage.ExpiryMutex.Unlock()
+	replconfig.ExpiryMutex.Unlock()
 
-	storage.DatabaseMutex.RLock()
-	dataObject, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	dataObject, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.RUnlock()
 
 	if exists {
 
@@ -56,7 +57,7 @@ func GetCommand(arguments [][]byte) RESP.Response {
 	}
 }
 
-func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
+func SetCommand(arguments [][]byte, client *storage.Client, replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 2 {
 		return RESP.WrongNumberOfArguments("SET")
 	}
@@ -68,9 +69,9 @@ func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 
 	*/
 
-	storage.ExpiryMutex.Lock()
-	delete(storage.Expiry, string(arguments[0]))
-	storage.ExpiryMutex.Unlock()
+	replconfig.ExpiryMutex.Lock()
+	delete(replconfig.Expiry, string(arguments[0]))
+	replconfig.ExpiryMutex.Unlock()
 
 	if len(arguments) > 2 {
 		if RESP.CompareBytes(arguments[2], []byte("EX")) || RESP.CompareBytes(arguments[2], []byte("PX")) {
@@ -91,13 +92,13 @@ func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 					}
 				}
 
-				storage.ExpiryMutex.Lock()
+				replconfig.ExpiryMutex.Lock()
 
 				duration := time.Duration(timeInSeconds) * time.Second
 				expiresAt := time.Now().Add(duration)
-				storage.Expiry[string(arguments[0])] = expiresAt
+				replconfig.Expiry[string(arguments[0])] = expiresAt
 
-				storage.ExpiryMutex.Unlock()
+				replconfig.ExpiryMutex.Unlock()
 
 			} else if RESP.CompareBytes(arguments[2], []byte("PX")) {
 				timeInMilliSeconds, err := strconv.Atoi(string(arguments[3]))
@@ -108,11 +109,11 @@ func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 					}
 				}
 
-				storage.ExpiryMutex.Lock()
+				replconfig.ExpiryMutex.Lock()
 				duration := time.Duration(timeInMilliSeconds) * time.Millisecond
 				expiresAt := time.Now().Add(duration)
-				storage.Expiry[string(arguments[0])] = expiresAt
-				storage.ExpiryMutex.Unlock()
+				replconfig.Expiry[string(arguments[0])] = expiresAt
+				replconfig.ExpiryMutex.Unlock()
 			}
 		} else {
 
@@ -125,12 +126,12 @@ func SetCommand(arguments [][]byte, client *storage.Client) RESP.Response {
 		}
 	}
 
-	storage.DatabaseMutex.Lock()
-	storage.Database[string(arguments[0])] = storage.Data{
+	replconfig.DatabaseMutex.Lock()
+	replconfig.Database[string(arguments[0])] = storage.Data{
 		Type:  storage.STRING,
 		Value: arguments[1],
 	}
-	storage.DatabaseMutex.Unlock()
+	replconfig.DatabaseMutex.Unlock()
 
 	markDirty(string(arguments[0]), client)
 

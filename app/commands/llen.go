@@ -2,18 +2,19 @@ package commands
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 )
 
-func LlenCommand(arguments [][]byte) RESP.Response {
+func LlenCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 	if len(arguments) != 1 {
 		return RESP.WrongNumberOfArguments("LLEN")
 	}
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[string(arguments[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(arguments[0])]
+	replconfig.DatabaseMutex.RUnlock()
 
 	if exists {
 		if data.Type != storage.LIST {

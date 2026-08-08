@@ -2,6 +2,7 @@ package rdb
 
 import (
 	"CacheDB/app/RESP"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"bytes"
 	"encoding/binary"
@@ -12,33 +13,31 @@ import (
 	"time"
 )
 
+func createEmptyRDB(path string,replconfig *config.SERVER) error {
+	var buffer bytes.Buffer
 
-func createEmptyRDB(path string) error {
-    var buffer bytes.Buffer
+	if err := writeRDBHeader(&buffer); err != nil {
+		return err
+	}
 
-    if err := writeRDBHeader(&buffer); err != nil {
-        return err
-    }
+	if err := writeAuxFileds(&buffer); err != nil {
+		return err
+	}
 
-    if err := writeAuxFileds(&buffer); err != nil {
-        return err
-    }
+	if err := writeselectdatabase(&buffer, 0); err != nil {
+		return err
+	}
 
-    if err := writeselectdatabase(&buffer, 0); err != nil {
-        return err
-    }
+	if err := WriteReSizeDB(&buffer,replconfig); err != nil {
+		return err
+	}
 
-    if err := WriteReSizeDB(&buffer); err != nil {
-        return err
-    }
+	if _, err := buffer.Write([]byte{0xFF}); err != nil {
+		return err
+	}
 
-    if _, err := buffer.Write([]byte{0xFF}); err != nil {
-        return err
-    }
-
-    return os.WriteFile(path, buffer.Bytes(), 0644)
+	return os.WriteFile(path, buffer.Bytes(), 0644)
 }
-
 
 func decodeSpecialEncoding(data []byte, encoding byte, pos *int) (uint64, error) {
 
@@ -341,7 +340,7 @@ func decodeLength(data []byte, pos *int) (LengthResult, error) {
 
 }
 
-func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
+func ReadRDBFile(rdbConfig *RDB,replconfig *config.SERVER) ([]*Data, error) {
 
 	var database []*Data
 
@@ -353,7 +352,7 @@ func ReadRDBFile(rdbConfig *RDB) ([]*Data, error) {
 	_, err := os.Stat(path)
 
 	if os.IsNotExist(err) {
-		err = createEmptyRDB(path)
+		err = createEmptyRDB(path,replconfig)
 
 		if err != nil {
 			WrappedError := &readErr{
@@ -429,8 +428,8 @@ loop:
 
 		/*
 		   0xFA-->auxilary field
-		   0xFB-->storage.Database size(RESIZEDB)
-		   0XFE--->storage.Database selector
+		   0xFB-->replconfig.Database size(RESIZEDB)
+		   0XFE--->replconfig.Database selector
 		   0xFF--->end of file
 
 		*/
@@ -454,7 +453,7 @@ loop:
 			dbHashTableSize, err := decodeLength(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
-					Name: "storage.Database HashTable size",
+					Name: "replconfig.Database HashTable size",
 					Err:  io.ErrUnexpectedEOF,
 				}
 
@@ -467,7 +466,7 @@ loop:
 			if err != nil {
 
 				WrappedError := &readErr{
-					Name: "storage.Database expiry HashTable size",
+					Name: "replconfig.Database expiry HashTable size",
 					Err:  io.ErrUnexpectedEOF,
 				}
 
@@ -497,7 +496,7 @@ loop:
 			_, err := selectDatabase(data, &pos)
 			if err != nil {
 				WrappedError := &readErr{
-					Name: "storage.Database number",
+					Name: "replconfig.Database number",
 					Err:  err,
 				}
 
@@ -505,7 +504,7 @@ loop:
 
 				return nil, err
 			}
-			// fmt.Printf("storage.Database number=%d\r\n", dbNumber)
+			// fmt.Printf("replconfig.Database number=%d\r\n", dbNumber)
 		case 0xFF:
 			break loop
 
@@ -525,7 +524,6 @@ func selectDatabase(data []byte, pos *int) (uint64, error) {
 
 	return length.Value, err
 }
-
 
 // strings
 func readStringKeyValuePair(data []byte, pos *int) ([]byte, []byte, error) {
@@ -575,53 +573,51 @@ func readListKeyValuePair(data []byte, pos *int) ([]byte, [][]byte, error) {
 	return key, list, nil
 }
 
+func LoadFileToMemory(rdbConfig *RDB, server *config.SERVER) error {
 
-
-func LoadFileToMemory(rdbConfig *RDB) error{
-
-	dataEntries, err :=ReadRDBFile(rdbConfig)
+	dataEntries, err := ReadRDBFile(rdbConfig,server)
 	if err != nil {
 		return err
 	}
-	
+
 	for _, dataEntry := range dataEntries {
-		
+
 		if dataEntry.HasExpiry {
 			expiresAt := time.UnixMilli(int64(dataEntry.ExpiresAt))
 			if time.Now().After(expiresAt) {
 				continue
 			}
-			storage.Expiry[string(dataEntry.Key)] = expiresAt
+			server.Expiry[string(dataEntry.Key)] = expiresAt
 		}
-		
+
 		switch dataEntry.Type {
 		case STRING:
-			
-			storage.Database[string(dataEntry.Key)] = storage.Data{
+
+			server.Database[string(dataEntry.Key)] = storage.Data{
 				Value: dataEntry.Value.([]byte),
 				Type:  storage.STRING,
 			}
 		case LIST:
 			items := dataEntry.Value.([][]byte)
-			
+
 			list := &storage.List{}
-			
+
 			for _, entry := range items {
 				list.PushBack(entry)
 			}
-			
-			storage.Database[string(dataEntry.Key)] = storage.Data{
+
+			server.Database[string(dataEntry.Key)] = storage.Data{
 				Type:  storage.LIST,
 				Value: list,
 			}
-			
+
 		default:
 			panic("Unknown data type was stored in the rdb file")
-			
+
 		}
-		
+
 	}
 
 	return nil
-	
+
 }

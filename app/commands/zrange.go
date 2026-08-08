@@ -3,19 +3,20 @@ package commands
 import (
 	"CacheDB/app/RESP"
 	zset "CacheDB/app/ZSET"
+	"CacheDB/app/config"
 	"CacheDB/app/storage"
 	"strconv"
 )
 
-func Zrange(args [][]byte) RESP.Response {
+func Zrange(args [][]byte,replconfig *config.SERVER) RESP.Response {
 
 	if len(args) != 3 {
 		return RESP.WrongNumberOfArguments("ZRANGE")
 	}
 
-	storage.DatabaseMutex.RLock()
-	data, exists := storage.Database[string(args[0])]
-	storage.DatabaseMutex.RUnlock()
+	replconfig.DatabaseMutex.RLock()
+	data, exists := replconfig.Database[string(args[0])]
+	replconfig.DatabaseMutex.RUnlock()
 
 	if !exists {
 		return RESP.Response{
@@ -24,7 +25,7 @@ func Zrange(args [][]byte) RESP.Response {
 		}
 	}
 
-	if data.Type !=storage.ZSET {
+	if data.Type != storage.ZSET {
 		return RESP.WrongType()
 	}
 
@@ -40,7 +41,7 @@ func Zrange(args [][]byte) RESP.Response {
 	}
 
 	zs := data.Value.(*zset.ZSet)
-   zs.ZSMutex.RLock()
+	zs.ZSMutex.RLock()
 	defer zs.ZSMutex.RUnlock()
 	if startIndex < 0 {
 		startIndex = zs.List.Length + startIndex

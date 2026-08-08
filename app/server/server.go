@@ -46,8 +46,6 @@ func createDefaultUser(client *storage.Client) {
 	storage.UsersMutex.RLock()
 	defer storage.UsersMutex.RUnlock()
 	defaultUser := storage.Users["default"]
-	defaultUser.CommandPermissions = storage.AllCommands
-
 	if defaultUser.Flags.NoPass {
 		client.User = defaultUser
 	}
@@ -139,8 +137,10 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 				}
 
 				replica.Offset.Store(-1)
+		
 				replConfig.ReplicasMutex.Lock()
 				replConfig.REPLICAS = append(replConfig.REPLICAS, replica)
+		
 				replConfig.ReplicasMutex.Unlock()
 				continue
 			}
@@ -165,16 +165,19 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 
 // for replicas
 func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) {
-
+   
 	var request []byte
 	temp := make([]byte, 1024)
 
+	client:=&storage.Client{}
+	createDefaultUser(client)
+	
 	defer conn.Close()
-
+	
 	for {
-
+		
 		bytesRead, err := conn.Read(temp)
-
+	
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 			return
 		}
@@ -206,9 +209,11 @@ func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) 
 
 			}
 
+		
+
 			request = request[bytesConsumed:]
 
-			response := dispatchCommands(&storage.Client{}, parsedRequest, replConfig, &rdb.RDB{}, aofConfig)
+			response := dispatchCommands(client, parsedRequest, replConfig, &rdb.RDB{}, aofConfig)
 
 			if len(parsedRequest) > 0 && RESP.CompareBytes(parsedRequest[0], []byte("REPLCONF")) {
 
@@ -248,7 +253,7 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 	}
 
 	//load rdb file from memory
-	err = rdb.LoadFileToMemory(rdbConfig)
+	err = rdb.LoadFileToMemory(rdbConfig,replConfig)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
@@ -276,20 +281,6 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 		}
 	}
 
-	//sync with the master if this server is a replica
-
-	if replConfig.Role == "slave" {
-
-		conn, err := syncWithMaster(replConfig, rdbConfig)
-
-		if err != nil {
-			panic(err)
-		}
-
-		go handleMaster(conn, replConfig, aofFileConfig)
-
-	}
-
 	defaultUser := storage.User{
 		Name:      "default",
 		Passwords: make([][32]byte, 0),
@@ -299,8 +290,23 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 		},
 	}
 
+	defaultUser.CommandPermissions = storage.AllCommands
 	commands.GrantOrRevokePermission(&defaultUser,[]byte("@ADMIN"),true)
+	storage.UsersMutex.Lock()
 	storage.Users["default"] = &defaultUser
+	storage.UsersMutex.Unlock()
+
+	//sync with the master if this server is a replica
+	if replConfig.Role == "slave" {
+		conn, err := syncWithMaster(replConfig, rdbConfig)
+		if err != nil {
+			panic(err)
+		}
+	
+		go handleMaster(conn, replConfig, aofFileConfig)
+
+	}
+
 
 	for {
 
