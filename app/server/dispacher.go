@@ -46,7 +46,11 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	CMD:=storage.CommandToPermission[cmd]
 
 	if client.User.CommandPermissions&CMD==0{
-		   fmt.Printf("%s\r\n",cmd)
+		   fmt.Printf(
+    "USER=%s permissions=%v\n",
+    client.User.Name,
+    client.User.CommandPermissions,
+)
 		   return RESP.Response{
 				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the '%s' command", cmd),
 				Type: RESP.ERROR,

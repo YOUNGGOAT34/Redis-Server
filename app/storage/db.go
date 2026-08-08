@@ -39,6 +39,7 @@ const (
 	PING
 	AUTH
 	ACL
+	ECHO
 	//admin
 	SETUSER
 	GETUSER
@@ -68,6 +69,12 @@ const (
 	ZSCORE
 	ZRANK
 	ZCARD
+	//transactions
+	MULTI
+	EXEC
+	DISCARD
+	WATCH
+	UNWATCH
 )
 
 
@@ -77,7 +84,9 @@ var (
 
 	
 	AllCommands uint64 = GET | SET | DEL | INCR | PING | AUTH | ACL | KEYS | TYPECMD | SAVE | RPUSH | LRANGE | LPUSH |
-	                     LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK | SETUSER
+	                     LLEN | BLPOP | LPOP | XADD | XRANGE | XREAD | ZADD | ZREM | ZRANGE | ZSCORE | ZRANK | SETUSER | ECHO |
+								MULTI | EXEC | DISCARD | WATCH | UNWATCH
+
    
 	CategoryToPermissions=map[string]uint64{
 			"READ": GET | KEYS | TYPECMD | LRANGE | ZRANGE | ZSCORE | ZRANK | XRANGE | XREAD | LLEN,
@@ -94,6 +103,7 @@ var CommandToPermission = map[string]uint64{
 	"DEL":  DEL,
 	"INCR": INCR,
 	"WAIT":WAIT,
+	
     
 	// Connection
 	"PING": PING,
@@ -102,6 +112,13 @@ var CommandToPermission = map[string]uint64{
 	"PSYNC":    PSYNC,
 	"REPLCONF": REPLCONF,
 	"INFO":INFO,
+	"ECHO":ECHO,
+	//transactions
+	"MULTI":MULTI,
+	"EXEC":EXEC,
+	"DISCARD":DISCARD,
+	"WATCH":WATCH,
+	"UNWATCH":UNWATCH,
 
 	// Generic
 	"KEYS": KEYS,
