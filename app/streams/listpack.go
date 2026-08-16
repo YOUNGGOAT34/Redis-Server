@@ -76,4 +76,23 @@ func encode13BitInteger(value int)([]byte,error){
 	 return []byte{highBits,lowBits},nil
 }
 
+func encode12BitString(length int) ([]byte,error){
+	   if length<0 || length>4095{
+			  return nil,errors.New("value cannot fit into 12 bits")
+		}
+		/*
+			The first 4 bits identify this as a 12-bit string:
+
+				1110xxxx xxxxxxxx
+
+			The remaining 12 bits store the string length.
+		*/
+	   encoded:=uint16(0xE000) | uint16(length)
+
+		highBits:=byte(encoded>>8)
+		lowBits:=byte(encoded&0xFF)
+
+		return []byte{highBits,lowBits},nil
+}
+
 
