@@ -96,3 +96,25 @@ func encode12BitString(length int) ([]byte,error){
 }
 
 
+
+func encode32BitString(length int) ([]byte,error){
+	  if length<0 || length>4294967295{
+		    return nil,errors.New("value cannot fit into 32 bits")
+	  }
+
+	  /*
+	      0xF0 identifies this entry as a 32-bit string
+			The next 4 bytes store the string length in big-endian
+			order, from the most significant byte to the least
+			significant byte.
+	  */
+
+	  prefix:=byte(0xF0)
+
+	  firstByte:=byte(length>>24)
+	  secondByte:=byte(length>>16)
+	  thirdByte:=byte(length>>8)
+	  fouthByte:=byte(length & 0xFF)
+
+	  return []byte{prefix,firstByte,secondByte,thirdByte,fouthByte},nil
+}
