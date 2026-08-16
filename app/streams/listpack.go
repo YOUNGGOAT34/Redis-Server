@@ -1,6 +1,9 @@
 package streams
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 const(
 	  EOF byte=0xFF
@@ -37,6 +40,16 @@ func(lp *ListPack) TotalBytes() uint32{
 
 func (lp *ListPack) Length()uint16{
 	  return binary.LittleEndian.Uint16(lp.data[4:6])
+}
+
+
+//encodings
+
+func encode7BitInteger(value int) (byte,error){
+	  if value<0 || value>127{
+		  return 0,errors.New("Value does not fit in 13 bits")
+	  }
+	return byte(value),nil
 }
 
 
