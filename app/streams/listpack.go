@@ -47,9 +47,33 @@ func (lp *ListPack) Length()uint16{
 
 func encode7BitInteger(value int) (byte,error){
 	  if value<0 || value>127{
-		  return 0,errors.New("Value does not fit in 13 bits")
+		  return 0,errors.New("Value does not fit in 7 bits")
 	  }
 	return byte(value),nil
+}
+
+func encode13BitInteger(value int)([]byte,error){
+	 if value < -4096 || value > 4096 {
+		  return nil,errors.New("Value does not fit in 13 bits")
+	 }
+
+	 /*
+	      A 13-bit integer only has 13 bits available for its value.
+			This is important for negative numbers because Go's
+			int uses two's-complement representation-->meaning a negative
+			value has 1s extending into the higher bits
+			Masking with 0x1FFF  discards those higher bits and
+			keeps only the 13 bits that belong to the Listpack encoding
+	 */
+
+	 value&=0x1FFF
+
+	 encoded:=uint16(0xC000) | uint16(value)
+
+	 highBits:=byte(encoded>>8)
+	 lowBits:=byte(encoded & 0xFF)
+
+	 return []byte{highBits,lowBits},nil
 }
 
 
