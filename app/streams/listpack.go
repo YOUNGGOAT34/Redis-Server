@@ -3,6 +3,8 @@ package streams
 import (
 	"encoding/binary"
 	"errors"
+
+	"github.com/segmentio/encoding/thrift"
 )
 
 const(
@@ -117,4 +119,25 @@ func encode32BitString(length int) ([]byte,error){
 	  fouthByte:=byte(length & 0xFF)
 
 	  return []byte{prefix,firstByte,secondByte,thirdByte,fouthByte},nil
+}
+
+func encode16BitInteger(value int) ([]byte,error){
+	   if value < -32768 || value>32767{
+           return nil,errors.New("value cannot fit into 16 bits")
+		}
+
+	/*
+	   0xF1 identifies this entry as a 16-bit signed integer.
+	   Keep only the lower 16 bits so that negative values are
+	   represented using their 16-bit two's-complement form.
+	*/
+
+		prefix:=byte(0xF1)
+
+		value=value & 0xFFFF
+		
+		firstByte:=byte(value>>8)
+		secondByte:=byte(value & 0xFF)
+
+		return []byte{prefix,firstByte,secondByte},nil
 }
