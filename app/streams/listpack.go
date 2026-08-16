@@ -3,8 +3,6 @@ package streams
 import (
 	"encoding/binary"
 	"errors"
-
-	"github.com/segmentio/encoding/thrift"
 )
 
 const(
@@ -72,10 +70,7 @@ func encode13BitInteger(value int)([]byte,error){
 
 	 encoded:=uint16(0xC000) | uint16(value)
 
-	 highBits:=byte(encoded>>8)
-	 lowBits:=byte(encoded & 0xFF)
-
-	 return []byte{highBits,lowBits},nil
+	 return []byte{byte(encoded>>8),byte(encoded & 0xFF)},nil
 }
 
 func encode12BitString(length int) ([]byte,error){
@@ -91,10 +86,7 @@ func encode12BitString(length int) ([]byte,error){
 		*/
 	   encoded:=uint16(0xE000) | uint16(length)
 
-		highBits:=byte(encoded>>8)
-		lowBits:=byte(encoded&0xFF)
-
-		return []byte{highBits,lowBits},nil
+		return []byte{byte(encoded>>8),byte(encoded&0xFF)},nil
 }
 
 
@@ -112,13 +104,7 @@ func encode32BitString(length int) ([]byte,error){
 	  */
 
 	  prefix:=byte(0xF0)
-
-	  firstByte:=byte(length>>24)
-	  secondByte:=byte(length>>16)
-	  thirdByte:=byte(length>>8)
-	  fouthByte:=byte(length & 0xFF)
-
-	  return []byte{prefix,firstByte,secondByte,thirdByte,fouthByte},nil
+	  return []byte{prefix,byte(length>>24),byte(length>>16),byte(length>>8),byte(length & 0xFF)},nil
 }
 
 func encode16BitInteger(value int) ([]byte,error){
@@ -134,10 +120,37 @@ func encode16BitInteger(value int) ([]byte,error){
 
 		prefix:=byte(0xF1)
 
-		value=value & 0xFFFF
-		
-		firstByte:=byte(value>>8)
-		secondByte:=byte(value & 0xFF)
+		value&=0xFFFF
+	
+		return []byte{prefix,byte(value>>8),byte(value & 0xFF)},nil
+}
 
-		return []byte{prefix,firstByte,secondByte},nil
+func encode24BitInteger(value int) ([]byte,error){
+	   if  value < -8388608 || value> 8388607{
+			 return nil,errors.New("value cannot fit into 24 bits")
+		}
+
+		/*
+			0xF2 identifies this entry as a 24-bit signed integer.
+			A 24-bit integer uses the remaining 3 bytes to store the value.
+			Masking with 0xFFFFFF keeps only those 24 bits, which gives
+			negative values their 24-bit two's-complement representation.
+			The 24 bits are then split into three bytes in big-endian order.
+		*/
+
+		prefix:=byte(0xF2)
+		
+		value &=0xFFFFFF
+		return []byte{prefix,byte(value>>16),byte(value>>8),byte(value & 0xFF)},nil
+}
+
+func encode32BitInteger(value int) ([]byte,error){
+	  if value < -2147483648 || value>2147483647{
+		   return nil,errors.New("value cannot fit into 32 bits")
+	  }
+
+	  prefix:=byte(0xF3)
+	  value&=0xFFFFFFFF
+
+	  return []byte{prefix,byte(value>>24),byte(value>>16),byte(value>>8),byte(value&0xFF)},nil
 }
