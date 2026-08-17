@@ -148,9 +148,32 @@ func encode32BitInteger(value int) ([]byte,error){
 	  if value < -2147483648 || value>2147483647{
 		   return nil,errors.New("value cannot fit into 32 bits")
 	  }
+     
+	  /*
+			0xF3 identifies this entry as a 32-bit signed integer.
 
+			A 32-bit integer uses the remaining 4 bytes to store the value.
+			Masking with 0xFFFFFFFF keeps only those 32 bits, giving negative
+			values their 32-bit two's-complement representation.
+
+			The 32 bits are then split into four bytes in big-endian order.
+		*/
 	  prefix:=byte(0xF3)
 	  value&=0xFFFFFFFF
 
 	  return []byte{prefix,byte(value>>24),byte(value>>16),byte(value>>8),byte(value&0xFF)},nil
+}
+
+func encode64BitInteger(value int64) ([]byte,error){
+	 /*
+			0xF4 identifies this entry as a 64-bit signed integer.
+			The integer occupies the remaining 8 bytes and is stored in
+			big-endian order, from the most significant byte to the least
+			significant byte.
+			Since value is already an int64, it already uses exactly 64 bits.
+			Negative values are represented using two's-complement, so no
+			additional masking is required.
+		*/
+	  prefix:=byte(0xF4)
+	  return []byte{prefix,byte(value>>56),byte(value>>48),byte(value>>40),byte(value>>32),byte(value>>24),byte(value>>16),byte(value>>8),byte(value & 0xFF)},nil
 }
