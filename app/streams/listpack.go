@@ -53,7 +53,7 @@ func encode7BitInteger(value int) (byte,error){
 }
 
 func encode13BitInteger(value int)([]byte,error){
-	 if value < -4096 || value > 4096 {
+	 if value < -4096 || value > 4095 {
 		  return nil,errors.New("Value does not fit in 13 bits")
 	 }
 
@@ -176,4 +176,34 @@ func encode64BitInteger(value int64) ([]byte,error){
 		*/
 	  prefix:=byte(0xF4)
 	  return []byte{prefix,byte(value>>56),byte(value>>48),byte(value>>40),byte(value>>32),byte(value>>24),byte(value>>16),byte(value>>8),byte(value & 0xFF)},nil
+}
+
+/*
+   Backlen encoding:
+	   length <= 127          → 1 byte
+		length <= 16,383       → 2 bytes
+		length <= 2,097,151    → 3 bytes
+		length <= 268,435,455  → 4 bytes
+		otherwise              → 5 bytes
+*/
+
+func backlenSize(length int) (int,error){
+	  if length<0{
+		   return 0,errors.New("Invalid length")
+	  }
+	  if length<=127{
+		  return 1,nil
+	  }else if length<=16383{
+		 return 2,nil
+	  }else if length<=2097151{
+		 return 3,nil
+	  }else if length<=268435455{
+		 return 4,nil
+	  }
+
+	  return 5,nil
+}
+
+func encodeBacklen(){
+	 
 }
