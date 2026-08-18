@@ -222,3 +222,18 @@ func encodeBacklen(length int) ([]byte,error){
 			  return []byte{byte((length>>28)&0x7F),byte(((length>>21)&0x7F) | 0x80),byte(((length>>14)&0x7F) | 0x80),byte(((length>>7)&0x7F) | 0x80),byte((length&0x7F) | 0x80)},nil
 		}
 }
+
+func entryTotalSize(contentSize int) int{
+	   backlenBytes:=1
+
+		for{
+			  totalSize:=contentSize+backlenBytes
+			  requiredBytes:=backlenSize(contentSize)
+
+			  if backlenBytes==requiredBytes{
+				 return totalSize
+			  }
+
+			  backlenBytes=requiredBytes
+		}
+}
