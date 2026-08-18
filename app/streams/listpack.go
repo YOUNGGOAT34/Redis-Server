@@ -187,23 +187,38 @@ func encode64BitInteger(value int64) ([]byte,error){
 		otherwise              → 5 bytes
 */
 
-func backlenSize(length int) (int,error){
-	  if length<0{
-		   return 0,errors.New("Invalid length")
-	  }
+func backlenSize(length int) int{
+	 
 	  if length<=127{
-		  return 1,nil
+		  return 1
 	  }else if length<=16383{
-		 return 2,nil
+		 return 2
 	  }else if length<=2097151{
-		 return 3,nil
+		 return 3
 	  }else if length<=268435455{
-		 return 4,nil
+		 return 4
 	  }
 
-	  return 5,nil
+	  return 5
 }
 
-func encodeBacklen(){
-	 
+func encodeBacklen(length int) ([]byte,error){
+	   if length<0{
+			 return nil,errors.New("Invalid length")
+		}
+
+		size:=backlenSize(length)
+      
+		switch size{
+		case 0x01:
+			 return []byte{byte(length&0x7F)},nil
+		case 0x02:
+			  return []byte{byte((length>>7)&0x7F),byte((length&0x7F) | 0x80)},nil
+		case 0x03:
+			  return []byte{byte(((length>>14)&0x7F)),byte(((length>>7)&0x7F)| 0x80),byte((length&0x7F) | 0x80)},nil
+		case 0x04:
+			  return []byte{byte(((length>>21)&0x7F)),byte(((length>>14)&0x7F) | 0x80),byte(((length>>7)&0x7F) | 0x80),byte((length&0x7F) | 0x80)},nil
+		default:
+			  return []byte{byte((length>>28)&0x7F),byte(((length>>21)&0x7F) | 0x80),byte(((length>>14)&0x7F) | 0x80),byte(((length>>7)&0x7F) | 0x80),byte((length&0x7F) | 0x80)},nil
+		}
 }
