@@ -6,7 +6,6 @@ import (
 	"CacheDB/app/config"
 	"CacheDB/app/server"
 	"CacheDB/app/storage"
-	"CacheDB/app/streams"
 	"flag"
 	"fmt"
 	"net"
@@ -17,15 +16,6 @@ import (
 )
 
 func main() {
-
-	lp:=streams.NewListPack()
-
-   lp.Push("hello")
-	lp.Push(int64(42))
-	lp.Push(int64(-1000))
-	lp.Push("world")
-
-	fmt.Printf("% X\n", lp.Data)
 
 	currentWorkingDir,err:=os.Getwd()
 	if err!=nil{
