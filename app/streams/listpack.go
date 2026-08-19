@@ -45,6 +45,38 @@ func (lp *ListPack) Length()uint16{
 
 //encodings
 
+func encode12BitString(length int) ([]byte,error){
+		if length<0 || length>4095{
+			  return nil,errors.New("value cannot fit into 12 bits")
+		}
+		/*
+			The first 4 bits identify this as a 12-bit string:
+
+				1110xxxx xxxxxxxx
+
+			The remaining 12 bits store the string length.
+		*/
+		encoded:=uint16(0xE000) | uint16(length)
+
+		return []byte{byte(encoded>>8),byte(encoded&0xFF)},nil
+}
+
+
+func encode32BitString(length int) ([]byte,error){
+	  if length<0 || length>4294967295{
+			 return nil,errors.New("value cannot fit into 32 bits")
+	  }
+
+	  /*
+			0xF0 identifies this entry as a 32-bit string
+			The next 4 bytes store the string length in big-endian
+			order, from the most significant byte to the least
+			significant byte.
+	  */
+
+	  prefix:=byte(0xF0)
+	  return []byte{prefix,byte(length>>24),byte(length>>16),byte(length>>8),byte(length & 0xFF)},nil
+}
 func encode7BitInteger(value int) (byte,error){
 	  if value<0 || value>127{
 		  return 0,errors.New("Value does not fit in 7 bits")
@@ -71,40 +103,6 @@ func encode13BitInteger(value int)([]byte,error){
 	 encoded:=uint16(0xC000) | uint16(value)
 
 	 return []byte{byte(encoded>>8),byte(encoded & 0xFF)},nil
-}
-
-func encode12BitString(length int) ([]byte,error){
-	   if length<0 || length>4095{
-			  return nil,errors.New("value cannot fit into 12 bits")
-		}
-		/*
-			The first 4 bits identify this as a 12-bit string:
-
-				1110xxxx xxxxxxxx
-
-			The remaining 12 bits store the string length.
-		*/
-	   encoded:=uint16(0xE000) | uint16(length)
-
-		return []byte{byte(encoded>>8),byte(encoded&0xFF)},nil
-}
-
-
-
-func encode32BitString(length int) ([]byte,error){
-	  if length<0 || length>4294967295{
-		    return nil,errors.New("value cannot fit into 32 bits")
-	  }
-
-	  /*
-	      0xF0 identifies this entry as a 32-bit string
-			The next 4 bytes store the string length in big-endian
-			order, from the most significant byte to the least
-			significant byte.
-	  */
-
-	  prefix:=byte(0xF0)
-	  return []byte{prefix,byte(length>>24),byte(length>>16),byte(length>>8),byte(length & 0xFF)},nil
 }
 
 func encode16BitInteger(value int) ([]byte,error){
@@ -236,4 +234,39 @@ func entryTotalSize(contentSize int) int{
 
 			  backlenBytes=requiredBytes
 		}
+}
+
+func encodeStringEntry(value string) ([]byte,error){
+	  data:=[]byte(value)
+	  
+	  length:=len(data)
+
+	  var encoding []byte
+	  var err error
+	
+	  if length<=4095{
+		    encoding,err=encode12BitString(length)
+	  }else{
+		    encoding,err=encode32BitString(length)
+	  }
+
+	  if err!=nil{
+		  return nil,err
+	  }
+    
+	  content:=append(encoding,data...)
+
+	  contentSize:=len(content)
+	  totalSize:=entryTotalSize(contentSize)
+
+	  backlenEncoding,err:=encodeBacklen(totalSize)
+
+	  if err!=nil{
+		 return nil,err
+	  }
+
+	  content = append(content, backlenEncoding...)
+
+	  return content,nil
+
 }
