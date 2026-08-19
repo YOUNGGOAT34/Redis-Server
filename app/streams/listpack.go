@@ -42,6 +42,30 @@ func (lp *ListPack) Length()uint16{
 	  return binary.LittleEndian.Uint16(lp.data[4:6])
 }
 
+func (lp *ListPack) Push(value string) error{
+	   entry,err:=encodeStringEntry(value)
+
+		if err!=nil{
+			 return err
+		}
+
+		listPackLen:=len(lp.data)
+
+		if listPackLen<HeaderSize+1{
+			 panic("Inserting into a corrupted listpack")
+		}
+
+		lp.data=append(lp.data[:listPackLen-1],entry... )
+
+      lp.data=append(lp.data, EOF)
+
+		//update total bytes
+		binary.LittleEndian.PutUint32(lp.data[0:4],uint32(len(lp.data)))
+      currentNumberOfEntries:=lp.Length()
+		binary.LittleEndian.PutUint16(lp.data[4:6],currentNumberOfEntries+1)
+		return nil
+}
+
 
 //encodings
 
@@ -237,6 +261,9 @@ func entryTotalSize(contentSize int) int{
 }
 
 func encodeStringEntry(value string) ([]byte,error){
+	/*
+	   encoding+data+backlen
+	*/
 	  data:=[]byte(value)
 	  
 	  length:=len(data)
