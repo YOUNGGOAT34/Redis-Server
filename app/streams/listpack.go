@@ -11,20 +11,20 @@ const(
 )
 
 type ListPack struct{
-	  data []byte
+	  Data []byte
 }
 
 func NewListPack() *ListPack{
 	 lp:=&ListPack{
-		  data:make([]byte,HeaderSize+1),
+		  Data:make([]byte,HeaderSize+1),
 	 }
 
 	 //total size
-	 binary.LittleEndian.PutUint32(lp.data[0:4],uint32(len(lp.data)))
+	 binary.LittleEndian.PutUint32(lp.Data[0:4],uint32(len(lp.Data)))
 	 //number of elements-->at this point there are 0 elemenents
-	 binary.LittleEndian.PutUint16(lp.data[4:6],0)
+	 binary.LittleEndian.PutUint16(lp.Data[4:6],0)
 	 //end of file
-	 lp.data[6]=EOF
+	 lp.Data[6]=EOF
 	 return lp
 }
 
@@ -35,34 +35,44 @@ func NewListPack() *ListPack{
 */
 
 func(lp *ListPack) TotalBytes() uint32{
-	  return binary.LittleEndian.Uint32(lp.data[0:4])
+	  return binary.LittleEndian.Uint32(lp.Data[0:4])
 }
 
 func (lp *ListPack) Length()uint16{
-	  return binary.LittleEndian.Uint16(lp.data[4:6])
+	  return binary.LittleEndian.Uint16(lp.Data[4:6])
 }
 
-func (lp *ListPack) Push(value string) error{
-	   entry,err:=encodeStringEntry(value)
+func (lp *ListPack) Push(value any) error{
+	var entry []byte
+	var err error
+	switch v:=value.(type){
+			case string:
+				entry,err=encodeStringEntry(v)
+			case int64:
+				entry,err=encodeIntegerEntry(v)
+			default:
+				 return errors.New("unsupported type")
+
+		}
 
 		if err!=nil{
 			 return err
 		}
 
-		listPackLen:=len(lp.data)
+		listPackLen:=len(lp.Data)
 
 		if listPackLen<HeaderSize+1{
 			 panic("Inserting into a corrupted listpack")
 		}
 
-		lp.data=append(lp.data[:listPackLen-1],entry... )
+		lp.Data=append(lp.Data[:listPackLen-1],entry... )
 
-      lp.data=append(lp.data, EOF)
+      lp.Data=append(lp.Data, EOF)
 
 		//update total bytes
-		binary.LittleEndian.PutUint32(lp.data[0:4],uint32(len(lp.data)))
+		binary.LittleEndian.PutUint32(lp.Data[0:4],uint32(len(lp.Data)))
       currentNumberOfEntries:=lp.Length()
-		binary.LittleEndian.PutUint16(lp.data[4:6],currentNumberOfEntries+1)
+		binary.LittleEndian.PutUint16(lp.Data[4:6],currentNumberOfEntries+1)
 		return nil
 }
 
@@ -101,11 +111,11 @@ func encode32BitString(length int) ([]byte,error){
 	  prefix:=byte(0xF0)
 	  return []byte{prefix,byte(length>>24),byte(length>>16),byte(length>>8),byte(length & 0xFF)},nil
 }
-func encode7BitInteger(value int) (byte,error){
+func encode7BitInteger(value int) ([]byte,error){
 	  if value<0 || value>127{
-		  return 0,errors.New("Value does not fit in 7 bits")
+		  return nil,errors.New("Value does not fit in 7 bits")
 	  }
-	return byte(value),nil
+	return []byte{byte(value)},nil
 }
 
 func encode13BitInteger(value int)([]byte,error){
@@ -296,4 +306,38 @@ func encodeStringEntry(value string) ([]byte,error){
 
 	  return content,nil
 
+}
+
+func encodeIntegerEntry(value int64) ([]byte,error){
+     
+	   var encoding []byte
+		var err error
+	   
+	   if value>=0 && value<=127{
+			   encoding,err=encode7BitInteger(int(value))
+		}else if value>=-4096 && value<=4095{
+			  encoding,err=encode13BitInteger(int(value))
+		}else if value>=-32768 && value<=32767{
+			  encoding,err=encode16BitInteger(int(value))
+		}else if  value>=-8388608 && value<=8388607{
+			  encoding,err=encode24BitInteger(int(value))
+		}else if value>=-2147483648 && value<=2147483647{
+			  encoding,err=encode32BitInteger(int(value))
+		}else {
+			 encoding,err=encode64BitInteger(value)
+		}
+
+		if err!=nil{
+			 return nil,err
+		}
+
+		contentSize:=len(encoding)
+		totalSize:=entryTotalSize(contentSize)
+      backlen,err:=encodeBacklen(totalSize)
+
+		if err!=nil{
+			 return nil,err
+		}
+		
+		return append(encoding,backlen...),nil
 }
