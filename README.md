@@ -170,7 +170,12 @@ The skiplist uses **probabilistic level selection** (p=0.25, max 32 levels) with
 
 Permissions are encoded as a **64-bit bitmap** — one bit per command. Users are granted or revoked permissions by OR-ing or AND-ing permission masks:
 
-
+```text
+GET | SET | DEL  →  read/write string access
+@READ            →  all read commands
+@WRITE           →  all write commands
+@ADMIN           →  replication and user management commands
+```
 ---
 
 ## Concurrency & Thread Safety
