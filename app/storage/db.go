@@ -370,7 +370,7 @@ func (stream *Stream) NextID() StreamID {
 
 func (stream *Stream) GenerateSequence(userSpecifiedId []byte) (StreamID, error) {
 
-	hyphenIndex := 0
+	hyphenIndex := -1
 
 	for index, char := range userSpecifiedId {
 		if char == '-' {
@@ -379,7 +379,7 @@ func (stream *Stream) GenerateSequence(userSpecifiedId []byte) (StreamID, error)
 		}
 	}
 
-	if hyphenIndex == 0 {
+	if hyphenIndex == -1 {
 		return StreamID{}, errors.New("Invalid stream id")
 	}
 
@@ -389,9 +389,18 @@ func (stream *Stream) GenerateSequence(userSpecifiedId []byte) (StreamID, error)
 		return StreamID{}, err
 	}
 
+	var seqence uint64
+
+	if milliseconds==stream.LastID.Milliseconds{
+		 seqence=stream.LastID.Sequence + 1
+	}else{
+		 seqence=0
+	}
+
+
 	return StreamID{
 		Milliseconds: milliseconds,
-		Sequence:     uint64(stream.LastID.Sequence) + 1,
+		Sequence:     seqence,
 	}, err
 }
 
