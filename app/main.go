@@ -39,17 +39,14 @@ func main() {
 	appendonly:=flag.String("appendonly","no","yes or no")
 
 	appenddirname:=flag.String("appenddirname","appendonly","appendonly directory")
-
-	appendfilename:=flag.String("appendfilename","appendnoly.aof","appendonly filename")
+                                                                                
+	appendfilename:=flag.String("appendfilename","appendonly.aof","appendonly filename")
 
 	appendfsync:=flag.String("appendfsync","everysec","i.e everysec")
 
-   
-
 	flag.Parse()
 
-	//replication configuration
-    
+	//replication configuration    
 	replConfig.PORT = *PORT
 
 	if len(*replicaof) > 0 {
@@ -76,7 +73,6 @@ func main() {
 
 	replConfig.MASTERREPLID = "8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb"
 	replConfig.MASTERREPLOFFSET.Store(0)
-
 	replConfig.PubSub.Channels=make(map[string]storage.Set[net.Conn])
 
 
@@ -85,17 +81,12 @@ func main() {
 	rdbFileConfig.DbFileName=*dbfilename
 
 	//aof file config
-
-	
-	
 	aofFileConfig.AppendDirName=*dir
 	aofFileConfig.AppendFilename=*appendfilename
 	aofFileConfig.AppendOnly=*appendonly
 	aofFileConfig.AppendDirName=*appenddirname
 	aofFileConfig.AppendFsync=*appendfsync
-
-	
-
+   
 	server.StartServer(replConfig,rdbFileConfig,aofFileConfig)
 
 }

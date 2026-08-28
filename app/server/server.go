@@ -44,8 +44,12 @@ func isWrite(command []byte) bool {
 
 func createDefaultUser(client *storage.Client) {
 	storage.UsersMutex.RLock()
-	defer storage.UsersMutex.RUnlock()
 	defaultUser := storage.Users["default"]
+	storage.UsersMutex.RUnlock()
+
+	defaultUser.UserMutex.RLock()
+	defer defaultUser.UserMutex.RUnlock()
+
 	if defaultUser.Flags.NoPass {
 		client.User = defaultUser
 	}
