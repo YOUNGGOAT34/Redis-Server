@@ -1,0 +1,45 @@
+services:
+  cachedb-master:
+    build: .
+    container_name: cachedb-master
+    command: ["--port", "6379", "--dir", "/data", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - master-data:/data
+    healthcheck:
+      test: ["CMD", "/healthcheck", "127.0.0.1:6379"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  cachedb-replica:
+    build: .
+    container_name: cachedb-replica
+    command: ["--port", "6379", "--dir", "/data", "--replicaof", "cachedb-master 6379"]
+    ports:
+      - "6380:6379"
+    volumes:
+      - replica-data:/data
+    depends_on:
+      cachedb-master:
+        # Gates startup on the master actually accepting connections, not
+        # just "the container process has started". Not strictly required -
+        # CacheDB's own replica retry/backoff (500ms-10s, capped) already
+        # tolerates the master not being ready yet - but this avoids a
+        # replica spending its first several seconds retrying for no reason
+        # on a normal `docker compose up`.
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/healthcheck", "127.0.0.1:6379"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+volumes:
+  master-data:
+  replica-data:

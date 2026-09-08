@@ -1,0 +1,23 @@
+.git
+.github
+
+# Test-only integration package and its fixture RDB/AOF files - not needed
+# in the image, and the fixtures churn on every test run.
+app/tester
+
+# Local persistence data / RDB / AOF artifacts a dev might have generated
+# by running the server manually - never part of the image, always came
+# from a mounted volume instead.
+*.rdb
+*.rdb.tmp
+*.aof
+*.aof.*
+appendonly/
+
+README.md
+
+# Editor/OS metadata
+.vscode
+.idea
+*.swp
+.DS_Store
