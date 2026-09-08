@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -30,10 +29,10 @@ func replication_test(t *testing.T) {
 	stageXX_ReplicaOffsetTracking(t)
 	stageXX_PipelinedCommandsKnownBug(t)
 	stageXX_PipelineReplication(t)
-	stageXX_ReadCommandsAreNotPropagated(t) 
+	stageXX_ReadCommandsAreNotPropagated(t)
 	stageXX_PartialPacketParsing(t)
-	stageXX_WaitAfterPipeline(t) 
-	stageXX_ReplicaDisconnectDuringPropagation(t) 
+	stageXX_WaitAfterPipeline(t)
+	stageXX_ReplicaDisconnectDuringPropagation(t)
 }
 
 func stageXX_ReplicaHandshake(t *testing.T) {
@@ -48,7 +47,7 @@ func stageXX_ReplicaHandshake(t *testing.T) {
 	if !strings.Contains(infoResp, "role: master") {
 		failf(t, "expected 'role: master' in INFO block, got: %q", infoResp)
 	}
-   
+
 	if !replicaRegistered && !strings.Contains(infoResp, "connected_slaves:1") {
 		failf(t, "replica never registered in master's REPLICAS slice, and INFO doesn't report connected_slaves:1")
 	}
@@ -56,30 +55,30 @@ func stageXX_ReplicaHandshake(t *testing.T) {
 	pass("replica handshake completed successfully")
 }
 func stageXX_WritePropagation(t *testing.T) {
-    stage("REPLICATION: WRITE PROPAGATION")
+	stage("REPLICATION: WRITE PROPAGATION")
 
-    masterConfig, masterPort := startMaster(t)
-    _, replicaPort := startReplica(t, masterPort)
+	masterConfig, masterPort := startMaster(t)
+	_, replicaPort := startReplica(t, masterPort)
 
-    if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
-        failf(t, "replica never registered with master")
-    }
+	if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
+		failf(t, "replica never registered with master")
+	}
 
-    setResp := sendRawCommand(
-        t,
-        masterPort,
-        encodeCommand("SET", "key", "value"),
-    )
+	setResp := sendRawCommand(
+		t,
+		masterPort,
+		encodeCommand("SET", "key", "value"),
+	)
 
-    if !strings.Contains(setResp, "OK") {
-        failf(t, "SET failed on master: %q", setResp)
-    }
+	if !strings.Contains(setResp, "OK") {
+		failf(t, "SET failed on master: %q", setResp)
+	}
 
-    if !waitForValue(t, replicaPort, "key", "value", 2*time.Second) {
-        failf(t, "replica failed to receive and store the propagated command from master")
-    }
+	if !waitForValue(t, replicaPort, "key", "value", 2*time.Second) {
+		failf(t, "replica failed to receive and store the propagated command from master")
+	}
 
-    pass("writes propagated to replica correctly")
+	pass("writes propagated to replica correctly")
 }
 
 func stageXX_WaitCommandLogic(t *testing.T) {
@@ -185,11 +184,11 @@ func stageXX_OrderedPropagation(t *testing.T) {
 	stage("REPLICATION: ORDERED PROPAGATION")
 
 	masterConfig, masterPort := startMaster(t)
-	_,replicaPort := startReplica(t, masterPort)
+	_, replicaPort := startReplica(t, masterPort)
 
-		if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
-			failf(t, "replica did not finish handshake")
-		}
+	if !waitForReplicaCount(masterConfig, 1, 1*time.Second) {
+		failf(t, "replica did not finish handshake")
+	}
 
 	master := dialWithReader(t, masterPort)
 	defer master.close()
@@ -317,7 +316,6 @@ func stageXX_PipelineReplication(t *testing.T) {
 	pass("multiple pipelined writes replicated")
 }
 
-
 func stageXX_ReadCommandsAreNotPropagated(t *testing.T) {
 	stage("REPLICATION: READ COMMANDS ARE NOT PROPAGATED")
 
@@ -373,7 +371,6 @@ func stageXX_ReadCommandsAreNotPropagated(t *testing.T) {
 
 	pass("read commands do not advance replication offset or get propagated")
 }
-
 
 func stageXX_PartialPacketParsing(t *testing.T) {
 	stage("REPLICATION: PARTIAL PACKET PARSING")
@@ -436,8 +433,6 @@ func stageXX_PartialPacketParsing(t *testing.T) {
 	pass("parser correctly buffered and reconstructed the partial packet")
 }
 
-
-
 func stageXX_PartialAndPipelineParsing(t *testing.T) {
 	stage("STAGE 46: PARTIAL AND PIPELINE PARSING")
 
@@ -453,10 +448,10 @@ func stageXX_PartialAndPipelineParsing(t *testing.T) {
 	reader := bufio.NewReader(conn)
 
 	/*
-	    PACKET 1: Complete "SET a 1" + Incomplete "SET b"
-		The master will send to send:
-		*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n  <- Complete
-		*3\r\n$3\r\nSET\r\n$1\r\nb\r\n           <- Incomplete
+		    PACKET 1: Complete "SET a 1" + Incomplete "SET b"
+			The master will send to send:
+			*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n  <- Complete
+			*3\r\n$3\r\nSET\r\n$1\r\nb\r\n           <- Incomplete
 	*/
 	packet1 := "*3\r\n$3\r\nSET\r\n$1\r\na\r\n$1\r\n1\r\n*3\r\n$3\r\nSET\r\n$1\r\nb\r\n"
 	if _, err := conn.Write([]byte(packet1)); err != nil {
@@ -473,9 +468,9 @@ func stageXX_PartialAndPipelineParsing(t *testing.T) {
 	}
 
 	/*
-	 set a short read deadline. 
+	 set a short read deadline.
 	 The server must NOT respond to the second command because it's incomplete.
-	 */
+	*/
 	err = conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	if err != nil {
 		failf(t, "failed to set read deadline: %v", err)
@@ -494,7 +489,6 @@ func stageXX_PartialAndPipelineParsing(t *testing.T) {
 	// Reset read deadline back to normal
 	_ = conn.SetReadDeadline(time.Time{})
 
-	
 	/*
 	    PACKET 2: Remainder of "SET b 2" + Complete "SET c 3"
 	   Completes SET b with "$1\r\n2\r\n", then pipelines:
@@ -539,7 +533,6 @@ func stageXX_PartialAndPipelineParsing(t *testing.T) {
 
 	pass("parser beautifully handled merged partial stream segments with pipelined commands")
 }
-
 
 func stageXX_WaitAfterPipeline(t *testing.T) {
 	stage("REPLICATION: WAIT AFTER PIPELINE")
@@ -586,8 +579,8 @@ func stageXX_WaitAfterPipeline(t *testing.T) {
 	}
 
 	/*
-			It should return ":1\r\n" because our replica should successfully catch up
-			to all three writes well within the 500ms window.
+		It should return ":1\r\n" because our replica should successfully catch up
+		to all three writes well within the 500ms window.
 	*/
 	if waitResp != ":1\r\n" {
 		failf(t, "expected ':1\\r\\n' from WAIT after pipeline, got %q", waitResp)
@@ -673,7 +666,6 @@ func stageXX_ReplicaDisconnectDuringPropagation(t *testing.T) {
 
 	pass("master survived replica disconnection and cleanly removed it from replication pool")
 }
-
 
 // Connection & Port Helpers
 
@@ -811,26 +803,21 @@ func startMaster(t *testing.T) (*config.SERVER, int) {
 		PORT:         port,
 		MASTERREPLID: "8371b4fb115b71c4a0413b1db346e45071511224",
 		REPLICAS:     make([]*config.REPLICA, 0),
-		Database: make(map[string]storage.Data),
-		Expiry: make(map[string]time.Time),
+		Database:     make(map[string]storage.Data),
+		Expiry:       make(map[string]time.Time),
 	}
 
-	currentWorkingDir,err:=os.Getwd()
-	
-	if err!=nil{
-		t.Fatalf("Failed to get current working directory: %v", err)
+	persistenceDir := t.TempDir()
+	rdb := &rdb.RDB{
+		Dir:        persistenceDir,
+		DbFileName: "dump.rdb",
 	}
 
-	rdb:=&rdb.RDB{
-		  Dir:currentWorkingDir,
-		  DbFileName: "dump.rdb",
-	}
-
-
-	go server.StartServer(cfg,rdb, &aof.AOF{
-		    AppendDirName: "appendonly",
-			 AppendFilename: "appendonly.aof",
-	  },)
+	go server.StartServer(cfg, rdb, &aof.AOF{
+		Dir:            persistenceDir,
+		AppendDirName:  "appendonly",
+		AppendFilename: "appendonly.aof",
+	})
 	time.Sleep(100 * time.Millisecond)
 	return cfg, port
 }
@@ -843,23 +830,20 @@ func startReplica(t *testing.T, masterPort int) (*config.SERVER, int) {
 		PORT:       port,
 		MasterHost: "127.0.0.1",
 		MasterPort: masterPort,
-		Database: make(map[string]storage.Data),
-		Expiry: make(map[string]time.Time),
+		Database:   make(map[string]storage.Data),
+		Expiry:     make(map[string]time.Time),
 	}
 
-	currentWorkingDir,err:=os.Getwd()
-	
-	if err!=nil{
-		t.Fatalf("Failed to get current working directory: %v", err)
+	persistenceDir := t.TempDir()
+	rdb := &rdb.RDB{
+		Dir:        persistenceDir,
+		DbFileName: "dump.rdb",
 	}
-	rdb:=&rdb.RDB{
-		  Dir: currentWorkingDir,
-		  DbFileName: "dump.rdb",
-	}
-	go server.StartServer(cfg,rdb, &aof.AOF{
-		    AppendDirName: "appendonly",
-			 AppendFilename: "appendonly.aof",
-	  },)
+	go server.StartServer(cfg, rdb, &aof.AOF{
+		Dir:            persistenceDir,
+		AppendDirName:  "appendonly",
+		AppendFilename: "appendonly.aof",
+	})
 	return cfg, port
 }
 
@@ -882,7 +866,7 @@ func waitForValue(t *testing.T, port int, key, expected string, timeout time.Dur
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		resp := sendRawCommand(t, port, encodeCommand("GET", key))
-		
+
 		if strings.Contains(resp, expected) {
 			return true
 		}

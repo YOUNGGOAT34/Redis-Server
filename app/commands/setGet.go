@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func GetCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
+func GetCommand(arguments [][]byte, replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 1 {
 		return RESP.Response{
 			Body: []byte("Wrong number of arguments for 'GET' command"),
@@ -16,20 +16,27 @@ func GetCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 		}
 	}
 
+	// Lazy expiry: check under ExpiryMutex, but do NOT nest DatabaseMutex
+	// inside it. Elsewhere (RDB.SaveRDB/SaveRDBLocked, and the PSYNC
+	// handler's snapshotAndRegisterReplica) DatabaseMutex is locked before
+	// ExpiryMutex; acquiring them in the opposite order here (as this used
+	// to) is a real, reachable AB-BA deadlock between a GET on an expired
+	// key and a concurrent SAVE/PSYNC. Releasing ExpiryMutex before ever
+	// touching DatabaseMutex avoids the ordering question entirely instead
+	// of trying to enforce a global lock order by convention.
 	replconfig.ExpiryMutex.Lock()
-
 	expires, exists := replconfig.Expiry[string(arguments[0])]
-
-	if exists {
-		if time.Now().After(expires) {
-			replconfig.DatabaseMutex.Lock()
-			delete(replconfig.Database, string(arguments[0]))
-			replconfig.DatabaseMutex.Unlock()
-			delete(replconfig.Expiry, string(arguments[0]))
-		}
+	isExpired := exists && time.Now().After(expires)
+	if isExpired {
+		delete(replconfig.Expiry, string(arguments[0]))
 	}
-
 	replconfig.ExpiryMutex.Unlock()
+
+	if isExpired {
+		replconfig.DatabaseMutex.Lock()
+		delete(replconfig.Database, string(arguments[0]))
+		replconfig.DatabaseMutex.Unlock()
+	}
 
 	replconfig.DatabaseMutex.RLock()
 	dataObject, exists := replconfig.Database[string(arguments[0])]

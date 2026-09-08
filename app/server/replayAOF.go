@@ -13,7 +13,13 @@ import (
 	"path/filepath"
 )
 
-func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF) error {
+// replayAOF replays previously-persisted commands from the append-only file
+// back through the normal command-dispatch path. replayUser is the trusted
+// identity (the server's own seeded default user) used for these replayed
+// commands: replay is internal state reconstruction of writes that were
+// already authorized once when originally executed, not new client input,
+// so it must not be subject to a fresh NOAUTH/ACL rejection.
+func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof.AOF, replayUser *storage.User) error {
 
 	aofDir := filepath.Join(aofFileConfig.Dir, aofFileConfig.AppendDirName)
 
@@ -61,7 +67,7 @@ func replayAOF(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *aof
 				return err
 			}
 
-			dispatchCommands(&storage.Client{}, parsedRequest, replConfig, rdbConfig, aofFileConfig)
+			dispatchCommands(&storage.Client{User: replayUser}, parsedRequest, replConfig, rdbConfig, aofFileConfig)
 
 			request = request[bytesConsumed:]
 

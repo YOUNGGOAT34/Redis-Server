@@ -53,7 +53,16 @@ func execCommand(arguments [][]byte, client *storage.Client, replConfig *config.
 	client.InTransaction = false
 	defer clearWatches(client)
 
-	if client.Dirty {
+	// client.Dirty is written from OTHER clients' goroutines (markDirty, in
+	// commands/utilities.go, called by every write command on a watched
+	// key) under storage.WatchedKeysMutex. Reading it here without that same
+	// lock is a real, reachable data race between whichever client last
+	// wrote the watched key and this client's own EXEC.
+	storage.WatchedKeysMutex.RLock()
+	dirty := client.Dirty
+	storage.WatchedKeysMutex.RUnlock()
+
+	if dirty {
 
 		return RESP.Response{
 			Body: []byte("*-1\r\n"),
@@ -162,8 +171,12 @@ func clearWatches(client *storage.Client) {
 		}
 	}
 
+	// Dirty is written here under WatchedKeysMutex to match the same lock
+	// markDirty (commands/utilities.go) uses to write it from another
+	// client's goroutine - see execCommand above for the matching read side.
+	client.Dirty = false
+
 	storage.WatchedKeysMutex.Unlock()
 
 	client.KeysWatched = make(map[string]struct{})
-	client.Dirty = false
 }
