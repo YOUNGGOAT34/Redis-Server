@@ -89,6 +89,32 @@ This project is designed as a **systems-level deep dive** into how Redis works i
 * Linux or macOS
 
 ---
+## Testing
+### Build all packages:
+
+```bash
+go build ./...
+```
+### Run the full test suite:
+
+```bash
+go test ./... -count=1
+```
+
+### Run the integration tester suite with verbose output:
+
+```bash
+go test ./app/tester -count=1 -v
+```
+
+### Run the tester suite with Go's race detector:
+
+```bash
+go test -race ./app/tester -count=1
+```
+
+
+The -count=1 flag disables test-result caching, ensuring the tests are executed fresh.
 
 ## Build & Run
 
@@ -116,6 +142,48 @@ go build -o cachedb ./app
   --appendfilename appendonly.aof \
   --dbfilename rdbfile.db
 ```
+
+---
+
+## Running with Docker
+
+A multi-stage `Dockerfile` builds a small, non-root, statically-linked image
+(no CGO, no shell, no OS package manager - `gcr.io/distroless/static-debian12:nonroot`).
+
+```bash
+docker build -t cachedb .
+
+# standalone, with a persistent volume mounted at /data:
+docker run -d --name cachedb \
+  -p 6379:6379 \
+  -v cachedb-data:/data \
+  cachedb
+```
+
+By default the image runs `--dir /data --appendonly yes`, so both the RDB
+file and the AOF directory land directly under the mounted volume - data
+survives `docker stop`/`docker rm`/container recreation as long as the same
+volume is reused. `docker stop` sends SIGTERM, which triggers CacheDB's
+existing graceful shutdown (stop accepting new clients, drain in-flight
+ones, close the AOF file) rather than a hard kill.
+
+### Master/replica with Docker Compose
+
+```bash
+docker compose up --build
+```
+
+This starts a master (`cachedb-master`, published on host port 6379) and a
+replica (`cachedb-replica`, published on host port 6380) on the same Compose
+network, with the replica's `--replicaof` pointing at the master by its
+Compose service name (Docker's embedded DNS resolves this automatically).
+The replica's own retry/backoff already tolerates the master not being
+ready yet; the Compose file also gates the replica's startup on the
+master's `HEALTHCHECK` passing, purely to avoid a few seconds of retry
+noise on a normal `docker compose up`.
+
+Each service has its own named volume (`master-data`, `replica-data`), so
+persisted state for each role survives container recreation independently.
 
 ---
 

@@ -2,13 +2,19 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
+	"syscall"
+	"time"
 
 	aof "CacheDB/app/AOF"
 	rdb "CacheDB/app/RDB"
@@ -19,6 +25,17 @@ import (
 	"CacheDB/app/storage"
 )
 
+// Replica-to-master reconnect backoff (see connectToMaster). Exposed as vars
+// (not consts) so tests can shrink them for fast, deterministic retry tests.
+var (
+	initialReplicaRetryDelay = 500 * time.Millisecond
+	maxReplicaRetryDelay     = 10 * time.Second
+)
+
+// How long shutdown waits for in-flight client commands to finish before
+// proceeding to close the listener's remaining resources and exit anyway.
+const clientDrainTimeout = 5 * time.Second
+
 // for the handshake between the master and the replica
 type ExpectedResponse int
 
@@ -28,7 +45,7 @@ const (
 	ExpectFullResync
 )
 
-//identify write commands
+// identify write commands
 func isWrite(command []byte) bool {
 
 	cmd := strings.ToUpper(string(command))
@@ -40,21 +57,29 @@ func isWrite(command []byte) bool {
 
 	return false
 }
+
 func createDefaultUser(client *storage.Client) {
 	storage.UsersMutex.RLock()
 	defaultUser := storage.Users["default"]
 	storage.UsersMutex.RUnlock()
 
+	// UsersMutex only protects the Users MAP itself (which entries exist).
+	// The User struct's own mutable fields (Flags, Passwords, ...) are
+	// protected by that user's own UserMutex - the same lock every other
+	// reader/writer of these fields already uses (see commands/auth.go's
+	// getUser/setUser/whoami). Reading Flags.NoPass here without it raced
+	// with ACL SETUSER mutating the same fields concurrently.
 	defaultUser.UserMutex.RLock()
 	defer defaultUser.UserMutex.RUnlock()
 
 	if defaultUser.Flags.NoPass {
 		client.User = defaultUser
 	}
-	
 }
 
-func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF) {
+func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, aofConfig *aof.AOF, clientWG *sync.WaitGroup) {
+	defer clientWG.Done()
+
 	var request []byte
 	var temp = make([]byte, 1024)
 
@@ -64,7 +89,7 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 		Conn:               conn,
 		KeysWatched:        make(map[string]struct{}),
 		SubscribedChannels: storage.NewSet[string](),
-		ClientType: storage.NORMALUSER,
+		ClientType:         storage.NORMALUSER,
 	}
 
 	createDefaultUser(client)
@@ -118,6 +143,30 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 					return
 				}
 
+				// CRITICAL ordering: snapshot creation and replica
+				// registration must happen atomically with respect to
+				// live writes, or a write landing in between would be
+				// lost to this replica entirely - present in neither the
+				// RDB snapshot (already taken) nor the propagated command
+				// stream (registration hadn't happened yet, so
+				// PropagateCommands wouldn't have sent it here either).
+				// Holding DatabaseMutex+ExpiryMutex (write locks, blocking
+				// ALL writers, not just readers) across both the snapshot
+				// and the REPLICAS append closes that window: any write
+				// that was already in flight either finished before we
+				// took the locks (so it's in the snapshot) or blocks until
+				// after we've registered this replica (so it's in the
+				// propagated stream instead). Network I/O (reading the
+				// file back and sending it) deliberately happens AFTER
+				// releasing the locks, so a slow replica connection can't
+				// stall the whole database.
+				snapshotErr := snapshotAndRegisterReplica(rdbConfig, replConfig, conn)
+
+				if snapshotErr != nil {
+					fmt.Fprintf(os.Stderr, "Error snapshotting RDB for PSYNC: %s\r\n", snapshotErr.Error())
+					return
+				}
+
 				data, err := os.ReadFile(rdbConfig.Dir + "/" + rdbConfig.DbFileName)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error reading the rdb file in the master: %s\r\n", err.Error())
@@ -134,16 +183,6 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 					return
 				}
 
-				replica := &config.REPLICA{
-					Conn: conn,
-				}
-
-				replica.Offset.Store(-1)
-		
-				replConfig.ReplicasMutex.Lock()
-				replConfig.REPLICAS = append(replConfig.REPLICAS, replica)
-		
-				replConfig.ReplicasMutex.Unlock()
 				continue
 			}
 
@@ -154,7 +193,9 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 			if replConfig.Role == "master" {
 				//only propagate successful write commands
 				if len(parsedRequest) > 0 && isWrite(parsedRequest[0]) && response.Type != RESP.ERROR {
-					aofConfig.File.Write(commandBytes)
+					if err := aofConfig.AppendCommand(commandBytes); err != nil {
+						fmt.Fprintf(os.Stderr, "Error writing to AOF: %s\r\n", err.Error())
+					}
 					replication.PropagateCommands(commandBytes, replConfig)
 					replConfig.MASTERREPLOFFSET.Add(int32(bytesConsumed))
 				}
@@ -167,19 +208,19 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 
 // for replicas
 func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) {
-   
+
 	var request []byte
 	temp := make([]byte, 1024)
 
-	client:=&storage.Client{ClientType: storage.MASTER}
+	client := &storage.Client{ClientType: storage.MASTER}
 	createDefaultUser(client)
-	
+
 	defer conn.Close()
-	
+
 	for {
-		
+
 		bytesRead, err := conn.Read(temp)
-	
+
 		if err == io.EOF || (err != nil && strings.Contains(err.Error(), "connection reset")) {
 			return
 		}
@@ -211,8 +252,6 @@ func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) 
 
 			}
 
-		
-
 			request = request[bytesConsumed:]
 
 			response := dispatchCommands(client, parsedRequest, replConfig, &rdb.RDB{}, aofConfig)
@@ -233,11 +272,40 @@ func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) 
 
 }
 
+// snapshotAndRegisterReplica atomically snapshots current in-memory state to
+// the RDB file and registers conn as a replica, so that no write can land in
+// the gap between "snapshot taken" and "replica registered for propagation"
+// - see the PSYNC handler above for the full explanation of why that gap
+// would otherwise silently lose writes for a newly-connecting replica.
+func snapshotAndRegisterReplica(rdbConfig *rdb.RDB, replConfig *config.SERVER, conn net.Conn) error {
+	replConfig.DatabaseMutex.Lock()
+	defer replConfig.DatabaseMutex.Unlock()
+	replConfig.ExpiryMutex.Lock()
+	defer replConfig.ExpiryMutex.Unlock()
+	replConfig.ReplicasMutex.Lock()
+	defer replConfig.ReplicasMutex.Unlock()
+
+	if err := rdb.SaveRDBLocked(rdbConfig.Dir+"/"+rdbConfig.DbFileName, replConfig); err != nil {
+		return err
+	}
+
+	replica := &config.REPLICA{Conn: conn}
+	replica.Offset.Store(-1)
+	replConfig.REPLICAS = append(replConfig.REPLICAS, replica)
+
+	return nil
+}
+
 func accept(listener net.Listener) net.Conn {
 	conn, err := listener.Accept()
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error accepting connection: %s\r\n", err.Error())
+		// A closed listener (intentional shutdown) is expected and not an
+		// operational error worth logging - the caller checks shuttingDown
+		// to distinguish this from a transient accept error.
+		if !errors.Is(err, net.ErrClosed) {
+			fmt.Fprintf(os.Stderr, "Error accepting connection: %s\r\n", err.Error())
+		}
 		return nil
 	}
 
@@ -255,7 +323,7 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 	}
 
 	//load rdb file from memory
-	err = rdb.LoadFileToMemory(rdbConfig,replConfig)
+	err = rdb.LoadFileToMemory(rdbConfig, replConfig)
 
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error loading an rdb file :%s\r\n", err.Error())
@@ -272,17 +340,57 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 		return
 	}
 
-	//replay the append only file if enabled
-	if aofFileConfig.AppendOnly == "yes" {
+	// Listen for SIGTERM/SIGINT so `docker stop`/Ctrl-C trigger a graceful
+	// shutdown instead of an immediate kill: stop accepting new clients, let
+	// in-flight commands finish (bounded), close replica/master connections
+	// and the AOF file, then exit. This does NOT perform an automatic RDB
+	// SAVE - CacheDB's persistence model only snapshots on an explicit SAVE
+	// (there is no autosave/save-points design), so shutdown preserves that
+	// contract rather than silently changing when snapshots happen.
+	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
 
-		err = replayAOF(replConfig, rdbConfig, aofFileConfig)
+	aofStopCh := make(chan struct{})
+	var aofStopOnce sync.Once
+	closeAOFStopCh := func() { aofStopOnce.Do(func() { close(aofStopCh) }) }
 
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error replaying AOF:%s\r\n", err.Error())
-			return
+	// Background fsync for --appendfsync everysec; no-op for "always"/"no".
+	// fsyncDone closes once the loop has actually stopped touching the AOF
+	// file - closing aofStopCh only wakes the goroutine, it doesn't wait for
+	// it, so shutdown waits on fsyncDone before calling File.Close() to rule
+	// out any chance of the fsync goroutine touching the file after it's
+	// closed.
+	fsyncDone := aofFileConfig.StartFsyncLoop(aofStopCh)
+
+	var clientWG sync.WaitGroup
+	var shuttingDown atomic.Bool
+
+	go func() {
+		<-ctx.Done()
+		fmt.Fprintln(os.Stderr, "Received shutdown signal, shutting down gracefully...")
+		shuttingDown.Store(true)
+
+		l.Close() // unblocks accept() below
+
+		closeAOFStopCh()
+
+		replConfig.ReplicasMutex.Lock()
+		for _, replica := range replConfig.REPLICAS {
+			replica.Conn.Close()
 		}
-	}
+		replConfig.ReplicasMutex.Unlock()
 
+		if replConfig.MASTERCONN != nil {
+			replConfig.MASTERCONN.Close()
+		}
+	}()
+
+	// The default ACL user must exist before AOF replay: replay dispatches
+	// each command through the same ACL-enforced path a live client uses,
+	// and that path requires an authenticated client.User. Replayed commands
+	// are already-committed writes reconstructing prior state (not fresh
+	// input needing authorization), so they run as the trusted default user
+	// rather than being rejected as NOAUTH.
 	defaultUser := storage.User{
 		Name:      "default",
 		Passwords: make([][32]byte, 0),
@@ -293,31 +401,109 @@ func StartServer(replConfig *config.SERVER, rdbConfig *rdb.RDB, aofFileConfig *a
 	}
 
 	defaultUser.CommandPermissions = storage.AllCommands
-	commands.GrantOrRevokePermission(&defaultUser,[]byte("@ADMIN"),true)
+	commands.GrantOrRevokePermission(&defaultUser, []byte("@ADMIN"), true)
 	storage.UsersMutex.Lock()
 	storage.Users["default"] = &defaultUser
 	storage.UsersMutex.Unlock()
 
+	//replay the append only file if enabled
+	if aofFileConfig.AppendOnly == "yes" {
+
+		err = replayAOF(replConfig, rdbConfig, aofFileConfig, &defaultUser)
+
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error replaying AOF:%s\r\n", err.Error())
+			return
+		}
+	}
+
 	//sync with the master if this server is a replica
 	if replConfig.Role == "slave" {
-		conn, err := syncWithMaster(replConfig, rdbConfig)
+		conn, err := connectToMaster(replConfig, rdbConfig, ctx.Done())
 		if err != nil {
-			panic(err)
+			fmt.Fprintf(os.Stderr, "Replication: %s\r\n", err.Error())
+			return
 		}
-	
+
 		go handleMaster(conn, replConfig, aofFileConfig)
 
 	}
 
-
 	for {
 
 		conn := accept(l)
-		if conn != nil {
-			go handleClient(conn, replConfig, rdbConfig, aofFileConfig)
+		if conn == nil {
+			if shuttingDown.Load() {
+				break
+			}
+			continue
+		}
+		clientWG.Add(1)
+		go handleClient(conn, replConfig, rdbConfig, aofFileConfig, &clientWG)
+	}
+
+	// Let in-flight client commands finish, but don't block shutdown forever.
+	drained := make(chan struct{})
+	go func() {
+		clientWG.Wait()
+		close(drained)
+	}()
+
+	select {
+	case <-drained:
+	case <-time.After(clientDrainTimeout):
+		fmt.Fprintln(os.Stderr, "Shutdown: timed out waiting for in-flight clients, exiting anyway")
+	}
+
+	closeAOFStopCh()
+
+	select {
+	case <-fsyncDone:
+	case <-time.After(2 * time.Second):
+		fmt.Fprintln(os.Stderr, "Shutdown: timed out waiting for fsync loop to stop, closing AOF file anyway")
+	}
+
+	if aofFileConfig.File != nil {
+		if err := aofFileConfig.File.Close(); err != nil {
+			fmt.Fprintf(os.Stderr, "Error closing AOF file during shutdown: %s\r\n", err.Error())
 		}
 	}
 
+	fmt.Fprintln(os.Stderr, "Shutdown complete.")
+}
+
+// connectToMaster performs the replica handshake against the master,
+// retrying with capped exponential backoff instead of panicking if the
+// master is temporarily unreachable or the handshake fails. This lets a
+// replica started before (or briefly after) its master recover automatically
+// once the master becomes reachable, without busy-looping or hammering it
+// with connection attempts. stopSignal (e.g. a shutdown context's Done()
+// channel) cancels the retry loop if the process is asked to exit before the
+// master ever becomes available.
+func connectToMaster(replConfig *config.SERVER, rdbConfig *rdb.RDB, stopSignal <-chan struct{}) (net.Conn, error) {
+	delay := initialReplicaRetryDelay
+
+	for {
+		conn, err := syncWithMaster(replConfig, rdbConfig)
+		if err == nil {
+			return conn, nil
+		}
+
+		fmt.Fprintf(os.Stderr,
+			"Replication: could not sync with master %s:%d (%s), retrying in %s\r\n",
+			replConfig.MasterHost, replConfig.MasterPort, err.Error(), delay)
+
+		select {
+		case <-time.After(delay):
+		case <-stopSignal:
+			return nil, errors.New("replica shutdown requested before master became available")
+		}
+
+		delay *= 2
+		if delay > maxReplicaRetryDelay {
+			delay = maxReplicaRetryDelay
+		}
+	}
 }
 
 func handShake(message string, conn net.Conn, RES ExpectedResponse) error {
@@ -518,6 +704,17 @@ func syncWithMaster(replConfig *config.SERVER, rdbConfig *rdb.RDB) (net.Conn, er
 	}
 
 	if err != nil {
+		return nil, err
+	}
+
+	// Writing the transferred bytes to disk is not enough on its own: the
+	// replica's in-memory Database/Expiry maps must actually be populated
+	// from this snapshot, or a fresh replica will never see any data that
+	// existed on the master before this PSYNC (it would only start
+	// reflecting writes streamed AFTER this handshake). This mirrors the
+	// same load step StartServer already performs at boot from a local RDB
+	// file.
+	if err := rdb.LoadFileToMemory(rdbConfig, replConfig); err != nil {
 		return nil, err
 	}
 

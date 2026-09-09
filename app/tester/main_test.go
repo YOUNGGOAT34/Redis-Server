@@ -2,7 +2,6 @@ package tester
 
 import (
 	// "fmt"
-	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -44,25 +43,21 @@ func info(msg string) {
 // ---------------- SERVER BOOTSTRAP ----------------
 
 func TestMain(t *testing.T) {
-	currentWorkingDir,err:=os.Getwd()
-	
-	if err!=nil{
-		fmt.Fprintf(os.Stderr,"Error:%s\r\n",err.Error())
-		return
-	}
+	persistenceDir := t.TempDir()
 	go server.StartServer(&config.SERVER{
-		PORT: 6379,
+		PORT:     6379,
 		Database: make(map[string]storage.Data),
-		Expiry: make(map[string]time.Time),
-	},&rdb.RDB{
-		Dir: currentWorkingDir,
+		Expiry:   make(map[string]time.Time),
+	}, &rdb.RDB{
+		Dir:        persistenceDir,
 		DbFileName: "dump.rdb",
 	},
-	  &aof.AOF{
-		    AppendDirName: "appendonly",
-			 AppendFilename: "appendonly.aof",
-	  },
-  )
+		&aof.AOF{
+			Dir:            persistenceDir,
+			AppendDirName:  "appendonly",
+			AppendFilename: "appendonly.aof",
+		},
+	)
 
 	waitForServer()
 	pingtest(t)

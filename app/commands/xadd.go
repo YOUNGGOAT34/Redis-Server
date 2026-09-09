@@ -39,7 +39,7 @@ func createStreamID(id []byte) (storage.StreamID, error) {
 	}, err
 }
 
-func XAddCommand(arguments [][]byte, client *storage.Client,replconfig *config.SERVER) RESP.Response {
+func XAddCommand(arguments [][]byte, client *storage.Client, replconfig *config.SERVER) RESP.Response {
 	if len(arguments) < 4 {
 
 		return RESP.WrongNumberOfArguments("XADD")
@@ -56,31 +56,33 @@ func XAddCommand(arguments [][]byte, client *storage.Client,replconfig *config.S
 
 	key := string(arguments[0])
 
+	// Protect both lookup and first creation of the stream. The previous
+	// split lock/unlock allowed concurrent XADDs to observe a missing key,
+	// publish competing stream values, and access a stream while it was being
+	// published. Acquire the stream lock before releasing the database lock so
+	// every caller observes a fully initialized stream and all mutations of one
+	// stream are serialized by its owning mutex.
 	replconfig.DatabaseMutex.Lock()
 	data, exists := replconfig.Database[key]
-	replconfig.DatabaseMutex.Unlock()
 
 	if exists {
 		if data.Type != storage.STREAM {
+			replconfig.DatabaseMutex.Unlock()
 			return RESP.WrongType()
 		}
 
 		stream = data.Value.(*storage.Stream)
-		stream.StreamMutex.Lock()
-		defer stream.StreamMutex.Unlock()
-
 	} else {
-
-		stream = &storage.Stream{
-			// Tree:NewRadix(),
-		}
-
-		replconfig.Database[string(arguments[0])] = storage.Data{
+		stream = &storage.Stream{}
+		replconfig.Database[key] = storage.Data{
 			Type:  storage.STREAM,
 			Value: stream,
 		}
-
 	}
+
+	stream.StreamMutex.Lock()
+	replconfig.DatabaseMutex.Unlock()
+	defer stream.StreamMutex.Unlock()
 
 	var Id storage.StreamID
 

@@ -3,6 +3,7 @@ package rdb
 import (
 	"CacheDB/app/config"
 	"CacheDB/app/storage"
+	"encoding/binary"
 	"errors"
 	"io"
 	"os"
@@ -10,6 +11,24 @@ import (
 )
 
 func SaveRDB(path string, replconfig *config.SERVER) error {
+	replconfig.DatabaseMutex.RLock()
+	replconfig.ExpiryMutex.RLock()
+	err := SaveRDBLocked(path, replconfig)
+	replconfig.ExpiryMutex.RUnlock()
+	replconfig.DatabaseMutex.RUnlock()
+	return err
+}
+
+// SaveRDBLocked writes an RDB snapshot of replconfig's current Database and
+// Expiry to path. The caller MUST already hold at least a read lock on both
+// DatabaseMutex and ExpiryMutex (SaveRDB does this for the normal case; the
+// PSYNC handler in server.go calls this directly because it needs to hold
+// those locks - as write locks - across snapshot creation AND replica
+// registration together, to close the window where a write landing between
+// "snapshot taken" and "replica registered for propagation" would otherwise
+// be silently lost to that replica. See the PSYNC handler for the full
+// explanation.
+func SaveRDBLocked(path string, replconfig *config.SERVER) error {
 	tempPath := path + ".tmp"
 
 	file, err := os.Create(tempPath)
@@ -258,6 +277,22 @@ func writeDatabase(w io.Writer, replconfig *config.SERVER) error {
 
 	for key, value := range replconfig.Database {
 
+		// Always write exactly len(replconfig.Database) entries, one per
+		// key - WriteReSizeDB's count is NOT just an advisory hint, the
+		// loader's 0xFB handler reads exactly that many entries via
+		// readEntry, so skipping a key here would desync the count and
+		// corrupt parsing of everything after it. Whether an
+		// already-expired key should actually be loaded back is instead
+		// left to LoadFileToMemory, which already correctly skips any
+		// entry whose expiry has passed - so it's enough to always write
+		// the expiry metadata when present (even for an already-expired
+		// key) and let that existing load-side check do the filtering.
+		if expiresAt, hasExpiry := replconfig.Expiry[key]; hasExpiry {
+			if err := writeExpiry(w, expiresAt); err != nil {
+				return err
+			}
+		}
+
 		err := writeObjectType(w, value.Type)
 		if err != nil {
 			return err
@@ -277,6 +312,22 @@ func writeDatabase(w io.Writer, replconfig *config.SERVER) error {
 	}
 
 	return nil
+}
+
+// writeExpiry writes the millisecond-precision expiry opcode (0xFC) that
+// ReadRDBFile's readEntry already knows how to parse, immediately before the
+// object-type/key/value for the same entry.
+func writeExpiry(w io.Writer, expiresAt time.Time) error {
+	if _, err := w.Write([]byte{0xFC}); err != nil {
+		return err
+	}
+
+	millis := uint64(expiresAt.UnixMilli())
+	buf := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buf, millis)
+
+	_, err := w.Write(buf)
+	return err
 }
 
 func writeKey(w io.Writer, key string) error {
