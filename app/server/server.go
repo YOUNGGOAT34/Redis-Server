@@ -51,7 +51,7 @@ func isWrite(command []byte) bool {
 	cmd := strings.ToUpper(string(command))
 
 	switch cmd {
-	case "SET", "INCR", "LPUSH", "LPOP", "RPUSH", "XADD":
+	case "SET", "INCR", "LPUSH", "LPOP", "RPUSH", "XADD","ZREM","ZADD":
 		return true
 	}
 
