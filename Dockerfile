@@ -25,7 +25,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /out/healthcheck ./app/healthcheck
 # the runtime image with ownership suitable for the non-root user.
 RUN mkdir -p /out/data
 
-
 # --- Runtime stage -----------------------------------------------------
 # Distroless static image:
 # - no shell

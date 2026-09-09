@@ -65,6 +65,14 @@ func GetConfig(args [][]byte, rdbConfig *rdb.RDB, aofConfig *aof.AOF) RESP.Respo
 				},
 				Type: RESP.ARRAY,
 			}
+		case "save":
+         return RESP.Response{
+            Array: []RESP.Response{
+               {Body: args[1], Type: RESP.BULK_STRING},
+               {Body: []byte("900 1 300 10 60 10000"), Type: RESP.BULK_STRING},
+            },
+            Type: RESP.ARRAY,
+         }
 
 		default:
 			return RESP.Response{

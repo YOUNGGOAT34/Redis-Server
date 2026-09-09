@@ -1,3 +1,6 @@
+
+build:
+	go build -o cachedb .
 test:
 	go test ./tester -v
 

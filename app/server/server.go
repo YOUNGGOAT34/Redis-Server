@@ -112,6 +112,7 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 		request = append(request, temp[:bytesRead]...)
 
 		for {
+			
 			parsedRequest, bytesConsumed, err := RESP.ParseRequest(request)
 
 			var response RESP.Response
@@ -128,6 +129,10 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 				}
 
 			} else {
+				if bytesConsumed<=0{
+					 break
+				}
+
 				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig, aofConfig)
 			}
 

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 
@@ -54,7 +55,27 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 		return  nil,bytesConsumed,ErrIncomplete
 	}
 
-	
+	// Support inline commands (e.g., "PING\r\n") that do not start with '*'
+   if request[0] != '*' {
+      idx := findCRLF(request)
+      if idx == -1 {
+         return nil, bytesConsumed, ErrIncomplete
+      }
+      
+      line := string(request[:idx])
+      parts := strings.Fields(line)
+      if len(parts) == 0 {
+         return nil, idx + 2, errors.New("empty inline command")
+      }
+
+      var args [][]byte
+      for _, p := range parts {
+         args = append(args, []byte(p))
+      }
+
+      bytesConsumed = idx + 2
+      return args, bytesConsumed, nil
+   }
 
 	header, body := getHeaderAndBody(request)
   
@@ -87,7 +108,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 	size, err := strconv.Atoi(string(header[1:index]))
 
 	if err != nil {
-		
+		fmt.Printf("Here %q\r\n",request)
 		return nil,bytesConsumed,err
 	}
 
@@ -99,7 +120,7 @@ func ParseRequest(request []byte) ([][]byte,int,error) {
 
 			return nil,bytesConsumed,ErrIncomplete
 		}
-
+       
 		/*
 			     Find the end of the bulk string length.
 			     Example:
