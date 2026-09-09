@@ -24,6 +24,13 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 
 	command := args[0]
 
+	if isWrite(command )&& replConfig.Role=="slave" && client.ClientType==storage.NORMALUSER{
+		   return RESP.Response{
+				  Body: []byte("READONLY You can't write against a read only replica"),
+				  Type: RESP.ERROR,
+			}
+	}
+   
 	//convert to a string and make it case insensitive so that it can be used in a switch case
 	cmd := strings.ToUpper(string(command))
 
@@ -46,11 +53,7 @@ func dispatchCommands(client *storage.Client, args [][]byte, replConfig *config.
 	CMD:=storage.CommandToPermission[cmd]
 
 	if client.User.CommandPermissions&CMD==0{
-		   fmt.Printf(
-    "USER=%s permissions=%v\n",
-    client.User.Name,
-    client.User.CommandPermissions,
-)
+	
 		   return RESP.Response{
 				Body: fmt.Appendf(nil, "NOPERM this user has no permissions to run the '%s' command", cmd),
 				Type: RESP.ERROR,

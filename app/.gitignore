@@ -1,0 +1,4 @@
+sentinel/
+*.aof
+*.aof.*
+*.rdb

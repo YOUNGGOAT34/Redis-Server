@@ -29,7 +29,6 @@ const (
 )
 
 //identify write commands
-
 func isWrite(command []byte) bool {
 
 	cmd := strings.ToUpper(string(command))
@@ -41,7 +40,6 @@ func isWrite(command []byte) bool {
 
 	return false
 }
-
 func createDefaultUser(client *storage.Client) {
 	storage.UsersMutex.RLock()
 	defaultUser := storage.Users["default"]
@@ -66,6 +64,7 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 		Conn:               conn,
 		KeysWatched:        make(map[string]struct{}),
 		SubscribedChannels: storage.NewSet[string](),
+		ClientType: storage.NORMALUSER,
 	}
 
 	createDefaultUser(client)
@@ -104,7 +103,6 @@ func handleClient(conn net.Conn, replConfig *config.SERVER, rdbConfig *rdb.RDB, 
 				}
 
 			} else {
-
 				response = dispatchCommands(client, parsedRequest, replConfig, rdbConfig, aofConfig)
 			}
 
@@ -173,7 +171,7 @@ func handleMaster(conn net.Conn, replConfig *config.SERVER, aofConfig *aof.AOF) 
 	var request []byte
 	temp := make([]byte, 1024)
 
-	client:=&storage.Client{}
+	client:=&storage.Client{ClientType: storage.MASTER}
 	createDefaultUser(client)
 	
 	defer conn.Close()

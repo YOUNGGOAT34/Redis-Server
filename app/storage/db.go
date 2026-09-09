@@ -146,6 +146,14 @@ var CommandToPermission = map[string]uint64{
 	"ZRANK":  ZRANK,
 }
 
+//this will help replicas determine if write commands were propagated from the master ,,or just a normal client(rejects write commands from a normal client)
+type CLIENTTYPE int
+
+const (
+	  MASTER CLIENTTYPE=iota
+	  NORMALUSER
+)
+
 type Client struct {
 	Conn               net.Conn
 	InTransaction      bool
@@ -155,6 +163,7 @@ type Client struct {
 	InSubscribeMode    bool
 	SubscribedChannels Set[string]
 	User               *User
+	ClientType CLIENTTYPE
 }
 
 var (

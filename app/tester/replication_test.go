@@ -17,7 +17,6 @@ import (
 	"CacheDB/app/storage"
 )
 
-// Runner & Stages
 
 func replication_test(t *testing.T) {
 	stageXX_ReplicaHandshake(t)
