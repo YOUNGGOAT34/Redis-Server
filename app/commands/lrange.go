@@ -102,7 +102,7 @@ func LRangeCommand(arguments [][]byte,replconfig *config.SERVER) RESP.Response {
 		defer list.ListMutex.RUnlock()
 
 		if list == nil || list.Len == 0 {
-
+         
 			return RESP.Response{
 				Body: []byte("*0\r\n"),
 				Type: RESP.LIST,

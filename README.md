@@ -119,7 +119,7 @@ The -count=1 flag disables test-result caching, ensuring the tests are executed 
 ## Build & Run
 
 ```bash
-go build -o cachedb ./app
+make build
 ```
 
 ### Run as standalone server
@@ -264,6 +264,34 @@ GET | SET | DEL  →  read/write string access
 * Expiry is passive only — no active expiration background task
 
 ---
+
+
+## Benchmarks
+
+Benchmarked against Redis 7.x on equivalent hardware.
+No pipelining — representative of real application workloads.
+
+`redis-benchmark -c 50 -n 1,000,000 -t <cmd> -q`
+
+| Operation  | CacheDB      | Redis        | Ratio |
+|------------|--------------|--------------|-------|
+| SET        | 44,630 ops/s | 57,780 ops/s | 77%   |
+| GET        | 44,607 ops/s | 56,170 ops/s | 79%   |
+| LPUSH      | 44,678 ops/s | 56,439 ops/s | 79%   |
+| LRANGE 100 | 20,885 ops/s | 38,729 ops/s | 54%   |
+| LRANGE 600 | 5,084 ops/s  | 13,572 ops/s | 37%   |
+| ZADD       | 40,576 ops/s | 50,725 ops/s | 80%   |
+| INCR       | 41,034 ops/s | 48,787 ops/s | 84%   |
+| PING       | 40,928 ops/s | 50,296 ops/s | 81%   |
+
+**Single value operations achieve 77-84% of Redis throughput.**
+
+The LRANGE gap grows with range size due to pointer chasing in
+the doubly linked list implementation — each node is a separate
+heap allocation causing CPU cache misses at scale. Redis uses
+a listpack encoding for small lists — a contiguous memory block
+eliminating cache misses entirely. Implementing listpack is a
+planned improvement.
 
 ## Educational Value
 
