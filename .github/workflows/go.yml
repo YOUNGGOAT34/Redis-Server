@@ -1,4 +1,3 @@
-
 name: Go
 
 on:
@@ -8,7 +7,6 @@ on:
     branches: [ "main" ]
 
 jobs:
-
   build:
     runs-on: ubuntu-latest
     steps:
@@ -20,8 +18,10 @@ jobs:
           go-version-file: go.mod
 
       - name: Build
-        run: go build -v ./...
+        run: make build
 
-      - name: Run tests
-        working-directory: app
+      - name: Test
         run: make test
+
+      - name: Test with race detector
+        run: make test-race
