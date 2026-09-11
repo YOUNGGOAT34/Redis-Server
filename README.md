@@ -93,24 +93,23 @@ This project is designed as a **systems-level deep dive** into how Redis works i
 ### Build all packages:
 
 ```bash
-go build ./...
+make build
 ```
-### Run the full test suite:
+ ### Run the integration tester suite without verbose output:
 
 ```bash
-go test ./... -count=1
+make test
 ```
-
 ### Run the integration tester suite with verbose output:
 
 ```bash
-go test ./app/tester -count=1 -v
+make test-v
 ```
 
 ### Run the tester suite with Go's race detector:
 
 ```bash
-go test -race ./app/tester -count=1
+make test-race
 ```
 
 
@@ -127,6 +126,7 @@ make build
 ```bash
 ./cachedb --port 6379
 ```
+If you don't provide the port explicitly ,it will default to 6379
 
 ### Run as replica
 
@@ -268,7 +268,7 @@ GET | SET | DEL  →  read/write string access
 
 ## Benchmarks
 
-Benchmarked against Redis 7.x on equivalent hardware.
+Benchmarked against Redis 8.0.6 on equivalent hardware.
 No pipelining — representative of real application workloads.
 
 `redis-benchmark -c 50 -n 1,000,000 -t <cmd> -q`
