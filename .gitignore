@@ -2,3 +2,4 @@ app/sentinel/
 *.aof
 *.aof.*
 *.rdb
+cachedb
